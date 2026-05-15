@@ -2,76 +2,304 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <title>Prompterator API Test</title>
+  <title>Prompterator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    :root {
+      --bg: #050812;
+      --panel: rgba(7, 17, 31, 0.86);
+      --panel2: rgba(10, 28, 48, 0.72);
+      --line: rgba(32, 216, 255, 0.24);
+      --text: #e8f2ff;
+      --muted: #91a9c2;
+      --cyan: #20d8ff;
+      --green: #3ef0a1;
+      --amber: #ffcf5a;
+      --red: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at top, #12324a, #050812 60%);
-      color: #e8f2ff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(32,216,255,0.22), transparent 30%),
+        radial-gradient(circle at 80% 0%, rgba(62,240,161,0.16), transparent 25%),
+        linear-gradient(180deg, #08111f, #03060d 72%);
+      color: var(--text);
       min-height: 100vh;
-      padding: 32px;
     }
-    .wrap {
-      max-width: 1000px;
+    body:before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(32,216,255,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(32,216,255,0.045) 1px, transparent 1px);
+      background-size: 36px 36px;
+      pointer-events: none;
+      mask-image: linear-gradient(to bottom, black, transparent 90%);
+    }
+    .shell {
+      width: min(1180px, calc(100% - 32px));
       margin: 0 auto;
+      padding: 28px 0 44px;
+      position: relative;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .orb {
+      width: 46px;
+      height: 46px;
+      border: 1px solid var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 28px rgba(32,216,255,0.45), inset 0 0 18px rgba(32,216,255,0.12);
+      position: relative;
+    }
+    .orb:after {
+      content: "";
+      position: absolute;
+      inset: 11px;
+      border: 1px solid var(--green);
+      border-radius: 50%;
+    }
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
     }
     h1 {
-      font-size: 48px;
-      line-height: 1;
-      margin-bottom: 8px;
+      margin: 0;
+      font-size: clamp(42px, 7vw, 86px);
+      letter-spacing: -0.07em;
+      line-height: 0.88;
     }
-    p {
-      color: #a9bfd6;
+    .subtitle {
+      color: #b7cbe0;
+      max-width: 780px;
+      line-height: 1.55;
+      margin: 16px 0 0;
+      font-size: 16px;
+    }
+    .badge {
+      border: 1px solid var(--line);
+      background: rgba(7, 17, 31, 0.74);
+      color: #d8ebff;
+      padding: 10px 13px;
+      border-radius: 999px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+    .card {
+      background: linear-gradient(180deg, var(--panel), rgba(3, 8, 16, 0.9));
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: 20px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.38);
+      backdrop-filter: blur(12px);
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .metric {
+      background: rgba(3, 10, 18, 0.58);
+      border: 1px solid rgba(145,169,194,0.16);
+      border-radius: 18px;
+      padding: 14px;
+      min-height: 92px;
+    }
+    .metric b { display: block; font-size: 22px; color: #ffffff; }
+    .metric span { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; }
+    .input-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 0.65fr;
+      gap: 18px;
+      align-items: stretch;
     }
     textarea {
       width: 100%;
-      min-height: 180px;
-      border-radius: 16px;
-      border: 1px solid #1f6f95;
-      background: #07111f;
-      color: #e8f2ff;
-      padding: 16px;
+      min-height: 230px;
+      border-radius: 20px;
+      border: 1px solid rgba(32,216,255,0.38);
+      background: #06101d;
+      color: var(--text);
+      padding: 18px;
       font-size: 16px;
-      box-sizing: border-box;
+      line-height: 1.55;
+      resize: vertical;
+      outline: none;
     }
-    textarea::placeholder {
-      color: #6f879f;
-      opacity: 1;
-    }
+    textarea:focus { box-shadow: 0 0 0 4px rgba(32,216,255,0.12); border-color: var(--cyan); }
+    textarea::placeholder { color: #6f879f; opacity: 1; }
     button {
-      margin-top: 14px;
-      padding: 12px 18px;
-      border-radius: 12px;
-      border: 0;
-      background: linear-gradient(135deg, #20d8ff, #3ef0a1);
-      font-weight: 800;
+      border: 1px solid rgba(32,216,255,0.34);
+      border-radius: 14px;
+      padding: 13px 16px;
+      background: linear-gradient(135deg, #123b59, #0d2136);
+      color: var(--text);
+      font-weight: 850;
       cursor: pointer;
     }
+    button.primary {
+      border: 0;
+      background: linear-gradient(135deg, var(--cyan), var(--green));
+      color: #03111a;
+    }
+    button:hover { transform: translateY(-1px); }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .side-list { display: grid; gap: 10px; }
+    .side-item {
+      border: 1px solid rgba(145,169,194,0.16);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(3,10,18,0.48);
+      color: #cbdcf0;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .side-item b { color: var(--cyan); display: block; margin-bottom: 4px; }
     pre {
-      margin-top: 20px;
+      margin: 18px 0 0;
       white-space: pre-wrap;
-      background: rgba(5, 12, 22, 0.85);
+      background: rgba(5, 12, 22, 0.88);
       border: 1px solid rgba(32, 216, 255, 0.25);
-      border-radius: 18px;
+      border-radius: 20px;
       padding: 18px;
       line-height: 1.5;
+      min-height: 220px;
+      color: #eaf5ff;
+      overflow-x: auto;
+    }
+    .library {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 0.75fr 1.25fr;
+      gap: 18px;
+    }
+    .lib-list { display: grid; gap: 9px; }
+    .lib-item {
+      text-align: left;
+      width: 100%;
+      background: rgba(3,10,18,0.58);
+    }
+    .lib-content {
+      min-height: 260px;
+      max-height: 520px;
+      overflow: auto;
+    }
+    .status-line {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: #cde8ff;
+      font-size: 13px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 16px var(--green);
+    }
+    .footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+    @media (max-width: 900px) {
+      .hero, .input-grid, .library { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) {
+      .metrics { grid-template-columns: 1fr; }
+      .shell { width: min(100% - 20px, 1180px); }
+      h1 { font-size: 44px; }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <p>GosseOS / KnowledgeOS / Operator Fischer</p>
-    <h1>Prompterator API Test</h1>
-    <p>Rohinput rein. OpenAI API klassifiziert Problemklasse, Modus, Artefakt und Masterprompt.</p>
+  <main class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <div class="orb"></div>
+        <div>
+          <div class="eyebrow">GosseOS / KnowledgeOS</div>
+          <div class="status-line"><span class="dot"></span><span>Pentagon Ring-2 aktiv</span></div>
+        </div>
+      </div>
+      <div class="badge">Kostenbremse: 5 € Monatsziel + Request Limits</div>
+    </div>
 
-    <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
-    <br>
-    <button onclick="run()">Generieren</button>
+    <section class="hero">
+      <div>
+        <div class="eyebrow">Prompterator</div>
+        <h1>Rohinput rein.<br>Artefakt raus.</h1>
+        <p class="subtitle">Ein Operator-Leitstand für strukturierte KI-Arbeit: Problemklasse erkennen, Modus wählen, Artefakt-Blueprint bauen, Governance prüfen und wiederverwendbare Prompts erzeugen.</p>
+      </div>
+      <div class="card metrics">
+        <div class="metric"><b>Ring-2</b><span>Security-Hardening aktiv</span></div>
+        <div class="metric"><b>5 €</b><span>Monatsziel für Kostenkontrolle</span></div>
+        <div class="metric"><b id="dailyMetric">--</b><span>Tagesnutzung</span></div>
+        <div class="metric"><b id="monthlyMetric">--</b><span>Monatsnutzung</span></div>
+      </div>
+    </section>
+
+    <section class="card input-grid">
+      <div>
+        <div class="eyebrow">Rohinput</div>
+        <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
+        <div class="actions">
+          <button class="primary" onclick="run()">Generieren</button>
+          <button onclick="copyOutput()">Output kopieren</button>
+          <button onclick="clearAll()">Leeren</button>
+        </div>
+      </div>
+      <aside class="side-list">
+        <div class="side-item"><b>Input-Limit</b>Maximal 4.000 Zeichen pro Anfrage.</div>
+        <div class="side-item"><b>Rate Limit</b>Kurze Anfragewellen werden automatisch gebremst.</div>
+        <div class="side-item"><b>Governance</b>Bei Medizin, Recht, Finanzen und Sicherheit wird ein Prüfhinweis ergänzt.</div>
+        <div class="side-item"><b>Owner-Regel</b>Mensch entscheidet. KI strukturiert.</div>
+      </aside>
+    </section>
 
     <pre id="out">Noch kein Output.</pre>
-  </div>
+
+    <section class="library">
+      <div class="card">
+        <div class="eyebrow">Markdown-Bibliothek</div>
+        <p>Wiederverwendbare Operator-Fischer-Bausteine.</p>
+        <div id="libList" class="lib-list">Lade Bibliothek...</div>
+      </div>
+      <div class="card">
+        <div class="eyebrow">Bibliothekseintrag</div>
+        <pre id="libContent" class="lib-content">Noch kein Eintrag ausgewählt.</pre>
+      </div>
+    </section>
+
+    <div class="footer">Prompterator MVP · Operator Fischer Method · Rohinput → Problemklasse → Modus → Artefakt → Qualitätsprüfung → Governance → Wiederverwendung</div>
+  </main>
 
 <script>
 let workingTimer = null;
@@ -92,9 +320,26 @@ function stopWorkingAnimation() {
   }
 }
 
+async function refreshUsage() {
+  try {
+    const res = await fetch("/api/usage");
+    const data = await res.json();
+    document.getElementById("dailyMetric").textContent = `${data.daily_requests_used}/${data.daily_request_limit}`;
+    document.getElementById("monthlyMetric").textContent = `${data.monthly_requests_used}/${data.monthly_request_limit}`;
+  } catch (err) {
+    document.getElementById("dailyMetric").textContent = "--";
+    document.getElementById("monthlyMetric").textContent = "--";
+  }
+}
+
 async function run() {
-  const raw_input = document.getElementById("raw").value;
+  const raw_input = document.getElementById("raw").value.trim();
   const out = document.getElementById("out");
+
+  if (!raw_input) {
+    out.textContent = "Bitte erst Text eingeben.";
+    return;
+  }
 
   startWorkingAnimation(out);
 
@@ -108,11 +353,59 @@ async function run() {
     const data = await res.json();
     stopWorkingAnimation();
     out.textContent = data.result || data.error || JSON.stringify(data, null, 2);
+    refreshUsage();
   } catch (err) {
     stopWorkingAnimation();
     out.textContent = "Fehler: " + err.message;
   }
 }
+
+async function copyOutput() {
+  const text = document.getElementById("out").textContent;
+  await navigator.clipboard.writeText(text);
+}
+
+function clearAll() {
+  document.getElementById("raw").value = "";
+  document.getElementById("out").textContent = "Noch kein Output.";
+}
+
+async function loadLibrary() {
+  const list = document.getElementById("libList");
+  try {
+    const res = await fetch("/api/library");
+    const data = await res.json();
+    if (!data.items || data.items.length === 0) {
+      list.textContent = "Noch keine Bibliothekseinträge vorhanden.";
+      return;
+    }
+    list.innerHTML = "";
+    data.items.forEach(item => {
+      const btn = document.createElement("button");
+      btn.className = "lib-item";
+      btn.textContent = item.title;
+      btn.onclick = () => loadLibraryEntry(item.slug);
+      list.appendChild(btn);
+    });
+  } catch (err) {
+    list.textContent = "Bibliothek konnte nicht geladen werden.";
+  }
+}
+
+async function loadLibraryEntry(slug) {
+  const out = document.getElementById("libContent");
+  out.textContent = "Lade...";
+  try {
+    const res = await fetch(`/api/library/${encodeURIComponent(slug)}`);
+    const data = await res.json();
+    out.textContent = data.markdown || data.error || JSON.stringify(data, null, 2);
+  } catch (err) {
+    out.textContent = "Fehler: " + err.message;
+  }
+}
+
+refreshUsage();
+loadLibrary();
 </script>
 </body>
 </html>
