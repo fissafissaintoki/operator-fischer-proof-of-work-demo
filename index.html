@@ -36,6 +36,10 @@
       font-size: 16px;
       box-sizing: border-box;
     }
+    textarea::placeholder {
+      color: #6f879f;
+      opacity: 1;
+    }
     button {
       margin-top: 14px;
       padding: 12px 18px;
@@ -62,7 +66,7 @@
     <h1>Prompterator API Test</h1>
     <p>Rohinput rein. OpenAI API klassifiziert Problemklasse, Modus, Artefakt und Masterprompt.</p>
 
-    <textarea id="raw">Wir verlieren im Wareneingang Zeit, weil Temperaturabweichungen bei MoPro-Lieferungen uneinheitlich bewertet werden. Ich brauche eine Entscheidungshilfe mit QS-Eskalation, Dokumentation, Sperrlogik und KPI-Annahmen.</textarea>
+    <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
     <br>
     <button onclick="run()">Generieren</button>
 
