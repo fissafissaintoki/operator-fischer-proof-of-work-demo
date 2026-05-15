@@ -2,8 +2,28 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <title>Prompterator API Test</title>
+  <title>Prompterator – KI Prompt Generator für strukturierte Arbeitsartefakte</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Prompterator verwandelt Rohinput in Problemklasse, Arbeitsmodus, Artefakt-Blueprint, Qualitätsprüfung, Governance und Masterprompt.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.prompterator.de/">
+  <meta property="og:title" content="Prompterator – KI Prompt Generator">
+  <meta property="og:description" content="Rohinput rein. Strukturierte Arbeitsartefakte raus: Problemklasse, Modus, Blueprint, Governance und Masterprompt.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.prompterator.de/">
+  <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Prompterator",
+    "applicationCategory": "ProductivityApplication",
+    "operatingSystem": "Web",
+    "url": "https://www.prompterator.de/",
+    "description": "Prompterator verwandelt Rohinput in Problemklasse, Arbeitsmodus, Artefakt-Blueprint, Qualitätsprüfung, Governance und Masterprompt.",
+    "creator": {"@type": "Person", "name": "Peter Fischer"}
+  }
+  </script>
   <style>
     body {
       margin: 0;
@@ -13,18 +33,9 @@
       min-height: 100vh;
       padding: 32px;
     }
-    .wrap {
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-    h1 {
-      font-size: 48px;
-      line-height: 1;
-      margin-bottom: 8px;
-    }
-    p {
-      color: #a9bfd6;
-    }
+    .wrap { max-width: 1000px; margin: 0 auto; }
+    h1 { font-size: 48px; line-height: 1; margin-bottom: 8px; }
+    p { color: #a9bfd6; }
     textarea {
       width: 100%;
       min-height: 180px;
@@ -36,10 +47,7 @@
       font-size: 16px;
       box-sizing: border-box;
     }
-    textarea::placeholder {
-      color: #6f879f;
-      opacity: 1;
-    }
+    textarea::placeholder { color: #6f879f; opacity: 1; }
     button {
       margin-top: 14px;
       padding: 12px 18px;
@@ -63,8 +71,8 @@
 <body>
   <div class="wrap">
     <p>GosseOS / KnowledgeOS / Operator Fischer</p>
-    <h1>Prompterator API Test</h1>
-    <p>Rohinput rein. OpenAI API klassifiziert Problemklasse, Modus, Artefakt und Masterprompt.</p>
+    <h1>Prompterator</h1>
+    <p>KI Prompt Generator für strukturierte Arbeitsartefakte: Rohinput rein, Problemklasse, Modus, Artefakt-Blueprint, Governance und Masterprompt raus.</p>
 
     <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
     <br>
