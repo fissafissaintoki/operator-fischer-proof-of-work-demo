@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Prompterator API Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at top, #12324a, #050812 60%);
+      color: #e8f2ff;
+      min-height: 100vh;
+      padding: 32px;
+    }
+    .wrap {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 48px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #a9bfd6;
+    }
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      border-radius: 16px;
+      border: 1px solid #1f6f95;
+      background: #07111f;
+      color: #e8f2ff;
+      padding: 16px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 14px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 0;
+      background: linear-gradient(135deg, #20d8ff, #3ef0a1);
+      font-weight: 800;
+      cursor: pointer;
+    }
+    pre {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: rgba(5, 12, 22, 0.85);
+      border: 1px solid rgba(32, 216, 255, 0.25);
+      border-radius: 18px;
+      padding: 18px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p>GosseOS / KnowledgeOS / Operator Fischer</p>
+    <h1>Prompterator API Test</h1>
+    <p>Rohinput rein. OpenAI API klassifiziert Problemklasse, Modus, Artefakt und Masterprompt.</p>
+
+    <textarea id="raw">Wir verlieren im Wareneingang Zeit, weil Temperaturabweichungen bei MoPro-Lieferungen uneinheitlich bewertet werden. Ich brauche eine Entscheidungshilfe mit QS-Eskalation, Dokumentation, Sperrlogik und KPI-Annahmen.</textarea>
+    <br>
+    <button onclick="run()">Generieren</button>
+
+    <pre id="out">Noch kein Output.</pre>
+  </div>
+
+<script>
+let workingTimer = null;
+
+function startWorkingAnimation(out) {
+  let dots = 0;
+  out.textContent = "Arbeite";
+  workingTimer = setInterval(() => {
+    dots = (dots + 1) % 4;
+    out.textContent = "Arbeite" + ".".repeat(dots);
+  }, 400);
+}
+
+function stopWorkingAnimation() {
+  if (workingTimer) {
+    clearInterval(workingTimer);
+    workingTimer = null;
+  }
+}
+
+async function run() {
+  const raw_input = document.getElementById("raw").value;
+  const out = document.getElementById("out");
+
+  startWorkingAnimation(out);
+
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({raw_input})
+    });
+
+    const data = await res.json();
+    stopWorkingAnimation();
+    out.textContent = data.result || data.error || JSON.stringify(data, null, 2);
+  } catch (err) {
+    stopWorkingAnimation();
+    out.textContent = "Fehler: " + err.message;
+  }
+}
+</script>
+</body>
+</html>
