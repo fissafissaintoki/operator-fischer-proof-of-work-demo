@@ -23,6 +23,13 @@ DAILY_REQUEST_LIMIT = int(os.environ.get("DAILY_REQUEST_LIMIT", "30"))
 MONTHLY_REQUEST_LIMIT = int(os.environ.get("MONTHLY_REQUEST_LIMIT", "300"))
 MONTHLY_BUDGET_EUR = float(os.environ.get("MONTHLY_BUDGET_EUR", "5.00"))
 
+BASE_URL = "https://www.prompterator.de"
+SEO_ROUTES = {
+    "/ki-prompt-generator": "pages/ki-prompt-generator.html",
+    "/ki-use-case-generator": "pages/ki-use-case-generator.html",
+    "/operator-fischer-method": "pages/operator-fischer-method.html",
+}
+
 DEFAULT_ALLOWED_ORIGINS = {
     "https://prompterator.de",
     "https://www.prompterator.de",
@@ -41,8 +48,6 @@ ALLOWED_ORIGINS = DEFAULT_ALLOWED_ORIGINS | extra_origins
 request_log = defaultdict(deque)
 daily_usage = defaultdict(int)
 monthly_usage = defaultdict(int)
-
-LIBRARY_DIR = Path("library")
 
 SYSTEM_PROMPT = """
 Du arbeitest als Prompterator im Operator-Fischer-Modus.
@@ -125,31 +130,19 @@ def origin_allowed(origin: str | None) -> bool:
     return normalized in ALLOWED_ORIGINS
 
 
-def sanitize_slug(slug: str) -> str:
-    return "".join(ch for ch in slug if ch.isalnum() or ch in ("-", "_"))[:80]
-
-
-def list_library() -> list[dict]:
-    if not LIBRARY_DIR.exists():
-        return []
+def sitemap_xml() -> str:
+    urls = ["/", *SEO_ROUTES.keys()]
+    now_date = time.strftime("%Y-%m-%d", time.gmtime())
     items = []
-    for path in sorted(LIBRARY_DIR.glob("*.md")):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        title = path.stem.replace("-", " ").title()
-        for line in text.splitlines():
-            if line.startswith("# "):
-                title = line[2:].strip()
-                break
-        items.append({"slug": path.stem, "title": title})
-    return items
+    for route in urls:
+        loc = f"{BASE_URL}{route if route != '/' else '/'}"
+        priority = "1.0" if route == "/" else "0.8"
+        items.append(f"""  <url>\n    <loc>{loc}</loc>\n    <lastmod>{now_date}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>{priority}</priority>\n  </url>""")
+    return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n" + "\n".join(items) + "\n</urlset>\n"
 
 
-def read_library(slug: str) -> tuple[bool, str, str]:
-    clean = sanitize_slug(slug)
-    path = LIBRARY_DIR / f"{clean}.md"
-    if not path.exists() or not path.is_file():
-        return False, clean, ""
-    return True, clean, path.read_text(encoding="utf-8", errors="replace")
+def robots_txt() -> str:
+    return f"User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: {BASE_URL}/sitemap.xml\n"
 
 
 def call_openai(raw_input: str) -> str:
@@ -214,7 +207,7 @@ Ausgabeformat:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PrompteratorRing2/2.0"
+    server_version = "PrompteratorRing2/2.1"
 
     def log_message(self, format: str, *args):
         print("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
@@ -258,7 +251,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send(204, "")
 
     def do_HEAD(self):
-        if self.path in ("/", "/index.html", "/health"):
+        if self.path in ("/", "/index.html", "/health", "/robots.txt", "/sitemap.xml", *SEO_ROUTES.keys()):
             self._send(200, "")
         else:
             self._send(404, "")
@@ -267,20 +260,18 @@ class Handler(BaseHTTPRequestHandler):
         if self.path in ("/", "/index.html"):
             html = Path("index.html").read_text(encoding="utf-8")
             self._send(200, html, "text/html; charset=utf-8")
+        elif self.path in SEO_ROUTES:
+            html = Path(SEO_ROUTES[self.path]).read_text(encoding="utf-8")
+            self._send(200, html, "text/html; charset=utf-8")
+        elif self.path == "/sitemap.xml":
+            self._send(200, sitemap_xml(), "application/xml; charset=utf-8")
+        elif self.path == "/robots.txt":
+            self._send(200, robots_txt(), "text/plain; charset=utf-8")
         elif self.path == "/health":
-            body = {"status": "ok", "model": MODEL, "ring": "2"}
+            body = {"status": "ok", "model": MODEL, "ring": "2", "seo": "active"}
             if os.environ.get("SHOW_HEALTH_DETAIL", "false").lower() == "true":
                 body["openai_key_set"] = bool(OPENAI_API_KEY)
             self._send_json(200, body)
-        elif self.path == "/api/library":
-            self._send_json(200, {"items": list_library()})
-        elif self.path.startswith("/api/library/"):
-            slug = self.path.rsplit("/", 1)[-1].replace(".md", "")
-            ok, clean, text = read_library(slug)
-            if not ok:
-                self._send_json(404, {"error": "Bibliothekseintrag nicht gefunden"})
-                return
-            self._send_json(200, {"slug": clean, "markdown": text})
         elif self.path == "/api/usage":
             self._send_json(200, {
                 "daily_requests_used": daily_usage[day_key()],
@@ -290,8 +281,6 @@ class Handler(BaseHTTPRequestHandler):
                 "monthly_budget_eur_target": MONTHLY_BUDGET_EUR,
                 "note": "App-seitige Kostenbremse. Das harte Abrechnungslimit muss zusätzlich im OpenAI-Projektbudget gesetzt werden."
             })
-        elif self.path == "/robots.txt":
-            self._send(200, "User-agent: *\nDisallow: /api/\n", "text/plain; charset=utf-8")
         elif self.path == "/favicon.ico":
             self._send(204, "")
         else:
