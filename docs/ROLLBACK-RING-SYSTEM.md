@@ -13,6 +13,77 @@ Ziel: Sicherheits- oder Interface-Änderungen kontrolliert zurückbauen, ohne Se
 
 Bevorzugt wird `git revert`, nicht `git reset --hard` auf `main`. Dadurch bleibt die Historie nachvollziehbar und Render kann sauber neu deployen.
 
+## Commit nicht zur Hand?
+
+Ja, die Ringe lassen sich auch ohne bekannte Commit-ID lösen.
+
+### Variante A: Commit über Nachricht finden
+
+```bash
+git log --oneline --all --grep="ring"
+git log --oneline --all --grep="security"
+git log --oneline --all --grep="firewall"
+git log --oneline --all --grep="defaults"
+```
+
+Dann den passenden Hash aus der linken Spalte verwenden:
+
+```bash
+git revert <GEFUNDENER_HASH>
+git push origin main
+```
+
+### Variante B: letzte Änderungen anzeigen
+
+```bash
+git log --oneline -20
+```
+
+### Variante C: Datei-Historie anzeigen
+
+Für Backend-Schutz:
+
+```bash
+git log --oneline -- server.py
+```
+
+Für Interface:
+
+```bash
+git log --oneline -- index.html
+```
+
+Für CI/Governance:
+
+```bash
+git log --oneline -- .github/workflows/ring7-ci.yml .gitignore docs/ROLLBACK-RING-SYSTEM.md
+```
+
+### Variante D: gezielt nach geändertem Inhalt suchen
+
+```bash
+git log -S "GENERATE_ENABLED" --oneline -- server.py
+git log -S "RATE_LIMIT_MAX_REQUESTS" --oneline -- server.py
+git log -S "PrompteratorRing" --oneline -- server.py
+git log -S "Ring 7 CI" --oneline -- .github/workflows/ring7-ci.yml
+```
+
+### Variante E: ohne Commit direkt über Render entschärfen
+
+Wenn nicht klar ist, welcher Commit verantwortlich ist, erst Betrieb stabilisieren:
+
+```text
+GENERATE_ENABLED=false
+REQUIRE_ORIGIN_FOR_GENERATE=false
+RATE_LIMIT_MAX_REQUESTS=6
+MAX_INPUT_CHARS=4000
+MAX_OUTPUT_TOKENS=1800
+DAILY_REQUEST_LIMIT=30
+MONTHLY_REQUEST_LIMIT=300
+```
+
+Danach in Ruhe den passenden Commit suchen.
+
 ## Standard-Rollback: letzten Commit zurücknehmen
 
 ```bash
