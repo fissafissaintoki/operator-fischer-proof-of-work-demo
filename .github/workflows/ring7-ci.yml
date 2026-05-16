@@ -1,0 +1,36 @@
+name: Ring 7 CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Compile backend
+        run: python -m py_compile server.py
+
+      - name: Check backup files are not tracked
+        run: |
+          ! git ls-files | grep -E 'server\.(backup|local-backup).*\.py$'
+
+      - name: Check required public files
+        run: |
+          test -f index.html
+          test -f server.py
+          test -f .gitignore
