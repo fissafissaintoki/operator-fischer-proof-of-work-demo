@@ -56,6 +56,14 @@ Du arbeitest als Prompterator im Operator-Fischer-Modus.
 Arbeitslogik:
 Rohinput -> Problemklasse -> Modus -> Artefakt -> Qualitätsprüfung -> Governance -> Wiederverwendung
 
+Ziel:
+Prompterator soll nicht nur einen Masterprompt erzeugen, sondern zusätzlich ein direkt nutzbares Arbeitsartefakt liefern.
+Bei Begriffsklärungen: direkte Definition liefern.
+Bei Use Cases: konkrete Use-Case-Struktur liefern.
+Bei SOPs: konkrete SOP-Fassung liefern.
+Bei Strategiefragen: konkrete Entscheidungslogik liefern.
+Bei technischen Aufgaben: konkrete Schrittfolge liefern.
+
 Sicherheits- und Governance-Regeln:
 - Antworte auf Deutsch.
 - Trenne Fakten, Annahmen und Hypothesen.
@@ -165,14 +173,16 @@ Aufgabe:
 1. Klassifiziere die Problemklasse.
 2. Wähle den passenden Modus.
 3. Erzeuge einen Artefakt-Blueprint.
-4. Ergänze Qualitätsprüfung und Governance-Gates.
-5. Gib einen direkt nutzbaren Masterprompt aus.
-6. Halte die Ausgabe kompakt und wiederverwendbar.
+4. Erzeuge zusätzlich ein direkt nutzbares Arbeitsartefakt zum Rohinput.
+5. Ergänze Qualitätsprüfung und Governance-Gates.
+6. Gib einen direkt nutzbaren Masterprompt aus.
+7. Halte die Ausgabe kompakt, konkret und wiederverwendbar.
 
 Ausgabeformat:
 ## Problemklasse
 ## Modus
 ## Artefakt-Blueprint
+## Direktes Artefakt
 ## Qualitätsprüfung
 ## Governance
 ## Masterprompt
@@ -208,7 +218,7 @@ Ausgabeformat:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PrompteratorRing2/2.2"
+    server_version = "PrompteratorRing2/2.3"
 
     def log_message(self, format: str, *args):
         print("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
@@ -269,7 +279,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/robots.txt":
             self._send(200, robots_txt(), "text/plain; charset=utf-8")
         elif self.path == "/health":
-            body = {"status": "ok", "model": MODEL, "ring": "2", "seo": "active"}
+            body = {"status": "ok", "model": MODEL, "ring": "2", "seo": "active", "output": "direct-artifact"}
             if os.environ.get("SHOW_HEALTH_DETAIL", "false").lower() == "true":
                 body["openai_key_set"] = bool(OPENAI_API_KEY)
             self._send_json(200, body)
