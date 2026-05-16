@@ -2,13 +2,13 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <title>Prompterator – KI Prompt Generator für strukturierte Arbeitsartefakte</title>
+  <title>Prompterator – AI Operations Proof-of-Work</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Prompterator verwandelt Rohinput in Problemklasse, Arbeitsmodus, Artefakt-Blueprint, Qualitätsprüfung, Governance und Masterprompt.">
+  <meta name="description" content="Prompterator verwandelt Rohinput in strukturierte KI-Arbeitsartefakte: Problemklasse, Modus, Blueprint, Governance, Qualitätsprüfung und Masterprompt.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.prompterator.de/">
-  <meta property="og:title" content="Prompterator – KI Prompt Generator">
-  <meta property="og:description" content="Rohinput rein. Strukturierte Arbeitsartefakte raus: Problemklasse, Modus, Blueprint, Governance und Masterprompt.">
+  <meta property="og:title" content="Prompterator – AI Operations Proof-of-Work">
+  <meta property="og:description" content="Rohinput rein. Strukturierte Arbeitsartefakte raus. Ein Proof-of-Work für KI-gestützte Prozesslogik, Governance und Prompt Engineering.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.prompterator.de/">
   <meta name="twitter:card" content="summary">
@@ -20,156 +20,724 @@
     "applicationCategory": "ProductivityApplication",
     "operatingSystem": "Web",
     "url": "https://www.prompterator.de/",
-    "description": "Prompterator verwandelt Rohinput in Problemklasse, Arbeitsmodus, Artefakt-Blueprint, Qualitätsprüfung, Governance und Masterprompt.",
+    "description": "Prompterator verwandelt Rohinput in strukturierte KI-Arbeitsartefakte mit Problemklasse, Modus, Blueprint, Governance und Masterprompt.",
     "creator": {"@type": "Person", "name": "Peter Fischer"}
   }
   </script>
   <style>
+    :root {
+      --bg: #04070d;
+      --panel: rgba(6, 14, 25, 0.78);
+      --panel-strong: rgba(7, 18, 32, 0.94);
+      --line: rgba(118, 209, 255, 0.18);
+      --line-warm: rgba(255, 187, 72, 0.30);
+      --text: #edf6ff;
+      --muted: #a8bbcf;
+      --soft: #6f879f;
+      --cyan: #23d6ff;
+      --green: #3ef0a1;
+      --amber: #ffd45a;
+      --orange: #ff8a00;
+      --red: #ff4b2f;
+      --shadow: 0 26px 90px rgba(0, 0, 0, 0.42);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background:
-        radial-gradient(circle at 20% 0%, rgba(255, 196, 64, 0.35), transparent 28%),
-        radial-gradient(circle at 90% 10%, rgba(255, 120, 0, 0.30), transparent 24%),
-        radial-gradient(circle at 50% 100%, rgba(32, 216, 255, 0.15), transparent 38%),
-        linear-gradient(135deg, #160d03, #07111f 48%, #050812 100%);
-      color: #e8f2ff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
       min-height: 100vh;
-      padding: 32px;
+      background:
+        radial-gradient(circle at 16% 2%, rgba(35, 214, 255, 0.22), transparent 28%),
+        radial-gradient(circle at 88% 0%, rgba(255, 138, 0, 0.28), transparent 22%),
+        radial-gradient(circle at 52% 110%, rgba(62, 240, 161, 0.15), transparent 38%),
+        linear-gradient(135deg, #04070d 0%, #07111f 43%, #110b05 100%);
+      overflow-x: hidden;
     }
+
     body::before {
       content: "";
       position: fixed;
       inset: 0;
+      z-index: -2;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+        radial-gradient(circle at 20% 12%, rgba(255, 212, 90, 0.12), transparent 18%),
+        radial-gradient(circle at 78% 8%, rgba(35, 214, 255, 0.12), transparent 18%);
+      background-size: 54px 54px, 54px 54px, 100% 100%, 100% 100%;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.88), rgba(0,0,0,0.16));
+      opacity: 0.75;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -80px;
       z-index: -1;
       background:
-        repeating-linear-gradient(135deg, rgba(255, 212, 90, 0.06) 0 18px, transparent 18px 36px),
-        repeating-linear-gradient(45deg, rgba(58, 82, 40, 0.12) 0 22px, transparent 22px 44px);
-      animation: pulseBg 8s ease-in-out infinite;
+        conic-gradient(from 90deg at 70% 22%, transparent, rgba(255, 138, 0, 0.10), transparent 34%),
+        conic-gradient(from 220deg at 28% 18%, transparent, rgba(35, 214, 255, 0.10), transparent 40%);
+      filter: blur(12px);
+      animation: slowDrift 14s ease-in-out infinite alternate;
+      pointer-events: none;
     }
-    @keyframes pulseBg {
-      0%, 100% { transform: translate(0, 0); opacity: 0.72; }
-      50% { transform: translate(-8px, 4px); opacity: 0.95; }
+
+    @keyframes slowDrift {
+      from { transform: translate3d(-8px, -4px, 0) scale(1); }
+      to { transform: translate3d(10px, 7px, 0) scale(1.02); }
     }
+
     @keyframes flameFlicker {
-      0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 112, 0, 0.65)); transform: skewX(-2deg) scale(1); }
-      35% { filter: drop-shadow(0 0 22px rgba(255, 191, 0, 0.95)); transform: skewX(1deg) scale(1.012); }
-      70% { filter: drop-shadow(0 0 16px rgba(255, 55, 0, 0.85)); transform: skewX(-1deg) scale(1.006); }
+      0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 112, 0, 0.55)); transform: skewX(-1.2deg) scale(1); }
+      42% { filter: drop-shadow(0 0 22px rgba(255, 191, 0, 0.86)); transform: skewX(0.8deg) scale(1.006); }
+      72% { filter: drop-shadow(0 0 15px rgba(255, 55, 0, 0.78)); transform: skewX(-0.6deg) scale(1.003); }
     }
-    .wrap { max-width: 1000px; margin: 0 auto; }
-    .topline { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 12px; }
-    .system-label { color: #a9bfd6; margin: 0; }
-    .ff-badge {
-      border: 1px solid rgba(255, 196, 64, 0.55);
-      border-radius: 12px;
-      padding: 9px 12px;
-      background: linear-gradient(135deg, rgba(255, 136, 0, 0.22), rgba(7, 17, 31, 0.88));
-      color: #ffe6a0;
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      text-shadow: 0 0 12px rgba(255, 136, 0, 0.8);
-      white-space: nowrap;
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 22px 58px;
     }
-    h1 {
-      font-size: 68px;
-      line-height: 0.95;
-      margin: 0 0 12px;
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 34px;
+      padding: 12px 14px;
+      border: 1px solid rgba(118, 209, 255, 0.15);
+      background: rgba(4, 7, 13, 0.42);
+      border-radius: 999px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 14px 60px rgba(0,0,0,0.22);
+    }
+
+    .brand-mini {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(35,214,255,0.95), rgba(62,240,161,0.86));
+      color: #03111a;
       font-weight: 1000;
-      letter-spacing: -0.055em;
+      box-shadow: 0 0 34px rgba(35, 214, 255, 0.24);
+    }
+
+    .brand-mini strong { display: block; font-size: 14px; letter-spacing: 0.02em; }
+    .brand-mini span { display: block; color: var(--soft); font-size: 12px; margin-top: 1px; }
+
+    .nav-links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 999px;
+    }
+
+    .nav a:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      border: 1px solid rgba(255, 212, 90, 0.42);
+      border-radius: 999px;
+      padding: 7px 11px;
+      color: #ffe7a6;
+      background: linear-gradient(135deg, rgba(255, 138, 0, 0.15), rgba(7, 17, 31, 0.72));
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      background: linear-gradient(180deg, #fff6b7 0%, #ffd45a 22%, #ff8a00 48%, #ff3b00 72%, #3a0800 100%);
+      white-space: nowrap;
+      box-shadow: 0 0 24px rgba(255, 138, 0, 0.12);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) 360px;
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .hero-card, .side-card, .generator, .section-card, .feature, .status-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-card {
+      position: relative;
+      overflow: hidden;
+      padding: 34px;
+      min-height: 480px;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 72% 12%, rgba(255, 212, 90, 0.15), transparent 24%),
+        radial-gradient(circle at 15% 20%, rgba(35, 214, 255, 0.13), transparent 22%),
+        linear-gradient(135deg, rgba(255,255,255,0.05), transparent 55%);
+      pointer-events: none;
+    }
+
+    .hero-inner { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--green);
+      background: rgba(62, 240, 161, 0.08);
+      border: 1px solid rgba(62, 240, 161, 0.22);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(54px, 8vw, 92px);
+      line-height: 0.89;
+      font-weight: 1000;
+      letter-spacing: -0.075em;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, #fff7c4 0%, #ffd45a 23%, #ff8a00 50%, #ff3b00 74%, #3a0800 100%);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
-      -webkit-text-stroke: 1px rgba(255, 229, 145, 0.62);
+      -webkit-text-stroke: 1px rgba(255, 229, 145, 0.54);
       text-shadow:
-        0 0 8px rgba(255, 238, 160, 0.55),
-        0 0 18px rgba(255, 136, 0, 0.95),
-        0 0 38px rgba(255, 56, 0, 0.78),
-        0 4px 0 rgba(44, 8, 0, 0.95);
-      animation: flameFlicker 2.8s ease-in-out infinite;
+        0 0 8px rgba(255, 238, 160, 0.42),
+        0 0 18px rgba(255, 136, 0, 0.82),
+        0 0 38px rgba(255, 56, 0, 0.62),
+        0 4px 0 rgba(44, 8, 0, 0.88);
+      animation: flameFlicker 3.4s ease-in-out infinite;
     }
-    p { color: #a9bfd6; }
-    .panel {
-      background: rgba(5, 12, 22, 0.82);
-      border: 1px solid rgba(255, 196, 64, 0.25);
-      border-radius: 20px;
+
+    .headline-sub {
+      font-size: clamp(19px, 2.6vw, 30px);
+      line-height: 1.18;
+      max-width: 780px;
+      margin: 0 0 18px;
+      color: #d8e9fa;
+      letter-spacing: -0.025em;
+      font-weight: 780;
+    }
+
+    .lead {
+      color: var(--muted);
+      max-width: 760px;
+      font-size: 16px;
+      line-height: 1.65;
+      margin: 0 0 24px;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin: 24px 0;
+    }
+
+    .button-link, button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      border: 0;
+      border-radius: 14px;
+      padding: 13px 17px;
+      text-decoration: none;
+      font-weight: 950;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+    }
+
+    .button-link.primary, button.primary {
+      color: #03111a;
+      background: linear-gradient(135deg, var(--cyan), var(--green));
+      box-shadow: 0 12px 38px rgba(35, 214, 255, 0.16);
+    }
+
+    .button-link.secondary, button.secondary {
+      color: #1b1000;
+      background: linear-gradient(135deg, var(--amber), var(--orange));
+      box-shadow: 0 12px 38px rgba(255, 138, 0, 0.15);
+    }
+
+    .button-link.ghost {
+      color: var(--text);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.11);
+    }
+
+    .button-link:hover, button:hover { transform: translateY(-1px); filter: brightness(1.04); }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 28px;
+    }
+
+    .pipe-step {
+      border: 1px solid rgba(118, 209, 255, 0.18);
+      background: rgba(3, 10, 19, 0.60);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 86px;
+    }
+
+    .pipe-step small {
+      display: block;
+      color: var(--amber);
+      font-weight: 900;
+      margin-bottom: 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .pipe-step span { font-size: 13px; color: #dbefff; font-weight: 760; }
+
+    .side-card {
       padding: 22px;
-      box-shadow: 0 24px 70px rgba(0,0,0,0.34);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
     }
+
+    .side-card h2, .section-title h2, .generator h2 {
+      margin: 0;
+      letter-spacing: -0.035em;
+    }
+
+    .score-ring {
+      border-radius: 24px;
+      padding: 24px;
+      background:
+        radial-gradient(circle at center, rgba(62, 240, 161, 0.16), transparent 58%),
+        rgba(3, 10, 19, 0.62);
+      border: 1px solid rgba(62, 240, 161, 0.22);
+      text-align: center;
+    }
+
+    .score-ring .number {
+      font-size: 72px;
+      line-height: 1;
+      font-weight: 1000;
+      letter-spacing: -0.08em;
+      color: var(--green);
+      text-shadow: 0 0 28px rgba(62, 240, 161, 0.34);
+    }
+
+    .score-ring p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .status-card {
+      border-radius: 16px;
+      padding: 13px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: none;
+      background: rgba(3, 10, 19, 0.58);
+    }
+
+    .status-card span:first-child { color: var(--muted); font-size: 13px; }
+    .status-card span:last-child { color: var(--green); font-size: 12px; font-weight: 950; text-transform: uppercase; }
+
+    .generator {
+      position: relative;
+      overflow: hidden;
+      margin: 22px 0;
+      padding: 26px;
+      background: var(--panel-strong);
+      border-color: rgba(255, 212, 90, 0.23);
+    }
+
+    .generator::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255, 212, 90, 0.08), transparent 38%, rgba(35,214,255,0.07));
+      pointer-events: none;
+    }
+
+    .generator-inner { position: relative; z-index: 1; }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-end;
+      margin-bottom: 18px;
+    }
+
+    .section-title p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 710px;
+    }
+
+    .input-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: #dbefff;
+      font-size: 13px;
+      font-weight: 880;
+      margin: 18px 0 9px;
+    }
+
+    .input-label span:last-child { color: var(--soft); font-weight: 650; }
+
     textarea {
       width: 100%;
-      min-height: 180px;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 196, 64, 0.42);
-      background: #07111f;
-      color: #e8f2ff;
-      padding: 16px;
-      font-size: 16px;
-      box-sizing: border-box;
-      outline: none;
-    }
-    textarea:focus { border-color: #ffd45a; box-shadow: 0 0 0 4px rgba(255, 212, 90, 0.12); }
-    textarea::placeholder { color: #6f879f; opacity: 1; }
-    button {
-      margin-top: 14px;
-      padding: 12px 18px;
-      border-radius: 12px;
-      border: 0;
-      background: linear-gradient(135deg, #20d8ff, #3ef0a1);
-      color: #03111a;
-      font-weight: 900;
-      cursor: pointer;
-    }
-    button.copy {
-      background: linear-gradient(135deg, #ffd45a, #ff8a00);
-      color: #1b1000;
-    }
-    pre {
-      margin-top: 20px;
-      white-space: pre-wrap;
-      background: rgba(5, 12, 22, 0.88);
-      border: 1px solid rgba(255, 196, 64, 0.28);
-      border-radius: 18px;
+      min-height: 190px;
+      resize: vertical;
+      border-radius: 20px;
+      border: 1px solid rgba(118, 209, 255, 0.24);
+      background: rgba(2, 8, 16, 0.82);
+      color: var(--text);
       padding: 18px;
-      line-height: 1.5;
-      min-height: 130px;
+      font-size: 16px;
+      line-height: 1.55;
+      outline: none;
+      box-shadow: inset 0 0 34px rgba(0,0,0,0.24);
     }
-    .copy-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 10px; }
-    #copyStatus { color: #ffd45a; font-size: 13px; }
+
+    textarea:focus {
+      border-color: rgba(35,214,255,0.70);
+      box-shadow: 0 0 0 4px rgba(35, 214, 255, 0.10), inset 0 0 34px rgba(0,0,0,0.24);
+    }
+
+    textarea::placeholder { color: #728ba4; opacity: 1; }
+
+    .generator-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 14px 0 0;
+    }
+
+    .hint { color: var(--soft); font-size: 13px; line-height: 1.45; }
+
+    pre {
+      margin: 20px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: rgba(2, 8, 16, 0.82);
+      border: 1px solid rgba(255, 212, 90, 0.22);
+      border-radius: 20px;
+      padding: 18px;
+      line-height: 1.55;
+      min-height: 160px;
+      color: #eef7ff;
+      box-shadow: inset 0 0 34px rgba(0,0,0,0.20);
+    }
+
+    .copy-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    #copyStatus { color: var(--amber); font-size: 13px; min-height: 18px; }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 22px 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 22px 0;
+    }
+
+    .feature, .section-card {
+      padding: 20px;
+      box-shadow: 0 18px 70px rgba(0,0,0,0.24);
+    }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, rgba(35,214,255,0.18), rgba(62,240,161,0.10));
+      border: 1px solid rgba(118, 209, 255, 0.18);
+      color: var(--cyan);
+      font-weight: 1000;
+    }
+
+    .feature h3, .section-card h3 {
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+      font-size: 18px;
+    }
+
+    .feature p, .section-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.58;
+      font-size: 14px;
+    }
+
+    .proof-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .proof-row {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(2, 8, 16, 0.52);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .proof-row strong { color: #e9f7ff; }
+
+    .footer {
+      margin-top: 28px;
+      padding: 18px 0 0;
+      color: var(--soft);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .mobile-break { display: none; }
+
+    @media (max-width: 940px) {
+      .hero { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3, .grid-2 { grid-template-columns: 1fr; }
+      .side-card { order: -1; }
+    }
+
     @media (max-width: 720px) {
-      body { padding: 18px; }
-      .topline { flex-direction: column; align-items: flex-start; }
-      .ff-badge { white-space: normal; }
-      h1 { font-size: 46px; }
-      .copy-row { justify-content: flex-start; flex-wrap: wrap; }
+      .page { padding: 16px 14px 42px; }
+      .nav { border-radius: 22px; align-items: flex-start; flex-direction: column; }
+      .nav-links { justify-content: flex-start; }
+      .hero-card, .generator { padding: 20px; border-radius: 22px; }
+      .pipeline { grid-template-columns: 1fr; }
+      h1 { font-size: 50px; }
+      .headline-sub { font-size: 20px; }
+      .proof-row { grid-template-columns: 1fr; }
+      .section-title { align-items: flex-start; flex-direction: column; }
+      .copy-row, .generator-actions { justify-content: flex-start; }
+      .mobile-break { display: block; }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="topline">
-      <p class="system-label">GosseOS / KnowledgeOS / Operator Fischer</p>
-      <div class="ff-badge">FF-OOC</div>
-    </div>
-
-    <div class="panel">
-      <h1>Prompterator</h1>
-      <p>KI Prompt Generator für strukturierte Arbeitsartefakte: Rohinput rein, Problemklasse, Modus, Artefakt-Blueprint, Governance und Masterprompt raus.</p>
-
-      <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
-      <br>
-      <button onclick="run()">Generieren</button>
-
-      <pre id="out">Noch kein Output.</pre>
-      <div class="copy-row">
-        <span id="copyStatus"></span>
-        <button class="copy" onclick="copyOutput()">Output kopieren</button>
+  <main class="page">
+    <nav class="nav" aria-label="Hauptnavigation">
+      <div class="brand-mini">
+        <div class="mark">P</div>
+        <div>
+          <strong>Prompterator</strong>
+          <span>AI Operations Proof-of-Work</span>
+        </div>
       </div>
+      <div class="nav-links">
+        <a href="#generator">Generator</a>
+        <a href="#system">Systemlogik</a>
+        <a href="#security">Security</a>
+        <a href="#proof">Proof-of-Work</a>
+        <span class="badge">FF-OOC</span>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-card">
+        <div class="hero-inner">
+          <div class="eyebrow">Live MVP · Domain · API · Governance</div>
+          <h1>Prompterator</h1>
+          <p class="headline-sub">Rohinput rein. Arbeitsartefakt raus. Ein KI-Operator-Interface für strukturierte Prozesslogik.</p>
+          <p class="lead">Prompterator übersetzt unscharfe Eingaben in Problemklasse, Modus, Artefakt-Blueprint, direkte Ausarbeitung, Qualitätsprüfung, Governance und wiederverwendbaren Masterprompt. Gebaut als funktionierender Proof-of-Work: Webapp, Deployment, API, Security-Limits und SEO-Grundstruktur.</p>
+
+          <div class="cta-row">
+            <a class="button-link primary" href="#generator">Artefakt generieren</a>
+            <a class="button-link ghost" href="#proof">Use Case ansehen</a>
+            <a class="button-link secondary" href="/health">Systemstatus prüfen</a>
+          </div>
+
+          <div class="pipeline" aria-label="Prompterator Prozesslogik">
+            <div class="pipe-step"><small>01 Input</small><span>Rohtext, Idee, Problem oder Auftrag</span></div>
+            <div class="pipe-step"><small>02 Klassifikation</small><span>Problemklasse und Arbeitsmodus</span></div>
+            <div class="pipe-step"><small>03 Artefakt</small><span>Blueprint und direkte Ausarbeitung</span></div>
+            <div class="pipe-step"><small>04 Prüfung</small><span>Fakten, Annahmen, Hypothesen</span></div>
+            <div class="pipe-step"><small>05 Wiederverwendung</small><span>Masterprompt und nächste Schritte</span></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side-card" aria-label="Systemstatus">
+        <h2>Live-System</h2>
+        <div class="score-ring">
+          <div class="number">82</div>
+          <p>Proof-of-Work Score / MVP-Reife</p>
+        </div>
+        <div class="status-grid">
+          <div class="status-card"><span>Domain</span><span>aktiv</span></div>
+          <div class="status-card"><span>Render Deployment</span><span>live</span></div>
+          <div class="status-card"><span>OpenAI API</span><span>angebunden</span></div>
+          <div class="status-card"><span>Ring-3 App-Firewall</span><span>aktiv</span></div>
+          <div class="status-card"><span>SEO-Basis</span><span>vorhanden</span></div>
+          <div class="status-card"><span>Governance</span><span>integriert</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="generator" class="generator">
+      <div class="generator-inner">
+        <div class="section-title">
+          <div>
+            <h2>Generator</h2>
+            <p>Gib Rohinput ein. Prompterator erzeugt daraus eine strukturierte, wiederverwendbare Arbeitsfassung.</p>
+          </div>
+          <span class="badge">Rohinput → Artefakt</span>
+        </div>
+
+        <label class="input-label" for="raw">
+          <span>Rohinput</span>
+          <span>Beispiel: „Schreibe einen Use Case für KI im Wareneingang“</span>
+        </label>
+        <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
+
+        <div class="generator-actions">
+          <button class="primary" onclick="run()">Artefakt generieren</button>
+          <div class="hint">Keine API-Keys im Browser. Die Verarbeitung läuft über das geschützte Backend.</div>
+        </div>
+
+        <pre id="out">Noch kein Output.</pre>
+        <div class="copy-row">
+          <span id="copyStatus"></span>
+          <button class="secondary" onclick="copyOutput()">Output kopieren</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="system" class="grid-3">
+      <article class="feature">
+        <div class="feature-icon">01</div>
+        <h3>Prompt Engineering</h3>
+        <p>Der Output folgt einer festen Arbeitslogik: Problemklasse, Modus, Artefakt, Qualitätsprüfung, Governance und Masterprompt.</p>
+      </article>
+      <article class="feature">
+        <div class="feature-icon">02</div>
+        <h3>Process Intelligence</h3>
+        <p>Rohinput wird nicht nur beantwortet, sondern in eine verwertbare Prozess- und Entscheidungsstruktur überführt.</p>
+      </article>
+      <article class="feature">
+        <div class="feature-icon">03</div>
+        <h3>Governance Layer</h3>
+        <p>Fakten, Annahmen und Hypothesen werden getrennt. Mensch bleibt Owner, KI bleibt Werkzeug.</p>
+      </article>
+    </section>
+
+    <section id="security" class="grid-2">
+      <article class="section-card">
+        <h3>Security & Kostenkontrolle</h3>
+        <div class="proof-list">
+          <div class="proof-row"><strong>API-Key</strong><span>Nur serverseitig als Environment Variable. Nicht im Frontend.</span></div>
+          <div class="proof-row"><strong>Ring-3 Firewall</strong><span>Blockliste für typische Scanner-Pfade, Methodenschutz, Security-Header und HSTS.</span></div>
+          <div class="proof-row"><strong>Limits</strong><span>Body-Limit, Input-Limit, Rate-Limit, Tages- und Monatsgrenzen.</span></div>
+          <div class="proof-row"><strong>Admin-Endpunkt</strong><span>/api/usage ist intern geschützt und ohne Token nicht sichtbar.</span></div>
+        </div>
+      </article>
+      <article class="section-card">
+        <h3>Use-Case-Wert</h3>
+        <p>Prompterator ist nicht nur ein Interface. Es ist ein belastbares Mini-System zur Demonstration von AI Operations: Idee, Code, GitHub, Deployment, Domain, API-Anbindung, Security, SEO und iterativer Verbesserung mit KI-Werkzeugen.</p>
+        <br>
+        <p>Der berufliche Wert liegt in der Fähigkeit, operative Problemstellungen in digitale Arbeits- und Entscheidungslogiken zu übersetzen.</p>
+      </article>
+    </section>
+
+    <section id="proof" class="section-card">
+      <div class="section-title">
+        <div>
+          <h2>Proof-of-Work für Bewerbungsmappe und Portfolio</h2>
+          <p>Prompterator zeigt praktisch, dass KI nicht nur genutzt, sondern als Arbeitsarchitektur betrieben werden kann.</p>
+        </div>
+        <span class="badge">Operator Fischer</span>
+      </div>
+      <div class="proof-list">
+        <div class="proof-row"><strong>Produktaufbau</strong><span>Aus einer Idee wurde eine öffentliche, funktionsfähige KI-Webanwendung.</span></div>
+        <div class="proof-row"><strong>Technik</strong><span>HTML/CSS/JS Frontend, Python Backend, OpenAI API, GitHub, Render und eigene Domain.</span></div>
+        <div class="proof-row"><strong>Operations</strong><span>Deployment, Healthcheck, Logikprüfung, Rollback-Denken und kontrollierte Iteration.</span></div>
+        <div class="proof-row"><strong>Governance</strong><span>Security-Basics, Kostenbremse, Admin-Schutz und klare Verantwortungslogik.</span></div>
+        <div class="proof-row"><strong>Kompetenzübersetzung</strong><span>Relevanz für Prozesslogistik, Leitstand, Supply Chain, Qualitätslogik und KI-gestützte Entscheidungsunterstützung.</span></div>
+      </div>
+    </section>
+
+    <div class="footer">
+      Prompterator · GosseOS / KnowledgeOS / Operator Fischer · Rohinput → Artefakt → Governance → Wiederverwendung
     </div>
-  </div>
+  </main>
 
 <script>
 let workingTimer = null;
