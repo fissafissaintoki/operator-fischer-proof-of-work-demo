@@ -28,25 +28,67 @@
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: radial-gradient(circle at top, #12324a, #050812 60%);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(255, 196, 64, 0.35), transparent 28%),
+        radial-gradient(circle at 90% 10%, rgba(255, 120, 0, 0.30), transparent 24%),
+        radial-gradient(circle at 50% 100%, rgba(32, 216, 255, 0.15), transparent 38%),
+        linear-gradient(135deg, #160d03, #07111f 48%, #050812 100%);
       color: #e8f2ff;
       min-height: 100vh;
       padding: 32px;
     }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        repeating-linear-gradient(135deg, rgba(255, 212, 90, 0.06) 0 18px, transparent 18px 36px),
+        repeating-linear-gradient(45deg, rgba(58, 82, 40, 0.12) 0 22px, transparent 22px 44px);
+      animation: pulseBg 8s ease-in-out infinite;
+    }
+    @keyframes pulseBg {
+      0%, 100% { transform: translate(0, 0); opacity: 0.72; }
+      50% { transform: translate(-8px, 4px); opacity: 0.95; }
+    }
     .wrap { max-width: 1000px; margin: 0 auto; }
-    h1 { font-size: 48px; line-height: 1; margin-bottom: 8px; }
+    .topline { display: flex; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 12px; }
+    .system-label { color: #a9bfd6; margin: 0; }
+    .ff-badge {
+      border: 1px solid rgba(255, 196, 64, 0.55);
+      border-radius: 12px;
+      padding: 9px 12px;
+      background: linear-gradient(135deg, rgba(255, 136, 0, 0.22), rgba(7, 17, 31, 0.88));
+      color: #ffe6a0;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow: 0 0 12px rgba(255, 136, 0, 0.8);
+      white-space: nowrap;
+    }
+    h1 { font-size: 58px; line-height: 1; margin: 0 0 8px; }
     p { color: #a9bfd6; }
+    .panel {
+      background: rgba(5, 12, 22, 0.82);
+      border: 1px solid rgba(255, 196, 64, 0.25);
+      border-radius: 20px;
+      padding: 22px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.34);
+    }
     textarea {
       width: 100%;
       min-height: 180px;
       border-radius: 16px;
-      border: 1px solid #1f6f95;
+      border: 1px solid rgba(255, 196, 64, 0.42);
       background: #07111f;
       color: #e8f2ff;
       padding: 16px;
       font-size: 16px;
       box-sizing: border-box;
+      outline: none;
     }
+    textarea:focus { border-color: #ffd45a; box-shadow: 0 0 0 4px rgba(255, 212, 90, 0.12); }
     textarea::placeholder { color: #6f879f; opacity: 1; }
     button {
       margin-top: 14px;
@@ -54,31 +96,56 @@
       border-radius: 12px;
       border: 0;
       background: linear-gradient(135deg, #20d8ff, #3ef0a1);
-      font-weight: 800;
+      color: #03111a;
+      font-weight: 900;
       cursor: pointer;
+    }
+    button.copy {
+      background: linear-gradient(135deg, #ffd45a, #ff8a00);
+      color: #1b1000;
     }
     pre {
       margin-top: 20px;
       white-space: pre-wrap;
-      background: rgba(5, 12, 22, 0.85);
-      border: 1px solid rgba(32, 216, 255, 0.25);
+      background: rgba(5, 12, 22, 0.88);
+      border: 1px solid rgba(255, 196, 64, 0.28);
       border-radius: 18px;
       padding: 18px;
       line-height: 1.5;
+      min-height: 130px;
+    }
+    .copy-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 10px; }
+    #copyStatus { color: #ffd45a; font-size: 13px; }
+    @media (max-width: 720px) {
+      body { padding: 18px; }
+      .topline { flex-direction: column; align-items: flex-start; }
+      .ff-badge { white-space: normal; }
+      h1 { font-size: 46px; }
+      .copy-row { justify-content: flex-start; flex-wrap: wrap; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <p>GosseOS / KnowledgeOS / Operator Fischer</p>
-    <h1>Prompterator</h1>
-    <p>KI Prompt Generator für strukturierte Arbeitsartefakte: Rohinput rein, Problemklasse, Modus, Artefakt-Blueprint, Governance und Masterprompt raus.</p>
+    <div class="topline">
+      <p class="system-label">GosseOS / KnowledgeOS / Operator Fischer</p>
+      <div class="ff-badge">FF-OOC</div>
+    </div>
 
-    <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
-    <br>
-    <button onclick="run()">Generieren</button>
+    <div class="panel">
+      <h1>Prompterator</h1>
+      <p>KI Prompt Generator für strukturierte Arbeitsartefakte: Rohinput rein, Problemklasse, Modus, Artefakt-Blueprint, Governance und Masterprompt raus.</p>
 
-    <pre id="out">Noch kein Output.</pre>
+      <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
+      <br>
+      <button onclick="run()">Generieren</button>
+
+      <pre id="out">Noch kein Output.</pre>
+      <div class="copy-row">
+        <span id="copyStatus"></span>
+        <button class="copy" onclick="copyOutput()">Output kopieren</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -103,6 +170,8 @@ function stopWorkingAnimation() {
 async function run() {
   const raw_input = document.getElementById("raw").value.trim();
   const out = document.getElementById("out");
+  const copyStatus = document.getElementById("copyStatus");
+  copyStatus.textContent = "";
 
   if (!raw_input) {
     out.textContent = "Bitte erst Text eingeben.";
@@ -124,6 +193,25 @@ async function run() {
   } catch (err) {
     stopWorkingAnimation();
     out.textContent = "Fehler: " + err.message;
+  }
+}
+
+async function copyOutput() {
+  const out = document.getElementById("out");
+  const copyStatus = document.getElementById("copyStatus");
+  const text = out.textContent.trim();
+
+  if (!text || text === "Noch kein Output.") {
+    copyStatus.textContent = "Noch kein Output zum Kopieren.";
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    copyStatus.textContent = "Kopiert.";
+    setTimeout(() => { copyStatus.textContent = ""; }, 1800);
+  } catch (err) {
+    copyStatus.textContent = "Bitte Output manuell markieren.";
   }
 }
 </script>
