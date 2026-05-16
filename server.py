@@ -5,10 +5,11 @@ import time
 import urllib.error
 import urllib.request
 from collections import defaultdict, deque
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+BASE_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORT", "8787"))
 HOST = os.environ.get("HOST", "0.0.0.0")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -207,7 +208,7 @@ Ausgabeformat:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PrompteratorRing2/2.1"
+    server_version = "PrompteratorRing2/2.2"
 
     def log_message(self, format: str, *args):
         print("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
@@ -258,10 +259,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/", "/index.html"):
-            html = Path("index.html").read_text(encoding="utf-8")
+            html = (BASE_DIR / "index.html").read_text(encoding="utf-8")
             self._send(200, html, "text/html; charset=utf-8")
         elif self.path in SEO_ROUTES:
-            html = Path(SEO_ROUTES[self.path]).read_text(encoding="utf-8")
+            html = (BASE_DIR / SEO_ROUTES[self.path]).read_text(encoding="utf-8")
             self._send(200, html, "text/html; charset=utf-8")
         elif self.path == "/sitemap.xml":
             self._send(200, sitemap_xml(), "application/xml; charset=utf-8")
@@ -345,4 +346,4 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     print(f"Prompterator API läuft auf http://{HOST}:{PORT}")
     print("Healthcheck:", f"http://{HOST}:{PORT}/health")
-    HTTPServer((HOST, PORT), Handler).serve_forever()
+    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
