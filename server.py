@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import hmac
 import json
 import os
 import threading
@@ -27,6 +28,7 @@ DAILY_REQUEST_LIMIT = int(os.environ.get("DAILY_REQUEST_LIMIT", "30"))
 MONTHLY_REQUEST_LIMIT = int(os.environ.get("MONTHLY_REQUEST_LIMIT", "300"))
 MONTHLY_BUDGET_EUR = float(os.environ.get("MONTHLY_BUDGET_EUR", "5.00"))
 TRUST_PROXY = os.environ.get("TRUST_PROXY", "true").lower() == "true"
+MAX_PATH_LENGTH = int(os.environ.get("MAX_PATH_LENGTH", "240"))
 
 BASE_URL = "https://www.prompterator.de"
 SEO_ROUTES = {
@@ -42,6 +44,37 @@ DEFAULT_ALLOWED_ORIGINS = {
     "http://localhost:8787",
     "http://127.0.0.1:8787",
 }
+
+FIREWALL_BLOCKED_PARTS = (
+    "/.env",
+    "/.git",
+    "/.svn",
+    "/.hg",
+    "/wp-",
+    "/wordpress",
+    "/xmlrpc.php",
+    "/phpmyadmin",
+    "/pma",
+    "/adminer",
+    "/vendor/phpunit",
+    "/cgi-bin",
+    "/server-status",
+    "/server-info",
+    "/actuator",
+    "/boaform",
+    "/manager/html",
+    "/solr/admin",
+    "/debug",
+    "/config",
+    "/backup",
+    "/dump",
+    "/database",
+    "/db.sql",
+    "/id_rsa",
+    "/.aws",
+    "/.ssh",
+    "/.DS_Store",
+)
 
 extra_origins = {
     origin.strip()
@@ -128,6 +161,16 @@ def client_ip(handler: BaseHTTPRequestHandler) -> str:
     return handler.client_address[0] if handler.client_address else "unknown"
 
 
+def firewall_blocks_path(path: str) -> bool:
+    parsed_path = urlparse(path).path
+    lowered = parsed_path.lower()
+    if len(path) > MAX_PATH_LENGTH:
+        return True
+    if "%00" in lowered or ".." in lowered or "//" in lowered:
+        return True
+    return any(part.lower() in lowered for part in FIREWALL_BLOCKED_PARTS)
+
+
 def is_rate_limited(ip: str) -> bool:
     with usage_lock:
         current = now()
@@ -172,7 +215,8 @@ def usage_snapshot() -> dict:
 def admin_authorized(handler: BaseHTTPRequestHandler) -> bool:
     if not ADMIN_TOKEN:
         return False
-    return handler.headers.get("X-Admin-Token", "") == ADMIN_TOKEN
+    provided = handler.headers.get("X-Admin-Token", "")
+    return hmac.compare_digest(provided, ADMIN_TOKEN)
 
 
 def normalize_origin(origin: str | None) -> str | None:
@@ -275,12 +319,14 @@ Ausgabeformat:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PrompteratorRing2/2.6"
+    server_version = "PrompteratorRing3/3.0"
+    sys_version = ""
 
     def log_message(self, format: str, *args):
         print("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
 
     def _security_headers(self):
+        self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
@@ -312,13 +358,26 @@ class Handler(BaseHTTPRequestHandler):
     def _send_json(self, status: int, payload: dict):
         self._send(status, json.dumps(payload, ensure_ascii=False), "application/json; charset=utf-8")
 
+    def _firewall_blocked(self) -> bool:
+        if firewall_blocks_path(self.path):
+            self._send_json(404, {"error": "Nicht gefunden"})
+            return True
+        return False
+
+    def _method_not_allowed(self):
+        self._send_json(405, {"error": "Methode nicht erlaubt"})
+
     def do_OPTIONS(self):
+        if self._firewall_blocked():
+            return
         if not origin_allowed(self.headers.get("Origin")):
             self._send_json(403, {"error": "Origin nicht erlaubt"})
             return
         self._send(204, "")
 
     def do_HEAD(self):
+        if self._firewall_blocked():
+            return
         if self.path in ("/", "/index.html", "/health", "/robots.txt", "/sitemap.xml", *SEO_ROUTES.keys()):
             self._send(200, "")
         elif self.path == "/api/usage" and admin_authorized(self):
@@ -327,6 +386,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, "")
 
     def do_GET(self):
+        if self._firewall_blocked():
+            return
         if self.path in ("/", "/index.html"):
             html = (BASE_DIR / "index.html").read_text(encoding="utf-8")
             self._send(200, html, "text/html; charset=utf-8")
@@ -338,7 +399,7 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/robots.txt":
             self._send(200, robots_txt(), "text/plain; charset=utf-8")
         elif self.path == "/health":
-            body = {"status": "ok", "model": MODEL, "ring": "2", "seo": "active", "output": "direct-artifact", "quality": "fact-assumption-hypothesis"}
+            body = {"status": "ok", "model": MODEL, "ring": "3", "seo": "active", "output": "direct-artifact", "quality": "fact-assumption-hypothesis", "firewall": "active"}
             if os.environ.get("SHOW_HEALTH_DETAIL", "false").lower() == "true":
                 body["openai_key_set"] = bool(OPENAI_API_KEY)
             self._send_json(200, body)
@@ -353,6 +414,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(404, {"error": "Nicht gefunden"})
 
     def do_POST(self):
+        if self._firewall_blocked():
+            return
         if self.path != "/api/generate":
             self._send_json(404, {"error": "Nicht gefunden"})
             return
@@ -406,6 +469,21 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             print(f"Unhandled server error: {type(exc).__name__}")
             self._send_json(500, {"error": "Interner Serverfehler. Bitte später erneut versuchen."})
+
+    def do_TRACE(self):
+        self._method_not_allowed()
+
+    def do_PUT(self):
+        self._method_not_allowed()
+
+    def do_PATCH(self):
+        self._method_not_allowed()
+
+    def do_DELETE(self):
+        self._method_not_allowed()
+
+    def do_CONNECT(self):
+        self._method_not_allowed()
 
 
 if __name__ == "__main__":
