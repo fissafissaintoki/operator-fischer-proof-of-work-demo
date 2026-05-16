@@ -29,6 +29,11 @@ MONTHLY_REQUEST_LIMIT = int(os.environ.get("MONTHLY_REQUEST_LIMIT", "300"))
 MONTHLY_BUDGET_EUR = float(os.environ.get("MONTHLY_BUDGET_EUR", "5.00"))
 TRUST_PROXY = os.environ.get("TRUST_PROXY", "true").lower() == "true"
 MAX_PATH_LENGTH = int(os.environ.get("MAX_PATH_LENGTH", "240"))
+MAX_HEADER_CHARS = int(os.environ.get("MAX_HEADER_CHARS", "8000"))
+MAX_USER_AGENT_CHARS = int(os.environ.get("MAX_USER_AGENT_CHARS", "240"))
+ADMIN_TOKEN_MIN_LENGTH = int(os.environ.get("ADMIN_TOKEN_MIN_LENGTH", "24"))
+GENERATE_ENABLED = os.environ.get("GENERATE_ENABLED", "true").lower() == "true"
+REQUIRE_ORIGIN_FOR_GENERATE = os.environ.get("REQUIRE_ORIGIN_FOR_GENERATE", "true").lower() == "true"
 
 BASE_URL = "https://www.prompterator.de"
 SEO_ROUTES = {
@@ -86,6 +91,7 @@ ALLOWED_ORIGINS = DEFAULT_ALLOWED_ORIGINS | extra_origins
 request_log = defaultdict(deque)
 daily_usage = defaultdict(int)
 monthly_usage = defaultdict(int)
+blocked_usage = defaultdict(int)
 usage_lock = threading.Lock()
 
 SYSTEM_PROMPT = """
@@ -161,6 +167,21 @@ def client_ip(handler: BaseHTTPRequestHandler) -> str:
     return handler.client_address[0] if handler.client_address else "unknown"
 
 
+def record_blocked_request():
+    with usage_lock:
+        blocked_usage[day_key()] += 1
+
+
+def headers_too_large(handler: BaseHTTPRequestHandler) -> bool:
+    total = 0
+    for key, value in handler.headers.items():
+        total += len(key) + len(value)
+        if total > MAX_HEADER_CHARS:
+            return True
+    user_agent = handler.headers.get("User-Agent", "")
+    return len(user_agent) > MAX_USER_AGENT_CHARS
+
+
 def firewall_blocks_path(path: str) -> bool:
     parsed_path = urlparse(path).path
     lowered = parsed_path.lower()
@@ -208,12 +229,14 @@ def usage_snapshot() -> dict:
             "monthly_requests_used": monthly_usage[month_key()],
             "monthly_request_limit": MONTHLY_REQUEST_LIMIT,
             "monthly_budget_eur_target": MONTHLY_BUDGET_EUR,
+            "blocked_requests_today": blocked_usage[day_key()],
+            "generate_enabled": GENERATE_ENABLED,
             "note": "App-seitige Kostenbremse. Das harte Abrechnungslimit muss zusätzlich im OpenAI-Projektbudget gesetzt werden."
         }
 
 
 def admin_authorized(handler: BaseHTTPRequestHandler) -> bool:
-    if not ADMIN_TOKEN:
+    if not ADMIN_TOKEN or len(ADMIN_TOKEN) < ADMIN_TOKEN_MIN_LENGTH:
         return False
     provided = handler.headers.get("X-Admin-Token", "")
     return hmac.compare_digest(provided, ADMIN_TOKEN)
@@ -319,7 +342,7 @@ Ausgabeformat:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PrompteratorRing3/3.0"
+    server_version = "Prompterator"
     sys_version = ""
 
     def log_message(self, format: str, *args):
@@ -331,6 +354,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+        self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("X-Permitted-Cross-Domain-Policies", "none")
         self.send_header("Cache-Control", "no-store")
         self.send_header(
             "Content-Security-Policy",
@@ -359,12 +384,14 @@ class Handler(BaseHTTPRequestHandler):
         self._send(status, json.dumps(payload, ensure_ascii=False), "application/json; charset=utf-8")
 
     def _firewall_blocked(self) -> bool:
-        if firewall_blocks_path(self.path):
+        if headers_too_large(self) or firewall_blocks_path(self.path):
+            record_blocked_request()
             self._send_json(404, {"error": "Nicht gefunden"})
             return True
         return False
 
     def _method_not_allowed(self):
+        record_blocked_request()
         self._send_json(405, {"error": "Methode nicht erlaubt"})
 
     def do_OPTIONS(self):
@@ -399,9 +426,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/robots.txt":
             self._send(200, robots_txt(), "text/plain; charset=utf-8")
         elif self.path == "/health":
-            body = {"status": "ok", "model": MODEL, "ring": "3", "seo": "active", "output": "direct-artifact", "quality": "fact-assumption-hypothesis", "firewall": "active"}
-            if os.environ.get("SHOW_HEALTH_DETAIL", "false").lower() == "true":
-                body["openai_key_set"] = bool(OPENAI_API_KEY)
+            body = {"status": "ok"}
+            if admin_authorized(self):
+                body = {"status": "ok", "model": MODEL, "service": "active", "generate_enabled": GENERATE_ENABLED}
             self._send_json(200, body)
         elif self.path == "/api/usage":
             if not admin_authorized(self):
@@ -419,9 +446,20 @@ class Handler(BaseHTTPRequestHandler):
         if self.path != "/api/generate":
             self._send_json(404, {"error": "Nicht gefunden"})
             return
-
+        if not GENERATE_ENABLED:
+            self._send_json(503, {"error": "Generator vorübergehend deaktiviert."})
+            return
+        if REQUIRE_ORIGIN_FOR_GENERATE and not normalize_origin(self.headers.get("Origin")):
+            record_blocked_request()
+            self._send_json(403, {"error": "Origin erforderlich"})
+            return
         if not origin_allowed(self.headers.get("Origin")):
+            record_blocked_request()
             self._send_json(403, {"error": "Origin nicht erlaubt"})
+            return
+        content_type = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if content_type != "application/json":
+            self._send_json(415, {"error": "Content-Type muss application/json sein"})
             return
 
         ip = client_ip(self)
@@ -445,6 +483,12 @@ class Handler(BaseHTTPRequestHandler):
 
             body = self.rfile.read(length).decode("utf-8")
             payload = json.loads(body)
+            if not isinstance(payload, dict):
+                self._send_json(400, {"error": "Ungültiges JSON"})
+                return
+            if set(payload.keys()) - {"raw_input"}:
+                self._send_json(400, {"error": "Unerwartete Felder im Request"})
+                return
             raw_input = str(payload.get("raw_input", "")).strip()
 
             if not raw_input:
