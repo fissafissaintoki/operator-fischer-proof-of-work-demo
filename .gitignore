@@ -3,3 +3,13 @@ __pycache__/
 .env
 .DS_Store
 backup_*/
+
+# Local safety backups
+server.backup-*.py
+server.local-backup-*.py
+*.local-backup*.py
+
+# Local editor and test artifacts
+*.swp
+*.tmp
+*.bak
