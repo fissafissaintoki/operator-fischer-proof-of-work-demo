@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -24,6 +25,7 @@ RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("RATE_LIMIT_MAX_REQUESTS", "6"))
 DAILY_REQUEST_LIMIT = int(os.environ.get("DAILY_REQUEST_LIMIT", "30"))
 MONTHLY_REQUEST_LIMIT = int(os.environ.get("MONTHLY_REQUEST_LIMIT", "300"))
 MONTHLY_BUDGET_EUR = float(os.environ.get("MONTHLY_BUDGET_EUR", "5.00"))
+TRUST_PROXY = os.environ.get("TRUST_PROXY", "true").lower() == "true"
 
 BASE_URL = "https://www.prompterator.de"
 SEO_ROUTES = {
@@ -50,6 +52,7 @@ ALLOWED_ORIGINS = DEFAULT_ALLOWED_ORIGINS | extra_origins
 request_log = defaultdict(deque)
 daily_usage = defaultdict(int)
 monthly_usage = defaultdict(int)
+usage_lock = threading.Lock()
 
 SYSTEM_PROMPT = """
 Du arbeitest als Prompterator im Operator-Fischer-Modus.
@@ -117,35 +120,40 @@ def month_key() -> str:
 
 def client_ip(handler: BaseHTTPRequestHandler) -> str:
     forwarded_for = handler.headers.get("X-Forwarded-For", "")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+    if TRUST_PROXY and forwarded_for:
+        candidates = [part.strip() for part in forwarded_for.split(",") if part.strip()]
+        if candidates:
+            return candidates[-1]
     return handler.client_address[0] if handler.client_address else "unknown"
 
 
 def is_rate_limited(ip: str) -> bool:
-    current = now()
-    bucket = request_log[ip]
-    while bucket and bucket[0] < current - RATE_LIMIT_WINDOW_SECONDS:
-        bucket.popleft()
-    if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
-        return True
-    bucket.append(current)
-    return False
+    with usage_lock:
+        current = now()
+        bucket = request_log[ip]
+        while bucket and bucket[0] < current - RATE_LIMIT_WINDOW_SECONDS:
+            bucket.popleft()
+        if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
+            return True
+        bucket.append(current)
+        return False
 
 
 def budget_guard_allows_request() -> tuple[bool, str]:
-    dkey = day_key()
-    mkey = month_key()
-    if daily_usage[dkey] >= DAILY_REQUEST_LIMIT:
-        return False, "Tageslimit erreicht. Bitte später erneut versuchen."
-    if monthly_usage[mkey] >= MONTHLY_REQUEST_LIMIT:
-        return False, "Monatslimit erreicht. Kostenbremse aktiv."
-    return True, "ok"
+    with usage_lock:
+        dkey = day_key()
+        mkey = month_key()
+        if daily_usage[dkey] >= DAILY_REQUEST_LIMIT:
+            return False, "Tageslimit erreicht. Bitte später erneut versuchen."
+        if monthly_usage[mkey] >= MONTHLY_REQUEST_LIMIT:
+            return False, "Monatslimit erreicht. Kostenbremse aktiv."
+        return True, "ok"
 
 
 def record_billable_request():
-    daily_usage[day_key()] += 1
-    monthly_usage[month_key()] += 1
+    with usage_lock:
+        daily_usage[day_key()] += 1
+        monthly_usage[month_key()] += 1
 
 
 def normalize_origin(origin: str | None) -> str | None:
@@ -248,7 +256,7 @@ Ausgabeformat:
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "PrompteratorRing2/2.4"
+    server_version = "PrompteratorRing2/2.5"
 
     def log_message(self, format: str, *args):
         print("%s - - [%s] %s" % (self.client_address[0], self.log_date_time_string(), format % args))
