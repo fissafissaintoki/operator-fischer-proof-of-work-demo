@@ -4,6 +4,7 @@ import hmac
 import io
 import json
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -397,72 +398,105 @@ Innerhalb von "## Direktes Artefakt" nach Möglichkeit mit diesen festen Portfol
     return "Der Dienst hat keine auswertbare Textantwort erhalten. Bitte den Input kürzer oder konkreter formulieren."
 
 
-# ============================================================================
-# EXECUTIVE PDF BRIEFING ENGINE
-# ----------------------------------------------------------------------------
-# Designprinzipien:
-#   - Message first: starkes Cover + Executive Summary auf Seite 2
-#   - Klare Hierarchie, ruhige Typografie, dezente cyan/slate-Palette
-#   - Inhaltsabhaengige Kapitel: kein leeres Kapitel-Schaufenster
-#   - Professionelle Fallback-Hinweise statt "Noch nicht ausreichend befuellt."
-#   - Appendix trennt Original-Output sauber vom Briefing-Teil
-# ============================================================================
-
-# Executive-Farbpalette (Slate / Graphit / dezentes Cyan)
-EX_INK        = colors.HexColor("#0F1E2C")  # Headlines, dunkler Slate
-EX_INK_SOFT   = colors.HexColor("#1F2F40")  # Body
-EX_INK_MUTED  = colors.HexColor("#4B5D6E")  # Sekundaer
-EX_INK_LIGHT  = colors.HexColor("#7B8B9B")  # Tertiaer / Footer
-EX_ACCENT     = colors.HexColor("#0E7C95")  # Cyan-Akzent (dezent)
-EX_ACCENT_DK  = colors.HexColor("#0A5E72")  # Akzent dunkel
-EX_RULE       = colors.HexColor("#C8D3DC")  # Linien
-EX_RULE_LIGHT = colors.HexColor("#E2E8EE")  # Linien light
-EX_BOX_BG     = colors.HexColor("#F4F7FA")  # Box-Hintergrund neutral
-EX_BOX_ACCENT = colors.HexColor("#E8F1F4")  # Box-Hintergrund cyan
-EX_BOX_BORDER = colors.HexColor("#B7C5D2")
-EX_AMBER      = colors.HexColor("#B05D17")  # Risiko / Achtung dezent
-
-# Maximale Zeichen pro Kapitel im Hauptteil (gegen Textwueste)
-EX_MAX_CHAPTER_CHARS = 1600
-
-# Professionelle Fallback-Varianten (rotierend), damit keine Wiederholungen
-EX_FALLBACKS = [
-    "Fachlich zu konkretisieren.",
-    "Managementseitig zu validieren.",
-    "Fuer eine belastbare Entscheidung sind weitere Angaben erforderlich.",
-    "Der vorliegende Input erlaubt aktuell nur eine Vorstrukturierung.",
-]
-
-
 def sanitize_pdf_text(text: str) -> str:
     safe = html.escape(text or "")
     safe = safe.replace("\n", "<br/>")
     return safe
 
 
-def parse_markdown_sections(content: str) -> dict[str, str]:
-    """Parst Markdown ## und # Header und liefert {Titel: Body}."""
-    sections: dict[str, str] = {}
-    current_title: str | None = None
-    current_lines: list[str] = []
+class PdfValidationError(ValueError):
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+
+
+def validate_pdf_payload(payload: dict) -> tuple[str, str, str]:
+    if not isinstance(payload, dict):
+        raise PdfValidationError(400, "Ungültiges JSON")
+    if set(payload.keys()) - {"title", "content", "source"}:
+        raise PdfValidationError(400, "Unerwartete Felder im PDF-Request")
+
+    title = str(payload.get("title", "Prompterator Use-Case Portfolio")).strip() or "Prompterator Use-Case Portfolio"
+    content = str(payload.get("content", "")).strip()
+    source = str(payload.get("source", "prompterator")).strip() or "prompterator"
+
+    if not content:
+        raise PdfValidationError(400, "content darf nicht leer sein")
+    if len(content) > MAX_PDF_CONTENT_CHARS:
+        raise PdfValidationError(413, f"content zu lang. Maximum: {MAX_PDF_CONTENT_CHARS} Zeichen.")
+
+    return title, content, source
+
+
+def parse_prompterator_output(content: str) -> dict:
+    parsed = {"sections": {}, "order": [], "raw": content.strip()}
+    current_section: str | None = None
+    current_subsection: str | None = None
+
+    def ensure_section(title: str):
+        if title not in parsed["sections"]:
+            parsed["sections"][title] = {
+                "body_lines": [],
+                "body": "",
+                "subsections": {},
+                "subsection_order": [],
+            }
+            parsed["order"].append(title)
 
     for raw_line in content.splitlines():
         line = raw_line.rstrip()
         if line.startswith("## ") or line.startswith("# "):
-            if current_title is not None:
-                body = "\n".join(current_lines).strip()
-                sections[current_title] = body
-            current_title = line.split(" ", 1)[1].strip() if " " in line else "Abschnitt"
-            current_lines = []
+            current_section = line.split(" ", 1)[1].strip() if " " in line else "Abschnitt"
+            current_subsection = None
+            ensure_section(current_section or "Abschnitt")
+            continue
+        if line.startswith("### "):
+            if current_section is None:
+                current_section = "Use-Case Inhalt"
+                ensure_section(current_section)
+            current_subsection = line.split(" ", 1)[1].strip() if " " in line else "Unterabschnitt"
+            section = parsed["sections"][current_section]
+            if current_subsection not in section["subsections"]:
+                section["subsections"][current_subsection] = []
+                section["subsection_order"].append(current_subsection)
+            continue
+
+        if current_section is None:
+            current_section = "Use-Case Inhalt"
+            ensure_section(current_section)
+
+        section = parsed["sections"][current_section]
+        if current_subsection:
+            section["subsections"][current_subsection].append(line)
         else:
-            current_lines.append(line)
+            section["body_lines"].append(line)
 
-    if current_title is not None:
-        body = "\n".join(current_lines).strip()
-        sections[current_title] = body
+    if not parsed["sections"]:
+        ensure_section("Use-Case Inhalt")
+        parsed["sections"]["Use-Case Inhalt"]["body_lines"] = [content.strip()]
 
-    if sections:
-        return sections
+    for section in parsed["sections"].values():
+        section["body"] = "\n".join(section["body_lines"]).strip()
+        del section["body_lines"]
+        for key, lines in list(section["subsections"].items()):
+            section["subsections"][key] = "\n".join(lines).strip()
+
+    return parsed
+
+
+def parse_markdown_sections(content: str) -> dict[str, str]:
+    parsed = parse_prompterator_output(content)
+    flat_sections: dict[str, str] = {}
+    for title in parsed["order"]:
+        section = parsed["sections"][title]
+        if section["body"]:
+            flat_sections[title] = section["body"]
+        for subsection in section["subsection_order"]:
+            sub_body = section["subsections"].get(subsection, "").strip()
+            if sub_body:
+                flat_sections[subsection] = sub_body
+    if flat_sections:
+        return flat_sections
     return {"Use-Case Inhalt": content.strip()}
 
 
@@ -482,667 +516,812 @@ def normalize_section_name(name: str) -> str:
 
 
 def get_section(sections: dict[str, str], possible_names: list[str]) -> str:
-    """Holt einen Abschnitt anhand mehrerer moeglicher Header-Schreibweisen."""
     normalized_targets = [normalize_section_name(name) for name in possible_names]
     for key, value in sections.items():
-        if normalize_section_name(key) in normalized_targets and value.strip():
-            return value.strip()
+        if normalize_section_name(key) in normalized_targets:
+            body = value.get("body", "").strip() if isinstance(value, dict) else str(value).strip()
+            if body:
+                return body
+            if isinstance(value, dict):
+                combined = []
+                for subsection in value.get("subsection_order", []):
+                    sub_body = value.get("subsections", {}).get(subsection, "").strip()
+                    if sub_body:
+                        combined.append(f"{subsection}\n{sub_body}")
+                if combined:
+                    return "\n\n".join(combined)
+    for value in sections.values():
+        if isinstance(value, dict):
+            for subsection in value.get("subsection_order", []):
+                if normalize_section_name(subsection) in normalized_targets:
+                    sub_body = value.get("subsections", {}).get(subsection, "").strip()
+                    if sub_body:
+                        return sub_body
     return ""
 
 
-def ex_clip(text: str, max_chars: int = EX_MAX_CHAPTER_CHARS) -> str:
-    """Begrenzung gegen Textwueste im Hauptteil, ohne Worttrennung mittendrin."""
-    if not text or len(text) <= max_chars:
-        return text or ""
-    cut = text[:max_chars]
-    last_space = cut.rfind(" ")
-    if last_space > max_chars * 0.7:
-        cut = cut[:last_space]
-    return cut.rstrip() + " ..."
+def first_meaningful_line(text: str, fallback: str = "Fachlich zu konkretisieren.") -> str:
+    for line in text.splitlines():
+        cleaned = line.strip(" -•\t")
+        if cleaned:
+            return cleaned
+    return fallback
 
 
-def ex_first_meaningful_line(content: str) -> str:
-    """Findet die erste bedeutende Zeile, ueberspringt Header und Leerzeilen."""
-    for raw in content.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        if line.startswith("#"):
-            continue
-        return line
-    return ""
+def first_sentence(text: str, fallback: str = "Fachlich zu konkretisieren.", max_len: int = 220) -> str:
+    cleaned = " ".join(part.strip() for part in text.splitlines() if part.strip())
+    if not cleaned:
+        return fallback
+    parts = re.split(r"(?<=[.!?])\s+", cleaned)
+    sentence = parts[0].strip() if parts else cleaned
+    if len(sentence) > max_len:
+        sentence = sentence[: max_len - 1].rstrip() + "…"
+    return sentence or fallback
 
 
-def ex_extract_bullets(text: str, limit: int = 4) -> list[str]:
-    """Extrahiert die ersten Bullet-/Listenpunkte aus einem Abschnittstext."""
-    if not text:
-        return []
-    bullets: list[str] = []
-    for raw in text.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        # Markdown bullets oder nummerierte Listen
-        if line[:2] in ("- ", "* ") or (len(line) >= 3 and line[0].isdigit() and line[1] in ".)" and line[2] == " "):
-            cleaned = line.lstrip("-*0123456789.) ").strip()
-            if cleaned:
-                bullets.append(cleaned)
-        if len(bullets) >= limit:
-            break
-    return bullets
+def shorten_text(text: str, fallback: str = "Fachlich zu konkretisieren.", max_len: int = 260) -> str:
+    cleaned = " ".join(part.strip() for part in text.splitlines() if part.strip())
+    if not cleaned:
+        return fallback
+    if len(cleaned) <= max_len:
+        return cleaned
+    return cleaned[: max_len - 1].rstrip() + "…"
 
 
-def ex_synthesize_summary(sections: dict[str, str], content: str) -> list[str]:
-    """Baut bis zu 4 Executive-Summary-Punkte aus dem Input.
+def text_blocks(text: str) -> list[dict]:
+    blocks: list[dict] = []
+    current: list[str] = []
 
-    Reihenfolge der Pruefung:
-      1. Vorhandene Portfolio-Zusammenfassung / Executive Summary
-      2. Bullets aus Zielbild + Ausgangslage
-      3. Erste bedeutende Zeile
-    """
-    summary_block = get_section(sections, [
-        "Portfolio-Zusammenfassung",
-        "Executive Summary",
-        "Zusammenfassung",
-    ])
-    if summary_block:
-        bullets = ex_extract_bullets(summary_block, limit=4)
-        if bullets:
-            return bullets
-        # Falls keine Bullets: in Saetze zerlegen
-        sentences = [s.strip() for s in summary_block.replace("\n", " ").split(".") if s.strip()]
-        if sentences:
-            return [s + "." for s in sentences[:4]]
+    def flush():
+        nonlocal current
+        if not current:
+            return
+        stripped = [line.strip() for line in current if line.strip()]
+        current = []
+        if not stripped:
+            return
+        bullet_items = []
+        all_list = True
+        for line in stripped:
+            bullet = re.sub(r"^[-*•]\s+", "", line)
+            bullet = re.sub(r"^\d+[.)]\s+", "", bullet)
+            if bullet == line:
+                all_list = False
+                break
+            bullet_items.append(bullet.strip())
+        if all_list and bullet_items:
+            blocks.append({"type": "list", "items": bullet_items})
+        else:
+            blocks.append({"type": "paragraph", "text": "\n".join(stripped)})
 
-    bullets: list[str] = []
-    for key in ("Zielbild und Nutzen", "Zielbild", "Ausgangslage", "Operativer Ablauf"):
-        block = get_section(sections, [key])
-        if block:
-            extracted = ex_extract_bullets(block, limit=2)
-            if extracted:
-                bullets.extend(extracted)
-            else:
-                first_sentence = block.replace("\n", " ").split(".")[0].strip()
-                if first_sentence:
-                    bullets.append(first_sentence + ".")
-        if len(bullets) >= 4:
-            break
-
-    if bullets:
-        return bullets[:4]
-
-    fallback_line = ex_first_meaningful_line(content)
-    return [fallback_line] if fallback_line else []
+    for raw_line in text.splitlines():
+        if raw_line.strip():
+            current.append(raw_line)
+        else:
+            flush()
+    flush()
+    return blocks
 
 
-def ex_management_signal(sections: dict[str, str]) -> str:
-    """Ableitung der empfohlenen naechsten Entscheidung."""
-    block = get_section(sections, [
-        "Naechste Schritte",
-        "Nächste Schritte",
-        "Management-Empfehlung",
-        "Handlungsempfehlung",
-    ])
-    if block:
-        bullets = ex_extract_bullets(block, limit=2)
-        if bullets:
-            return " ".join(bullets)
-        first = block.replace("\n", " ").split(".")[0].strip()
-        if first:
-            return first + "."
-    return "Konkrete Entscheidungsempfehlung managementseitig festzulegen."
+def extract_list_items(text: str) -> list[str]:
+    items = []
+    for block in text_blocks(text):
+        if block["type"] == "list":
+            items.extend(block["items"])
+        elif block["type"] == "paragraph":
+            lines = [line.strip() for line in block["text"].splitlines() if line.strip()]
+            if len(lines) > 1:
+                items.extend(lines)
+    deduped = []
+    seen = set()
+    for item in items:
+        key = item.lower()
+        if key not in seen:
+            seen.add(key)
+            deduped.append(item)
+    return deduped
 
 
-# ----------------------------------------------------------------------------
-# Mapping: Hauptteil-Kapitel auf Input-Sections
-# ----------------------------------------------------------------------------
-
-def ex_chapter_content(chapter_key: str, sections: dict[str, str], fallback_index: int) -> tuple[str, str]:
-    """Liefert (body, status) fuer ein Kapitel.
-    status: 'filled' wenn echter Inhalt vorhanden, sonst 'placeholder'.
-    """
-    mapping = {
-        "ausgangslage":        ["Ausgangslage", "Fakten / Annahmen / Hypothesen"],
-        "problemklasse":       ["Problemklasse", "Use-Case-Titel"],
-        "zielbild":            ["Zielbild und Nutzen", "Zielbild", "Erwarteter Output"],
-        "entscheidungslogik":  ["Loesungslogik", "Lösungslogik", "Entscheidungslogik"],
-        "hauptablauf":         ["Operativer Ablauf", "Artefakt-Blueprint", "Direktes Artefakt"],
-        "daten":               ["Datenbasis und Inputs", "Erwarteter Output", "Daten / Inputs / Outputs"],
-        "governance":          ["Governance", "Risiken und Governance"],
-        "risiken":             ["Risiken und Governance", "Fakten / Annahmen / Hypothesen"],
-        "qualitaet":           ["Qualitaetspruefung", "Qualitätsprüfung"],
-        "kpi":                 ["KPI- und Wirkungsannahmen", "KPIs", "Erfolgskriterien"],
-        "umsetzung":           ["Naechste Schritte", "Nächste Schritte", "Umsetzungsplan"],
-        "empfehlung":          ["Naechste Schritte", "Nächste Schritte", "Management-Empfehlung"],
+def extract_domain_context(sections: dict[str, dict]) -> dict:
+    problem = get_section(sections, ["Problemklasse", "Portfolio-Zusammenfassung", "Use-Case-Titel"])
+    target = get_section(sections, ["Zielbild und Nutzen", "Zielbild"])
+    process = get_section(sections, ["Operativer Ablauf", "Artefakt-Blueprint", "Loesungslogik"])
+    governance = get_section(sections, ["Governance", "Risiken und Governance"])
+    next_steps = get_section(sections, ["Naechste Schritte", "Nächste Schritte"])
+    return {
+        "problem_anchor": first_sentence(problem, "Use-Case fachlich zu konkretisieren."),
+        "value_driver": first_sentence(target, "Wirkungsziel fachlich zu konkretisieren."),
+        "operating_scope": first_sentence(process, "Ablauf und Umsetzungsrahmen fachlich zu konkretisieren."),
+        "governance_note": first_sentence(governance, "Governance-Rahmen fachlich zu konkretisieren."),
+        "decision_need": first_sentence(next_steps, "Naechster Management-Schritt fachlich zu konkretisieren."),
     }
-    keys = mapping.get(chapter_key, [])
-    body = get_section(sections, keys) if keys else ""
-    if body:
-        return ex_clip(body), "filled"
-    return EX_FALLBACKS[fallback_index % len(EX_FALLBACKS)], "placeholder"
 
 
-# ----------------------------------------------------------------------------
-# ReportLab-Bausteine: Footer & Header
-# ----------------------------------------------------------------------------
+def build_usecase_dossier_model(title: str, sections: dict[str, dict], source: str) -> dict:
+    model = {
+        "title": title or "Prompterator Use-Case Portfolio",
+        "source": source or "prompterator",
+        "sections": sections,
+        "summary": get_section(sections, ["Portfolio-Zusammenfassung", "Executive Summary", "Direktes Artefakt"]),
+        "usecase_title": get_section(sections, ["Use-Case-Titel"]),
+        "target_state": get_section(sections, ["Zielbild und Nutzen", "Zielbild"]),
+        "background": get_section(sections, ["Ausgangslage", "Fakten / Annahmen / Hypothesen", "Artefakt-Blueprint"]),
+        "problem_class": get_section(sections, ["Problemklasse"]),
+        "artifact_blueprint": get_section(sections, ["Artefakt-Blueprint"]),
+        "artifact": get_section(sections, ["Direktes Artefakt"]),
+        "process_overview": get_section(sections, ["Operativer Ablauf", "Artefakt-Blueprint", "Loesungslogik"]),
+        "decision_logic": get_section(sections, ["Loesungslogik", "Modus", "Masterprompt"]),
+        "inputs_outputs": get_section(sections, ["Datenbasis und Inputs", "Erwarteter Output"]),
+        "governance": get_section(sections, ["Governance", "Risiken und Governance"]),
+        "risks": get_section(sections, ["Risiken und Governance", "Fakten / Annahmen / Hypothesen"]),
+        "quality": get_section(sections, ["Qualitaetspruefung", "Qualitätsprüfung"]),
+        "kpis": get_section(sections, ["KPI- und Wirkungsannahmen", "Erwarteter Output"]),
+        "mode": get_section(sections, ["Modus"]),
+        "next_steps": get_section(sections, ["Naechste Schritte", "Nächste Schritte"]),
+        "masterprompt": get_section(sections, ["Masterprompt"]),
+        "raw_content": get_section(sections, ["Use-Case Inhalt"]) or "",
+    }
+    model["context"] = extract_domain_context(sections)
+    model["original_output"] = "\n\n".join(
+        part for part in [model["artifact"], model["masterprompt"]] if part.strip()
+    ).strip() or "\n\n".join(
+        f"## {title}\n{section.get('body', '').strip()}" for title, section in sections.items() if section.get("body", "").strip()
+    )
+    return model
 
-def _ex_page_chrome(canvas, doc):
-    """Footer + dezente Top-Hairline. Auf Cover unterdrueckt."""
+
+def expand_business_context(model: dict) -> dict:
+    summary_source = model["summary"] or model["artifact"] or model["background"]
+    model["executive_summary_points"] = [
+        shorten_text(summary_source, "Der vorliegende Input erlaubt aktuell nur eine Vorstrukturierung.", 190),
+        shorten_text(model["problem_class"], "Die Problemklasse ist fachlich zu konkretisieren.", 170),
+        shorten_text(model["target_state"], "Das Zielbild ist managementseitig zu validieren.", 170),
+        shorten_text(model["next_steps"], "Die naechsten Entscheidungsschritte sind fachlich zu definieren.", 170),
+    ]
+    model["management_context_points"] = [
+        f"Management-Relevanz: {model['context']['problem_anchor']}",
+        f"Erwartete Wirkung: {model['context']['value_driver']}",
+        f"Operativer Fokus: {model['context']['operating_scope']}",
+        f"Entscheidungsbedarf: {model['context']['decision_need']}",
+    ]
+    model["usecase_profile_rows"] = [
+        ["Use-Case", shorten_text(model["usecase_title"] or model["summary"], "Noch als Arbeitstitel zu fuehren.", 120)],
+        ["Problemtyp", shorten_text(model["problem_class"], "Fachlich zu konkretisieren.", 120)],
+        ["Wirkungshebel", shorten_text(model["target_state"], "Wirkungshebel fachlich zu konkretisieren.", 120)],
+        ["Arbeitsmodus", shorten_text(model["mode"], "Modus fachlich zu konkretisieren.", 120)],
+        ["Reifegrad", "Vorstrukturiert" if model["artifact"] else "Fruehphase / Strukturierungsbedarf"],
+        ["Naechster Einstieg", shorten_text(model["next_steps"], "Naechsten Schritt definieren.", 120)],
+    ]
+    model["management_signal_rows"] = [
+        ["Entscheidungsreife", "Vorstrukturiert" if model["summary"] and model["next_steps"] else "Zu vertiefen"],
+        ["Governance-Lage", "Pruefpflichtig" if model["governance"] else "Noch offen"],
+        ["Datenlage", "Benannt" if model["inputs_outputs"] else "Zu ergaenzen"],
+        ["Ausrolllogik", "Ableitbar" if model["process_overview"] else "Zu modellieren"],
+    ]
+    return model
+
+
+def build_case_examples(model: dict) -> dict:
+    steps = extract_list_items(model["process_overview"])[:4]
+    next_steps = extract_list_items(model["next_steps"])[:3]
+    case_one = {
+        "title": "Fallbeispiel 1: Regelfall",
+        "Ausgangslage": first_sentence(model["background"] or model["problem_class"], "Fallbeispiel muss fachlich ergänzt werden."),
+        "Entscheidungspunkt": first_sentence(model["decision_logic"] or model["target_state"], "Entscheidungspunkt fachlich ergänzen."),
+        "Vorgehen": " / ".join(steps) if steps else "Vorgehen fachlich ergänzen.",
+        "Risiko": first_sentence(model["risks"], "Risiko fachlich ergänzen."),
+        "Prüfung": first_sentence(model["quality"], "Prüfung fachlich ergänzen."),
+        "Ergebnis": first_sentence(model["target_state"] or model["artifact"], "Ergebnis fachlich ergänzen."),
+        "Lernpunkt": first_sentence(model["next_steps"], "Lernpunkt fachlich ergänzen."),
+    }
+    case_two = {
+        "title": "Fallbeispiel 2: Ausnahme- oder Eskalationsfall",
+        "Ausgangslage": first_sentence(model["risks"] or model["governance"], "Fallbeispiel muss fachlich ergänzt werden."),
+        "Entscheidungspunkt": first_sentence(model["governance"] or model["quality"], "Entscheidungspunkt fachlich ergänzen."),
+        "Vorgehen": " / ".join(next_steps) if next_steps else "Vorgehen fachlich ergänzen.",
+        "Risiko": first_sentence(model["risks"], "Risiko fachlich ergänzen."),
+        "Prüfung": first_sentence(model["quality"] or model["governance"], "Prüfung fachlich ergänzen."),
+        "Ergebnis": first_sentence(model["summary"] or model["target_state"], "Ergebnis fachlich ergänzen."),
+        "Lernpunkt": "Governance und fachliche Freigabe muessen im Ausnahmefall sichtbar vor dem Rollout verankert werden." if model["governance"] else "Lernpunkt fachlich ergänzen.",
+    }
+    model["case_examples"] = [case_one, case_two]
+    return model
+
+
+def build_process_matrix(model: dict) -> dict:
+    steps = extract_list_items(model["process_overview"])
+    if not steps:
+        steps = [
+            "Ausgangsinput fachlich qualifizieren.",
+            "Entscheidungslogik und Rollenmodell festlegen.",
+            "Artefakt pruefen, freigeben und weiterverwenden.",
+        ]
+    checkpoint = first_sentence(model["quality"] or model["governance"], "Prüfpunkt fachlich ergänzen.", 120)
+    rows = []
+    for idx, step in enumerate(steps[:6], start=1):
+        if idx == 1:
+            purpose = "Eingangslage strukturieren und Erwartungshaltung klaeren."
+        elif idx == len(steps[:6]):
+            purpose = "Ergebnis absichern, freigeben und in den Betrieb ueberfuehren."
+        else:
+            purpose = "Sachlogik anwenden und operative Entscheidung vorbereiten."
+        rows.append([f"{idx:02d}", step, purpose, checkpoint])
+    model["process_matrix_rows"] = rows
+    return model
+
+
+def build_training_module(model: dict) -> dict:
+    model["training_rows"] = [
+        ["Lernziel", shorten_text(model["target_state"] or model["summary"], "Lernziel fachlich ergänzen.", 150)],
+        ["Zielgruppe", shorten_text(model["usecase_title"] or model["problem_class"], "Zielgruppe fachlich ergänzen.", 150)],
+        ["Typische Anwendung", shorten_text(model["process_overview"] or model["artifact"], "Typische Anwendung fachlich ergänzen.", 150)],
+        ["Transfer in den Alltag", shorten_text(model["next_steps"] or model["governance"], "Transferlogik fachlich ergänzen.", 150)],
+    ]
+    model["training_questions"] = [
+        "Welche Entscheidung wird durch den Use Case vorbereitet oder beschleunigt?",
+        "Welche fachliche Freigabe ist vor Nutzung oder Rollout erforderlich?",
+        "Welche Daten oder Eingangsinformationen muessen vorab belastbar vorliegen?",
+    ]
+    return model
+
+
+def build_quality_scorecard(model: dict) -> dict:
+    def score_status(source_text: str, open_label: str = "Offen") -> str:
+        return "Vorstrukturiert" if source_text else open_label
+
+    model["quality_scorecard_rows"] = [
+        ["Problemverständnis", score_status(model["problem_class"]), shorten_text(model["problem_class"], "Problemverständnis zu präzisieren.", 140)],
+        ["Datenbasis", score_status(model["inputs_outputs"]), shorten_text(model["inputs_outputs"], "Datenbasis zu ergänzen.", 140)],
+        ["Governance", score_status(model["governance"], "Prüfpflichtig"), shorten_text(model["governance"], "Governance-Rahmen definieren.", 140)],
+        ["Qualitätsprüfung", score_status(model["quality"], "Offen"), shorten_text(model["quality"], "Qualitätslogik definieren.", 140)],
+        ["Umsetzungsreife", score_status(model["next_steps"], "Vorbereitung"), shorten_text(model["next_steps"], "Rolloutpfad konkretisieren.", 140)],
+    ]
+    return model
+
+
+def build_management_recommendation(model: dict) -> dict:
+    model["management_recommendation"] = {
+        "headline": "Empfohlene Management-Entscheidung",
+        "decision": first_sentence(model["next_steps"] or model["target_state"], "Naechsten Management-Schritt fachlich definieren.", 170),
+        "prerequisites": [
+            shorten_text(model["governance"], "Governance- und Freigabepfad festlegen.", 120),
+            shorten_text(model["quality"], "Qualitaets- und Fachpruefung definieren.", 120),
+            shorten_text(model["inputs_outputs"], "Daten- und Inputlage konkretisieren.", 120),
+        ],
+        "note": first_sentence(model["summary"] or model["background"], "Der vorliegende Stand ist als belastbare Vorstrukturierung zu lesen.", 200),
+    }
+    return model
+
+
+def chapter_text(title: str, purpose: str, model: dict) -> str:
+    if title == "Executive Summary":
+        return "\n".join(f"- {item}" for item in model["executive_summary_points"])
+    if title == "Management-Kontext":
+        return "\n".join(f"- {item}" for item in model["management_context_points"])
+    if title == "Ausgangslage":
+        return model["background"] or "Der vorliegende Input erlaubt aktuell nur eine Vorstrukturierung."
+    if title == "Problemklasse":
+        return model["problem_class"] or "Die Problemklasse ist fachlich zu konkretisieren."
+    if title == "Zielbild":
+        return model["target_state"] or "Das Zielbild ist managementseitig zu validieren."
+    if title == "Use-Case-Steckbrief":
+        return "Der Steckbrief verdichtet den Use Case in eine entscheidungsnahe Kurzübersicht."
+    if title == "Fachlicher Hintergrund":
+        return model["artifact_blueprint"] or model["summary"] or "Der fachliche Hintergrund ist zu vertiefen."
+    if title == "Prozessübersicht":
+        return model["process_overview"] or "Die Prozessübersicht ist fachlich zu ergänzen."
+    if title == "Prozessmodell / Ablaufmatrix":
+        return "Die Ablaufmatrix zeigt die Kernschritte, deren Zweck und den jeweils wichtigsten Prüfpunkt."
+    if title == "Akteure und Rollen":
+        return model["governance"] or model["masterprompt"] or "Rollen und Verantwortungen sind zu konkretisieren."
+    if title == "Inputs / Outputs / Datenpunkte":
+        return model["inputs_outputs"] or "Inputs, Outputs und Datenpunkte sind fachlich zu konkretisieren."
+    if title == "Entscheidungslogik":
+        return model["decision_logic"] or "Die Entscheidungslogik ist zu konkretisieren."
+    if title == "Fallbeispiel 1":
+        return "Regelfall auf Basis des vorliegenden Inputs."
+    if title == "Fallbeispiel 2":
+        return "Ausnahme- oder Eskalationsfall zur Governance-Absicherung."
+    if title == "Risiken und Annahmen":
+        return model["risks"] or "Risiken und Annahmen sind fachlich zu ergänzen."
+    if title == "Governance":
+        return model["governance"] or "Governance-Rahmen und Freigabepunkte sind zu konkretisieren."
+    if title == "Qualitätsprüfung":
+        return model["quality"] or "Qualitätsprüfung und Validierungslogik sind zu definieren."
+    if title == "KPI- und Erfolgskriterien":
+        return model["kpis"] or "KPI- und Erfolgskriterien sind zu konkretisieren."
+    if title == "Schulungsmodul":
+        return "Das Schulungsmodul übersetzt den Use Case in Lernziele, Zielgruppenbezug und Transferfragen."
+    if title == "Checkliste":
+        return "Die Checkliste dient als kurze Review- und Freigabelogik fuer Umsetzung und Betrieb."
+    if title == "Umsetzungsplan":
+        return model["next_steps"] or "Der Umsetzungsplan ist fachlich zu ergänzen."
+    if title == "Management-Empfehlung":
+        return model["management_recommendation"]["note"]
+    if title == "Anhang: Original-Output / Masterprompt":
+        return "Der Anhang trennt Nachweis und Dokumentation von der Management-Erzählung des Dossiers."
+    return purpose
+
+
+def build_appendix(model: dict) -> dict:
+    appendix_parts = []
+    if model["raw_content"]:
+        appendix_parts.append(model["raw_content"])
+    elif model["artifact"]:
+        appendix_parts.append(f"## Direktes Artefakt\n{model['artifact']}")
+        if model["masterprompt"]:
+            appendix_parts.append(f"## Masterprompt\n{model['masterprompt']}")
+    elif model["masterprompt"]:
+        appendix_parts.append(f"## Masterprompt\n{model['masterprompt']}")
+    if not appendix_parts:
+        appendix_parts.append(model["original_output"] or "Kein Original-Output vorhanden.")
+    return {
+        "title": "Anhang: Original-Output / Masterprompt",
+        "purpose": "Volltextdokumentation des fachlichen Outputs zur Nachvollziehbarkeit und Weiterverwendung.",
+        "paragraphs": ["\n\n".join(appendix_parts)],
+        "page_break_before": True,
+    }
+
+
+def build_pdf_chapters(model: dict) -> list[dict]:
+    roles_rows = [
+        ["Fachlicher Owner", shorten_text(model["governance"] or model["problem_class"], "Owner fachlich ergänzen.", 150), "Freigabe, Priorisierung, fachliche Verantwortung"],
+        ["Operative Rolle", shorten_text(model["process_overview"] or model["artifact"], "Operative Rolle fachlich ergänzen.", 150), "Durchführung, Pflege, Rückmeldung"],
+        ["KI-Unterstützung", "Prompterator / strukturierende KI-Logik", "Vorstrukturierung, Formulierung, Dokumentation"],
+        ["Governance / Review", shorten_text(model["quality"] or model["governance"], "Review-Instanz fachlich ergänzen.", 150), "Prüfung, Freigabe, Eskalation"],
+    ]
+    io_rows = [
+        ["Inputs", shorten_text(model["inputs_outputs"] or model["background"], "Inputlage fachlich ergänzen.", 180)],
+        ["Direkter Output", shorten_text(model["artifact"] or model["summary"], "Output fachlich ergänzen.", 180)],
+        ["Masterprompt", shorten_text(model["masterprompt"], "Masterprompt nur bei Bedarf ergänzen.", 180)],
+        ["Datenpunkte", shorten_text(model["inputs_outputs"] or model["kpis"], "Datenpunkte fachlich ergänzen.", 180)],
+    ]
+    risk_rows = [
+        ["Annahmenlage", shorten_text(model["risks"] or model["background"], "Annahmenlage fachlich ergänzen.", 150), "Amber"],
+        ["Governance-Risiko", shorten_text(model["governance"], "Governance-Risiko fachlich ergänzen.", 150), "Red"],
+        ["Qualitätsrisiko", shorten_text(model["quality"], "Qualitätsrisiko fachlich ergänzen.", 150), "Amber"],
+        ["Rollout-Risiko", shorten_text(model["next_steps"], "Rollout-Risiko fachlich ergänzen.", 150), "Blue"],
+    ]
+    kpi_rows = []
+    for item in extract_list_items(model["kpis"])[:5]:
+        kpi_rows.append([item, "als [ANNAHME] zu validieren", "Messlogik definieren"])
+    if not kpi_rows:
+        kpi_rows = [
+            ["Vorbereitungsaufwand", "als [ANNAHME] zu validieren", "Baseline und Zielwert definieren"],
+            ["Entscheidungsqualität", "fachlich zu messen", "Review-Mechanik festlegen"],
+            ["Rollout-Reife", "fachlich zu validieren", "Pilot und Freigabe koppeln"],
+        ]
+    checklist_rows = []
+    for item in extract_list_items(model["next_steps"] or model["quality"])[:6]:
+        checklist_rows.append(["[ ]", item, "Vor Freigabe prüfen"])
+    if not checklist_rows:
+        checklist_rows = [
+            ["[ ]", "Problemklasse und Zielbild fachlich validieren", "Owner-Freigabe"],
+            ["[ ]", "Governance- und Qualitätslogik dokumentieren", "Review"],
+            ["[ ]", "Pilot und Rollout-Reife bewerten", "Management-Entscheidung"],
+        ]
+    implementation_rows = []
+    raw_steps = extract_list_items(model["next_steps"] or model["process_overview"])[:5]
+    for idx, item in enumerate(raw_steps, start=1):
+        implementation_rows.append([f"Phase {idx}", item, "Verantwortung fachlich zuordnen"])
+    if not implementation_rows:
+        implementation_rows = [
+            ["Phase 1", "Scope und Zielbild bestätigen", "Owner / Fachbereich"],
+            ["Phase 2", "Pilotstruktur und Qualitätsprüfung festlegen", "Projektleitung / Review"],
+            ["Phase 3", "Rollout und Betriebslogik definieren", "Management / Betrieb"],
+        ]
+
+    return [
+        {
+            "title": "Executive Summary",
+            "purpose": "Verdichtete Zusammenfassung fuer Fuehrungskraefte, Sponsoren und schnelle Entscheidungsrunden.",
+            "paragraphs": [chapter_text("Executive Summary", "", model)],
+            "box": {"label": "Topline", "text": model["context"]["value_driver"]},
+            "page_break_before": True,
+        },
+        {
+            "title": "Management-Kontext",
+            "purpose": "Einordnung von Relevanz, Wirkungslogik und Entscheidungsbedarf.",
+            "paragraphs": [chapter_text("Management-Kontext", "", model)],
+            "table": {"headers": ["Signal", "Einordnung"], "rows": model["management_signal_rows"], "widths": [52 * mm, 108 * mm]},
+        },
+        {
+            "title": "Ausgangslage",
+            "purpose": "Beschreibt die beobachtete Startlage, die operative Spannung und den Anlass fuer das Dossier.",
+            "paragraphs": [chapter_text("Ausgangslage", "", model)],
+        },
+        {
+            "title": "Problemklasse",
+            "purpose": "Ordnet das Problem in eine fachliche und operative Kategorie ein.",
+            "paragraphs": [chapter_text("Problemklasse", "", model)],
+        },
+        {
+            "title": "Zielbild",
+            "purpose": "Beschreibt die Soll-Wirkung, den Nutzen und die angestrebte Entscheidungssicherheit.",
+            "paragraphs": [chapter_text("Zielbild", "", model)],
+            "box": {"label": "Wirkungsziel", "text": model["context"]["value_driver"]},
+        },
+        {
+            "title": "Use-Case-Steckbrief",
+            "purpose": "Kompakte Executive-Uebersicht ueber Use Case, Reifegrad und empfohlenen Einstieg.",
+            "paragraphs": [chapter_text("Use-Case-Steckbrief", "", model)],
+            "table": {"headers": ["Baustein", "Einordnung"], "rows": model["usecase_profile_rows"], "widths": [46 * mm, 114 * mm]},
+            "page_break_before": True,
+        },
+        {
+            "title": "Fachlicher Hintergrund",
+            "purpose": "Beschreibt die fachliche Logik, den Kontext und vorhandene Strukturbausteine des Use Cases.",
+            "paragraphs": [chapter_text("Fachlicher Hintergrund", "", model)],
+        },
+        {
+            "title": "Prozessübersicht",
+            "purpose": "Verdichtet den Ablauf zu einer verständlichen Gesamtlogik fuer Fachbereich und Management.",
+            "paragraphs": [chapter_text("Prozessübersicht", "", model)],
+        },
+        {
+            "title": "Prozessmodell / Ablaufmatrix",
+            "purpose": "Übersetzt den Ablauf in eine prüfbare Schritt-für-Schritt-Matrix.",
+            "paragraphs": [chapter_text("Prozessmodell / Ablaufmatrix", "", model)],
+            "table": {"headers": ["Schritt", "Ablauf", "Zweck", "Prüfpunkt"], "rows": model["process_matrix_rows"], "widths": [16 * mm, 54 * mm, 56 * mm, 34 * mm]},
+            "page_break_before": True,
+        },
+        {
+            "title": "Akteure und Rollen",
+            "purpose": "Zeigt Verantwortungen, Beiträge und notwendige Freigabeinstanzen im Operating Model.",
+            "paragraphs": [chapter_text("Akteure und Rollen", "", model)],
+            "table": {"headers": ["Rolle", "Fokus", "Beitrag"], "rows": roles_rows, "widths": [34 * mm, 52 * mm, 74 * mm]},
+        },
+        {
+            "title": "Inputs / Outputs / Datenpunkte",
+            "purpose": "Dokumentiert, welche Informationen in den Prozess eingehen und welche Artefakte daraus entstehen.",
+            "paragraphs": [chapter_text("Inputs / Outputs / Datenpunkte", "", model)],
+            "table": {"headers": ["Element", "Einordnung"], "rows": io_rows, "widths": [42 * mm, 118 * mm]},
+        },
+        {
+            "title": "Entscheidungslogik",
+            "purpose": "Beschreibt die Regeln, Kriterien und Leitplanken fuer operative und managementseitige Entscheidungen.",
+            "paragraphs": [chapter_text("Entscheidungslogik", "", model)],
+            "box": {"label": "Decision Note", "text": model["context"]["decision_need"]},
+        },
+        {
+            "title": "Fallbeispiel 1",
+            "purpose": "Regelfall fuer Kommunikation, Schulung und Durchstich ins operative Alltagshandeln.",
+            "case_example": model["case_examples"][0],
+            "page_break_before": True,
+        },
+        {
+            "title": "Fallbeispiel 2",
+            "purpose": "Ausnahme- oder Eskalationsfall zur Absicherung von Governance und Qualitätsprüfung.",
+            "case_example": model["case_examples"][1],
+        },
+        {
+            "title": "Risiken und Annahmen",
+            "purpose": "Macht Unsicherheiten, Voraussetzungen und kritische Annahmen sichtbar.",
+            "paragraphs": [chapter_text("Risiken und Annahmen", "", model)],
+            "risk_table": risk_rows,
+        },
+        {
+            "title": "Governance",
+            "purpose": "Beschreibt Verantwortung, Freigabe und Kontrollbedarf rund um Einsatz und Rollout.",
+            "paragraphs": [chapter_text("Governance", "", model)],
+        },
+        {
+            "title": "Qualitätsprüfung",
+            "purpose": "Verdichtet die Qualitätslogik in eine kurze, managementtaugliche Scorecard.",
+            "paragraphs": [chapter_text("Qualitätsprüfung", "", model)],
+            "table": {"headers": ["Kriterium", "Status", "Hinweis"], "rows": model["quality_scorecard_rows"], "widths": [42 * mm, 34 * mm, 84 * mm]},
+            "page_break_before": True,
+        },
+        {
+            "title": "KPI- und Erfolgskriterien",
+            "purpose": "Leitet messbare oder zu definierende Erfolgskriterien fuer Pilot, Betrieb und Review ab.",
+            "paragraphs": [chapter_text("KPI- und Erfolgskriterien", "", model)],
+            "table": {"headers": ["KPI / Signal", "Status", "Nächster Schritt"], "rows": kpi_rows, "widths": [60 * mm, 44 * mm, 56 * mm]},
+        },
+        {
+            "title": "Schulungsmodul",
+            "purpose": "Macht den Use Case als Lern- und Einweisungsunterlage nutzbar.",
+            "paragraphs": [chapter_text("Schulungsmodul", "", model)],
+            "table": {"headers": ["Baustein", "Inhalt"], "rows": model["training_rows"], "widths": [42 * mm, 118 * mm]},
+            "bullets": model["training_questions"],
+        },
+        {
+            "title": "Checkliste",
+            "purpose": "Kurzprüfung fuer Freigabe, Review und operative Einsatzreife.",
+            "paragraphs": [chapter_text("Checkliste", "", model)],
+            "table": {"headers": ["Status", "Prüfpunkt", "Hinweis"], "rows": checklist_rows, "widths": [18 * mm, 96 * mm, 46 * mm]},
+        },
+        {
+            "title": "Umsetzungsplan",
+            "purpose": "Ordnet die naechsten Schritte in eine belastbare, managementfaehige Folge.",
+            "paragraphs": [chapter_text("Umsetzungsplan", "", model)],
+            "table": {"headers": ["Phase", "Massnahme", "Zuständigkeit"], "rows": implementation_rows, "widths": [26 * mm, 88 * mm, 46 * mm]},
+        },
+        {
+            "title": "Management-Empfehlung",
+            "purpose": "Formuliert den empfohlenen Entscheidungspunkt und die dafuer noetigen Voraussetzungen.",
+            "paragraphs": [chapter_text("Management-Empfehlung", "", model)],
+            "box": {
+                "label": model["management_recommendation"]["headline"],
+                "text": model["management_recommendation"]["decision"] + "\n\n" + "\n".join(f"- {item}" for item in model["management_recommendation"]["prerequisites"]),
+            },
+            "page_break_before": True,
+        },
+        build_appendix(model),
+    ]
+
+
+def add_footer(canvas, doc):
     canvas.saveState()
-    page_num = canvas.getPageNumber()
-
-    # Cover-Seite: nur Footer-Marke, keine Top-Hairline
-    if page_num > 1:
-        canvas.setStrokeColor(EX_RULE_LIGHT)
-        canvas.setLineWidth(0.4)
-        canvas.line(20 * mm, A4[1] - 13 * mm, A4[0] - 20 * mm, A4[1] - 13 * mm)
-
-    # Footer-Linie
-    canvas.setStrokeColor(EX_RULE)
-    canvas.setLineWidth(0.5)
-    canvas.line(20 * mm, 14 * mm, A4[0] - 20 * mm, 14 * mm)
-
-    # Footer-Text links
-    canvas.setFont("Helvetica", 7.5)
-    canvas.setFillColor(EX_INK_LIGHT)
-    canvas.drawString(20 * mm, 9 * mm, "Prompterator · Operator Fischer · AI Operations")
-
-    # Footer-Text rechts: Seitenzahl
-    canvas.setFont("Helvetica-Bold", 7.5)
-    canvas.setFillColor(EX_INK_MUTED)
-    page_label = f"Seite {page_num}"
-    canvas.drawRightString(A4[0] - 20 * mm, 9 * mm, page_label)
-
+    canvas.setStrokeColor(colors.HexColor("#244C5A"))
+    canvas.setLineWidth(0.7)
+    canvas.line(16 * mm, 12 * mm, A4[0] - 16 * mm, 12 * mm)
+    canvas.setFont("Helvetica", 8)
+    canvas.setFillColor(colors.HexColor("#536575"))
+    footer = f"Prompterator · Operator Fischer · AI Operations · Seite {canvas.getPageNumber()}"
+    canvas.drawString(16 * mm, 8 * mm, footer)
     canvas.restoreState()
 
 
-# ----------------------------------------------------------------------------
-# ReportLab-Bausteine: Key-Message-Box, Decision-Note, Risk-Note
-# ----------------------------------------------------------------------------
-
-def ex_key_message_box(text: str, label: str = "Kernbotschaft", accent: bool = True) -> Table:
-    """Hervorgehobene Aussagebox mit Akzentlinie links."""
-    bg = EX_BOX_ACCENT if accent else EX_BOX_BG
-    border_color = EX_ACCENT if accent else EX_BOX_BORDER
-
-    label_style = ParagraphStyle(
-        name="KMLabel",
-        fontName="Helvetica-Bold",
-        fontSize=8,
-        leading=10,
-        textColor=EX_ACCENT_DK,
-        spaceAfter=4,
-    )
-    text_style = ParagraphStyle(
-        name="KMText",
-        fontName="Helvetica",
-        fontSize=10.5,
-        leading=15,
-        textColor=EX_INK,
-        spaceAfter=0,
-    )
-
-    inner = [
-        Paragraph(label.upper(), label_style),
-        Paragraph(sanitize_pdf_text(text), text_style),
-    ]
-    tbl = Table([[inner]], colWidths=[170 * mm])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), bg),
-        ("LINEBEFORE", (0, 0), (0, -1), 2.4, border_color),
-        ("LEFTPADDING", (0, 0), (-1, -1), 14),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-        ("TOPPADDING", (0, 0), (-1, -1), 12),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-    ]))
-    return tbl
-
-
-def ex_decision_note(text: str) -> Table:
-    """Empfehlung / naechste Entscheidung. Cyan-Box."""
-    return ex_key_message_box(text, label="Empfohlene Entscheidung", accent=True)
-
-
-def ex_risk_note(text: str) -> Table:
-    """Risiko-Hinweis. Amber-akzentuiert dezent."""
-    label_style = ParagraphStyle(
-        name="RNLabel",
-        fontName="Helvetica-Bold",
-        fontSize=8,
-        leading=10,
-        textColor=EX_AMBER,
-        spaceAfter=4,
-    )
-    text_style = ParagraphStyle(
-        name="RNText",
-        fontName="Helvetica",
-        fontSize=10,
-        leading=14,
-        textColor=EX_INK,
-    )
-    inner = [
-        Paragraph("RISIKO / ANNAHME", label_style),
-        Paragraph(sanitize_pdf_text(text), text_style),
-    ]
-    tbl = Table([[inner]], colWidths=[170 * mm])
-    tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FBF4EC")),
-        ("LINEBEFORE", (0, 0), (0, -1), 2.4, EX_AMBER),
-        ("LEFTPADDING", (0, 0), (-1, -1), 14),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-        ("TOPPADDING", (0, 0), (-1, -1), 11),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 11),
-    ]))
-    return tbl
-
-
-# ----------------------------------------------------------------------------
-# ReportLab-Bausteine: Stil-Setup
-# ----------------------------------------------------------------------------
-
-def _ex_build_styles():
-    styles = getSampleStyleSheet()
-
-    # Cover-Eyebrow (kleines uppercase-Label oben)
-    styles.add(ParagraphStyle(
-        name="ExEyebrow",
-        fontName="Helvetica-Bold",
-        fontSize=8.5,
-        leading=11,
-        textColor=EX_ACCENT_DK,
-        spaceAfter=10,
-    ))
-    # Cover-Titel
-    styles.add(ParagraphStyle(
-        name="ExCoverTitle",
-        fontName="Helvetica-Bold",
-        fontSize=30,
-        leading=34,
-        textColor=EX_INK,
-        spaceAfter=8,
-    ))
-    # Cover-Context-Line
-    styles.add(ParagraphStyle(
-        name="ExCoverContext",
-        fontName="Helvetica",
-        fontSize=12.5,
-        leading=18,
-        textColor=EX_INK_SOFT,
-        spaceAfter=18,
-    ))
-    # Cover-Footer-Stand
-    styles.add(ParagraphStyle(
-        name="ExCoverMeta",
-        fontName="Helvetica",
-        fontSize=9,
-        leading=13,
-        textColor=EX_INK_LIGHT,
-        spaceAfter=2,
-    ))
-    styles.add(ParagraphStyle(
-        name="ExCoverMetaBold",
-        fontName="Helvetica-Bold",
-        fontSize=9,
-        leading=13,
-        textColor=EX_INK_MUTED,
-        spaceAfter=2,
-    ))
-
-    # Section-Eyebrow
-    styles.add(ParagraphStyle(
-        name="ExSectionEyebrow",
-        fontName="Helvetica-Bold",
-        fontSize=8,
-        leading=10,
-        textColor=EX_ACCENT_DK,
-        spaceAfter=4,
-    ))
-    # Section-Headline (Leitfrage)
-    styles.add(ParagraphStyle(
-        name="ExSectionHead",
-        fontName="Helvetica-Bold",
-        fontSize=18,
-        leading=22,
-        textColor=EX_INK,
-        spaceAfter=6,
-    ))
-    # Section-Lead (kurzer Untertitel-Satz)
-    styles.add(ParagraphStyle(
-        name="ExSectionLead",
-        fontName="Helvetica",
-        fontSize=11,
-        leading=16,
-        textColor=EX_INK_MUTED,
-        spaceAfter=14,
-    ))
-    # Body
-    styles.add(ParagraphStyle(
-        name="ExBody",
-        fontName="Helvetica",
-        fontSize=10,
-        leading=15,
-        textColor=EX_INK_SOFT,
-        spaceAfter=8,
-    ))
-    # Body als Placeholder (etwas dezenter / kursiv)
-    styles.add(ParagraphStyle(
-        name="ExBodyPlaceholder",
-        fontName="Helvetica-Oblique",
-        fontSize=9.5,
-        leading=14,
-        textColor=EX_INK_LIGHT,
-        spaceAfter=8,
-    ))
-    # Bullet
-    styles.add(ParagraphStyle(
-        name="ExBullet",
-        fontName="Helvetica",
-        fontSize=10.5,
-        leading=15,
-        textColor=EX_INK,
-        leftIndent=14,
-        bulletIndent=2,
-        spaceAfter=5,
-    ))
-    # Appendix mono
-    styles.add(ParagraphStyle(
-        name="ExAppendixMono",
-        fontName="Courier",
-        fontSize=8.5,
-        leading=12,
-        textColor=EX_INK_SOFT,
-        spaceAfter=6,
-    ))
-    return styles
-
-
-# ----------------------------------------------------------------------------
-# Story-Builder
-# ----------------------------------------------------------------------------
-
-def _ex_render_body(story: list, styles, text: str, status: str):
-    """Rendert einen Kapitel-Body als Bullets (wenn vorhanden) oder Absatz."""
-    if status == "placeholder":
-        story.append(Paragraph(sanitize_pdf_text(text), styles["ExBodyPlaceholder"]))
-        return
-
-    bullets = ex_extract_bullets(text, limit=6)
-    if bullets:
-        for b in bullets:
-            story.append(Paragraph(
-                "•&nbsp;&nbsp;" + sanitize_pdf_text(b),
-                styles["ExBullet"],
-            ))
-        story.append(Spacer(1, 2 * mm))
-        return
-
-    # Absatzweise
-    for chunk in text.split("\n\n"):
-        chunk = chunk.strip()
-        if chunk:
-            story.append(Paragraph(sanitize_pdf_text(chunk), styles["ExBody"]))
-
-
-def _ex_section_header(story: list, styles, eyebrow: str, headline: str, lead: str):
-    """Eyebrow + Leitfrage + Sub-Lead. Macht den Seitenkopf."""
-    story.append(Paragraph(eyebrow.upper(), styles["ExSectionEyebrow"]))
-    story.append(Paragraph(sanitize_pdf_text(headline), styles["ExSectionHead"]))
-    if lead:
-        story.append(Paragraph(sanitize_pdf_text(lead), styles["ExSectionLead"]))
-
-
-def _ex_build_cover(story: list, styles, title: str, sections: dict[str, str], content: str, source: str):
-    """Seite 1: ruhig, hierarchisch, kein Tabellen-Klotz."""
-    # Etwas Luft oben statt direkt am Rand kleben
-    story.append(Spacer(1, 22 * mm))
-
-    story.append(Paragraph("EXECUTIVE USE-CASE BRIEFING", styles["ExEyebrow"]))
-    story.append(Paragraph(sanitize_pdf_text(title), styles["ExCoverTitle"]))
-
-    # Context line: 1-2 Saetze aus Zielbild/Zusammenfassung
-    summary_block = get_section(sections, [
-        "Portfolio-Zusammenfassung",
-        "Executive Summary",
-        "Zielbild und Nutzen",
-        "Zielbild",
-    ])
-    context_line = ""
-    if summary_block:
-        # Erster Satz, harter Cap
-        first_sentence = summary_block.replace("\n", " ").split(".")[0].strip()
-        if first_sentence:
-            context_line = first_sentence + "."
-    if not context_line:
-        first_line = ex_first_meaningful_line(content)
-        if first_line:
-            context_line = first_line[:240]
-    if not context_line:
-        context_line = "Verdichtete Entscheidungsgrundlage fuer Management und Operations."
-
-    story.append(Paragraph(sanitize_pdf_text(context_line), styles["ExCoverContext"]))
-
-    # Trennlinie + Meta-Block dezent
-    rule = Table([[""]], colWidths=[170 * mm], rowHeights=[0.8])
-    rule.setStyle(TableStyle([
-        ("LINEBELOW", (0, 0), (-1, -1), 1.2, EX_ACCENT),
-    ]))
-    story.append(rule)
-    story.append(Spacer(1, 8 * mm))
-
-    now_label = time.strftime("%d.%m.%Y", time.localtime())
-    meta_rows = [
-        [Paragraph("STAND", styles["ExCoverMetaBold"]), Paragraph(now_label, styles["ExCoverMeta"])],
-        [Paragraph("HERAUSGEBER", styles["ExCoverMetaBold"]), Paragraph("Operator Fischer · AI Operations", styles["ExCoverMeta"])],
-        [Paragraph("QUELLE", styles["ExCoverMetaBold"]), Paragraph(sanitize_pdf_text(source or "prompterator"), styles["ExCoverMeta"])],
-        [Paragraph("FORMAT", styles["ExCoverMetaBold"]), Paragraph("Executive Use-Case Briefing", styles["ExCoverMeta"])],
-    ]
-    meta_tbl = Table(meta_rows, colWidths=[34 * mm, 136 * mm])
-    meta_tbl.setStyle(TableStyle([
+def make_table(rows: list[list[str]], styles, widths: list[float], header_fill: str = "#123847", body_fill: str = "#F6F9FB"):
+    table_rows = []
+    for idx, row in enumerate(rows):
+        rendered = []
+        for cell in row:
+            style = styles["TableHeader"] if idx == 0 else styles["TableBody"]
+            rendered.append(Paragraph(sanitize_pdf_text(str(cell)), style))
+        table_rows.append(rendered)
+    table = Table(table_rows, colWidths=widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(header_fill)),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor(body_fill)),
+        ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#AAB7C2")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D2DCE4")),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
-    story.append(meta_tbl)
+    return table
 
-    # Bottom-Aussagebox
-    story.append(Spacer(1, 26 * mm))
-    note_style = ParagraphStyle(
-        name="ExCoverNote",
-        fontName="Helvetica-Oblique",
-        fontSize=9,
-        leading=13,
-        textColor=EX_INK_LIGHT,
+
+def build_management_box(label: str, text: str, styles):
+    box = Table(
+        [[Paragraph(sanitize_pdf_text(label), styles["BoxLabel"]), Paragraph(sanitize_pdf_text(text), styles["BoxBody"])]],
+        colWidths=[34 * mm, 126 * mm],
     )
-    story.append(Paragraph(
-        "Dieses Briefing verdichtet einen Prompterator-Use-Case zu einer Entscheidungsgrundlage. "
-        "Der vollstaendige Original-Output ist im Anhang dokumentiert.",
-        note_style,
-    ))
+    box.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), colors.HexColor("#123847")),
+        ("BACKGROUND", (1, 0), (1, 0), colors.HexColor("#EDF4F7")),
+        ("TEXTCOLOR", (0, 0), (0, 0), colors.white),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#94A9B5")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#C9D6DE")),
+        ("TOPPADDING", (0, 0), (-1, -1), 7),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    return box
 
 
-def _ex_build_executive_summary(story: list, styles, sections: dict[str, str], content: str):
-    """Seite 2: Problem · Zielbild · Nutzen · Empfehlung."""
-    story.append(PageBreak())
-    _ex_section_header(
-        story, styles,
-        eyebrow="01 · Executive Summary",
-        headline="Worum geht es und warum jetzt entscheiden?",
-        lead="Verdichtung des Use Cases auf Management-Relevanz, Wirkungserwartung und naechsten Entscheidungsschritt.",
-    )
-
-    summary_points = ex_synthesize_summary(sections, content)
-    if summary_points:
-        for point in summary_points:
-            story.append(Paragraph(
-                "•&nbsp;&nbsp;" + sanitize_pdf_text(point),
-                styles["ExBullet"],
-            ))
-        story.append(Spacer(1, 8 * mm))
-    else:
-        story.append(Paragraph(
-            "Der vorliegende Input erlaubt aktuell nur eine Vorstrukturierung. Eine belastbare "
-            "Management-Zusammenfassung erfordert weitere fachliche Angaben.",
-            styles["ExBodyPlaceholder"],
-        ))
-        story.append(Spacer(1, 6 * mm))
-
-    # Kernbotschaft
-    zielbild = get_section(sections, ["Zielbild und Nutzen", "Zielbild"])
-    if zielbild:
-        first_sentence = zielbild.replace("\n", " ").split(".")[0].strip()
-        if first_sentence:
-            story.append(ex_key_message_box(first_sentence + ".", label="Zielbild · Wirkung"))
-            story.append(Spacer(1, 8 * mm))
-
-    # Empfohlene Entscheidung
-    story.append(ex_decision_note(ex_management_signal(sections)))
+def build_case_example_table(case_example: dict, styles):
+    rows = [["Baustein", "Ausarbeitung"]]
+    for key in ["Ausgangslage", "Entscheidungspunkt", "Vorgehen", "Risiko", "Prüfung", "Ergebnis", "Lernpunkt"]:
+        rows.append([key, case_example.get(key, "Fachlich zu ergänzen.")])
+    return make_table(rows, styles, [40 * mm, 120 * mm], header_fill="#1D4554")
 
 
-def _ex_build_chapter(story: list, styles, eyebrow: str, headline: str, lead: str,
-                      body: str, status: str, extra=None):
-    """Allgemeines Kapitel mit Page-Break, Header, Body."""
-    story.append(PageBreak())
-    _ex_section_header(story, styles, eyebrow, headline, lead)
-    _ex_render_body(story, styles, body, status)
-    if extra is not None:
-        story.append(Spacer(1, 4 * mm))
-        story.append(extra)
-
-
-def _ex_build_appendix(story: list, styles, content: str):
-    """Letzte Seiten: Original-Output unverkuerzt."""
-    story.append(PageBreak())
-    _ex_section_header(
-        story, styles,
-        eyebrow="Anhang · A",
-        headline="Original-Output (Prompterator)",
-        lead="Unverkuerzter Ausgangstext zur Nachvollziehbarkeit. Nicht Teil des Management-Briefings.",
-    )
-
-    text = (content or "").strip()
-    if not text:
-        story.append(Paragraph(
-            "Kein Original-Output vorhanden.",
-            styles["ExBodyPlaceholder"],
-        ))
+def render_text_content(story: list, styles, text: str):
+    if not text.strip():
+        story.append(Paragraph("Fachlich zu konkretisieren.", styles["BodyCopy"]))
         return
+    for block in text_blocks(text):
+        if block["type"] == "list":
+            for item in block["items"]:
+                story.append(Paragraph(sanitize_pdf_text(item), styles["BulletCopy"], bulletText="•"))
+            story.append(Spacer(1, 1.5 * mm))
+        else:
+            story.append(Paragraph(sanitize_pdf_text(block["text"]), styles["BodyCopy"]))
 
-    # Absatzweise in Monospace ausgeben
-    for chunk in text.split("\n\n"):
-        chunk = chunk.strip()
-        if chunk:
-            story.append(Paragraph(sanitize_pdf_text(chunk), styles["ExAppendixMono"]))
+
+def build_cover_page(story: list, styles, metadata: dict):
+    story.append(Paragraph("Prompterator Use-Case Portfolio", styles["DeckTitle"]))
+    story.append(Paragraph("Executive Decision Brief / KI-gestuetztes Arbeitsartefakt", styles["DeckSubtitle"]))
+    story.append(Spacer(1, 4 * mm))
+    story.append(build_management_box("Executive Context", metadata["context_line"], styles))
+    story.append(Spacer(1, 7 * mm))
+    meta_rows = [
+        ["Datum", metadata["date"]],
+        ["Quelle", metadata["source"]],
+        ["Dokumenttyp", "Business-Dossier / Schulungsdokument / Use-Case-Buch"],
+        ["Hinweis", "Erstellt mit Prompterator / Operator Fischer / AI Operations"],
+    ]
+    story.append(make_table([["Metadatum", "Einordnung"], *meta_rows], styles, [44 * mm, 116 * mm], header_fill="#213847"))
+    story.append(Spacer(1, 9 * mm))
+    story.append(Paragraph(sanitize_pdf_text(metadata["cover_intro"]), styles["LeadCopy"]))
 
 
-def build_pdf_portfolio(title: str, content: str, source: str) -> bytes:
-    """Executive PDF Briefing.
+def build_pdf_chapter(story: list, styles, chapter: dict):
+    if chapter.get("page_break_before"):
+        story.append(PageBreak())
 
-    Aufbau:
-      Seite 1   Cover
-      Seite 2   Executive Summary (Problem, Zielbild, Empfehlung)
-      Seite 3+  Inhaltsabhaengige Kapitel (nur wenn Input dafuer trägt)
-      Letzte   Anhang: Original-Output
-    """
+    story.append(make_table([[chapter["title"]]], styles, [160 * mm], header_fill="#103947", body_fill="#103947"))
+    story.append(Spacer(1, 2 * mm))
+    story.append(Paragraph(sanitize_pdf_text(chapter["purpose"]), styles["PurposeCopy"]))
+    story.append(Spacer(1, 1.5 * mm))
+
+    if chapter.get("box"):
+        story.append(build_management_box(chapter["box"]["label"], chapter["box"]["text"], styles))
+        story.append(Spacer(1, 3 * mm))
+
+    for paragraph in chapter.get("paragraphs", []):
+        render_text_content(story, styles, paragraph)
+        story.append(Spacer(1, 1.5 * mm))
+
+    if chapter.get("table"):
+        table = chapter["table"]
+        story.append(make_table([table["headers"], *table["rows"]], styles, table["widths"]))
+        story.append(Spacer(1, 3 * mm))
+
+    if chapter.get("risk_table"):
+        story.append(make_table([["Risikofeld", "Einordnung", "Signal"], *chapter["risk_table"]], styles, [42 * mm, 94 * mm, 24 * mm], header_fill="#6D4A17", body_fill="#FBF6EE"))
+        story.append(Spacer(1, 3 * mm))
+
+    if chapter.get("case_example"):
+        story.append(Paragraph(sanitize_pdf_text(chapter["case_example"]["title"]), styles["CaseTitle"]))
+        story.append(Spacer(1, 1.5 * mm))
+        story.append(build_case_example_table(chapter["case_example"], styles))
+        story.append(Spacer(1, 3 * mm))
+
+    if chapter.get("bullets"):
+        for item in chapter["bullets"]:
+            story.append(Paragraph(sanitize_pdf_text(item), styles["BulletCopy"], bulletText="•"))
+        story.append(Spacer(1, 3 * mm))
+
+
+def render_executive_dossier_pdf(chapters: list[dict], metadata: dict) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        leftMargin=20 * mm,
-        rightMargin=20 * mm,
-        topMargin=22 * mm,
-        bottomMargin=22 * mm,
-        title=title or "Prompterator Executive Briefing",
+        leftMargin=16 * mm,
+        rightMargin=16 * mm,
+        topMargin=14 * mm,
+        bottomMargin=18 * mm,
+        title=metadata["title"],
         author="Prompterator / Operator Fischer",
-        subject="Executive Use-Case Briefing",
     )
 
-    styles = _ex_build_styles()
-    normalized_title = (title or "Prompterator Use-Case Briefing").strip()
-    sections = parse_markdown_sections(content)
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name="DeckTitle",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=26,
+        leading=30,
+        textColor=colors.HexColor("#143A47"),
+        spaceAfter=10,
+    ))
+    styles.add(ParagraphStyle(
+        name="DeckSubtitle",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=12,
+        leading=16,
+        textColor=colors.HexColor("#4B5E6D"),
+        spaceAfter=8,
+    ))
+    styles.add(ParagraphStyle(
+        name="LeadCopy",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=11,
+        leading=15,
+        textColor=colors.HexColor("#22313F"),
+        spaceAfter=8,
+    ))
+    styles.add(ParagraphStyle(
+        name="PurposeCopy",
+        parent=styles["BodyText"],
+        fontName="Helvetica-Oblique",
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor("#586A79"),
+        spaceAfter=6,
+    ))
+    styles.add(ParagraphStyle(
+        name="BodyCopy",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=10.2,
+        leading=14.2,
+        textColor=colors.HexColor("#18232E"),
+        spaceAfter=6,
+    ))
+    styles.add(ParagraphStyle(
+        name="BulletCopy",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=13.5,
+        leftIndent=12,
+        firstLineIndent=0,
+        textColor=colors.HexColor("#1C2B35"),
+        spaceAfter=3,
+    ))
+    styles.add(ParagraphStyle(
+        name="BoxLabel",
+        parent=styles["BodyText"],
+        fontName="Helvetica-Bold",
+        fontSize=9.5,
+        leading=12,
+        textColor=colors.white,
+    ))
+    styles.add(ParagraphStyle(
+        name="BoxBody",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=13.5,
+        textColor=colors.HexColor("#1B2732"),
+    ))
+    styles.add(ParagraphStyle(
+        name="TableHeader",
+        parent=styles["BodyText"],
+        fontName="Helvetica-Bold",
+        fontSize=9,
+        leading=11,
+        textColor=colors.white,
+    ))
+    styles.add(ParagraphStyle(
+        name="TableBody",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11.5,
+        textColor=colors.HexColor("#22313F"),
+    ))
+    styles.add(ParagraphStyle(
+        name="CaseTitle",
+        parent=styles["Heading3"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        leading=13,
+        textColor=colors.HexColor("#174455"),
+        spaceAfter=4,
+    ))
 
     story: list = []
+    build_cover_page(story, styles, metadata)
+    for chapter in chapters:
+        build_pdf_chapter(story, styles, chapter)
 
-    # ── Seite 1: Cover ──
-    _ex_build_cover(story, styles, normalized_title, sections, content, source)
-
-    # ── Seite 2: Executive Summary ──
-    _ex_build_executive_summary(story, styles, sections, content)
-
-    # ── Seite 3+: Inhaltskapitel ──
-    # Liste der Kapitel als (chapter_key, eyebrow, headline, lead).
-    # Headlines sind als Leitfragen formuliert.
-    chapter_specs = [
-        ("ausgangslage",       "02 · Ausgangslage",        "Wovon gehen wir aus?",
-         "Beobachtungen, relevante Annahmen und Kontext fuer den Use Case."),
-        ("problemklasse",      "03 · Problemklasse",       "Welches Problem loesen wir?",
-         "Fachliche und operative Einordnung des Falls."),
-        ("zielbild",           "04 · Zielbild und Wirkung", "Was soll erreicht werden?",
-         "Soll-Zustand, Nutzenbild und erwartete Wirkung."),
-        ("entscheidungslogik", "05 · Entscheidungslogik",   "Nach welchen Regeln wird entschieden?",
-         "Kriterien, Logik und Entscheidungswege im Ablauf."),
-        ("hauptablauf",        "06 · Hauptablauf",          "Wie funktioniert es operativ?",
-         "Schrittweiser Kernablauf vom Rohinput zum Artefakt."),
-        ("daten",              "07 · Daten · Inputs · Outputs", "Welche Daten ziehen ein und welche entstehen?",
-         "Benoetigte Eingaben, Datenquellen und resultierende Ausgaben."),
-        ("governance",         "08 · Governance",           "Wer entscheidet, wer verantwortet?",
-         "Freigaben, Verantwortung und Kontrollbedarf."),
-        ("risiken",            "09 · Risiken und Annahmen", "Wo liegen die Risiken?",
-         "Unsicherheiten, Annahmen und potenzielle Stoerquellen."),
-        ("qualitaet",          "10 · Qualitaetspruefung",   "Wie sichern wir Qualitaet?",
-         "Pruefmechanismen und Validierungspunkte."),
-        ("kpi",                "11 · KPIs und Erfolgskriterien", "Woran messen wir Erfolg?",
-         "Messbare oder zu definierende Erfolgskriterien."),
-        ("umsetzung",          "12 · Umsetzungsplan",       "Was passiert als naechstes?",
-         "Konkrete Schritte zur Umsetzung und Pilotierung."),
-        ("empfehlung",         "13 · Management-Empfehlung", "Was empfehlen wir konkret?",
-         "Empfohlene Entscheidung und Begruendung."),
-    ]
-
-    # Trockenes Limit gegen Placeholder-Inflation
-    placeholder_used = 0
-    placeholder_budget = 4  # max 4 Kapitel als Platzhalter, danach werden weitere uebersprungen
-
-    for chapter_key, eyebrow, headline, lead in chapter_specs:
-        body, status = ex_chapter_content(chapter_key, sections, placeholder_used)
-        if status == "placeholder":
-            if placeholder_used >= placeholder_budget:
-                # Strategie: Kapitel still ueberspringen, um halbleere Seitenserien zu vermeiden
-                continue
-            placeholder_used += 1
-
-        extra = None
-        # Spezialfaelle: Empfehlung als Decision-Note darstellen
-        if chapter_key == "empfehlung" and status == "filled":
-            # Body wird durch Decision-Note ersetzt
-            _ex_build_chapter(
-                story, styles, eyebrow, headline, lead,
-                body="", status="placeholder",  # body wird unten ersetzt
-                extra=None,
-            )
-            story.append(ex_decision_note(ex_clip(body, 600)))
-            continue
-
-        if chapter_key == "risiken" and status == "filled":
-            # Body als normaler Bullet-Block, zusaetzlich Risk-Note
-            _ex_build_chapter(
-                story, styles, eyebrow, headline, lead, body, status,
-                extra=None,
-            )
-            # Ableitung eines Risiko-Highlights aus erstem Bullet
-            highlight_bullets = ex_extract_bullets(body, limit=1)
-            if highlight_bullets:
-                story.append(ex_risk_note(highlight_bullets[0]))
-            continue
-
-        _ex_build_chapter(story, styles, eyebrow, headline, lead, body, status, extra)
-
-    # ── Anhang ──
-    _ex_build_appendix(story, styles, content)
-
-    doc.build(story, onFirstPage=_ex_page_chrome, onLaterPages=_ex_page_chrome)
+    doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
     return buffer.getvalue()
+
+
+def build_pdf_portfolio(title: str, content: str, source: str) -> bytes:
+    parsed = parse_prompterator_output(content)
+    model = build_usecase_dossier_model(title, parsed["sections"], source)
+    model["raw_content"] = content.strip()
+    model = expand_business_context(model)
+    model = build_case_examples(model)
+    model = build_process_matrix(model)
+    model = build_training_module(model)
+    model = build_quality_scorecard(model)
+    model = build_management_recommendation(model)
+    chapters = build_pdf_chapters(model)
+    metadata = {
+        "title": title or "Prompterator Use-Case Portfolio",
+        "source": source or "prompterator",
+        "date": time.strftime("%d.%m.%Y", time.localtime()),
+        "context_line": model["context"]["problem_anchor"],
+        "cover_intro": shorten_text(
+            model["summary"] or model["background"] or model["artifact"],
+            "Der vorliegende Input wurde in ein strukturiertes Business-Dossier ueberfuehrt.",
+            360,
+        ),
+    }
+    return render_executive_dossier_pdf(chapters, metadata)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -1364,19 +1543,10 @@ class Handler(BaseHTTPRequestHandler):
             if length > MAX_PDF_BODY_BYTES:
                 self._send_json(413, {"error": f"PDF-Request zu groß. Maximum: {MAX_PDF_BODY_BYTES} Bytes."})
                 return
-            if set(payload.keys()) - {"title", "content", "source"}:
-                self._send_json(400, {"error": "Unerwartete Felder im PDF-Request"})
-                return
-
-            title = str(payload.get("title", "Prompterator Use-Case Portfolio")).strip() or "Prompterator Use-Case Portfolio"
-            content = str(payload.get("content", "")).strip()
-            source = str(payload.get("source", "prompterator")).strip()
-
-            if not content:
-                self._send_json(400, {"error": "content darf nicht leer sein"})
-                return
-            if len(content) > MAX_PDF_CONTENT_CHARS:
-                self._send_json(413, {"error": f"content zu lang. Maximum: {MAX_PDF_CONTENT_CHARS} Zeichen."})
+            try:
+                title, content, source = validate_pdf_payload(payload)
+            except PdfValidationError as exc:
+                self._send_json(exc.status, {"error": str(exc)})
                 return
 
             pdf_bytes = build_pdf_portfolio(title, content, source)
