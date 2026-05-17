@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import html
 import hmac
+import io
 import json
 import os
 import threading
@@ -11,6 +13,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
 BASE_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORT", "8787"))
 HOST = os.environ.get("HOST", "0.0.0.0")
@@ -20,10 +28,13 @@ ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
 
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", "7000"))
 MAX_INPUT_CHARS = int(os.environ.get("MAX_INPUT_CHARS", "2500"))
+MAX_PDF_BODY_BYTES = int(os.environ.get("MAX_PDF_BODY_BYTES", "120000"))
+MAX_PDF_CONTENT_CHARS = int(os.environ.get("MAX_PDF_CONTENT_CHARS", "50000"))
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "1200"))
 OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", "0.3"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
 RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("RATE_LIMIT_MAX_REQUESTS", "3"))
+PDF_RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("PDF_RATE_LIMIT_MAX_REQUESTS", "5"))
 DAILY_REQUEST_LIMIT = int(os.environ.get("DAILY_REQUEST_LIMIT", "20"))
 MONTHLY_REQUEST_LIMIT = int(os.environ.get("MONTHLY_REQUEST_LIMIT", "100"))
 MONTHLY_BUDGET_EUR = float(os.environ.get("MONTHLY_BUDGET_EUR", "5.00"))
@@ -97,6 +108,7 @@ extra_origins = {
 ALLOWED_ORIGINS = DEFAULT_ALLOWED_ORIGINS | extra_origins
 
 request_log = defaultdict(deque)
+pdf_request_log = defaultdict(deque)
 daily_usage = defaultdict(int)
 monthly_usage = defaultdict(int)
 blocked_usage = defaultdict(int)
@@ -217,12 +229,16 @@ def firewall_blocks_path(path: str) -> bool:
 
 
 def is_rate_limited(ip: str) -> bool:
+    return is_rate_limited_for_bucket(request_log, ip, RATE_LIMIT_MAX_REQUESTS)
+
+
+def is_rate_limited_for_bucket(bucket_map: defaultdict[str, deque], ip: str, max_requests: int) -> bool:
     with usage_lock:
         current = now()
-        bucket = request_log[ip]
+        bucket = bucket_map[ip]
         while bucket and bucket[0] < current - RATE_LIMIT_WINDOW_SECONDS:
             bucket.popleft()
-        if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
+        if len(bucket) >= max_requests:
             return True
         bucket.append(current)
         return False
@@ -381,6 +397,176 @@ Innerhalb von "## Direktes Artefakt" nach Möglichkeit mit diesen festen Portfol
     return "Der Dienst hat keine auswertbare Textantwort erhalten. Bitte den Input kürzer oder konkreter formulieren."
 
 
+def split_pdf_sections(content: str) -> list[tuple[str, str]]:
+    sections: list[tuple[str, str]] = []
+    current_title: str | None = None
+    current_lines: list[str] = []
+
+    for raw_line in content.splitlines():
+        line = raw_line.rstrip()
+        if line.startswith("## "):
+            if current_title is not None:
+                body = "\n".join(current_lines).strip()
+                sections.append((current_title, body))
+            current_title = line[3:].strip() or "Abschnitt"
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    if current_title is not None:
+        body = "\n".join(current_lines).strip()
+        sections.append((current_title, body))
+
+    if sections:
+        return sections
+    return [("Use-Case Inhalt", content.strip())]
+
+
+def pdf_text(text: str) -> str:
+    safe = html.escape(text or "")
+    safe = safe.replace("\n", "<br/>")
+    return safe
+
+
+def pdf_footer(canvas, doc):
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor("#1E5F73"))
+    canvas.setLineWidth(0.7)
+    canvas.line(16 * mm, 12 * mm, A4[0] - 16 * mm, 12 * mm)
+    canvas.setFont("Helvetica", 8)
+    canvas.setFillColor(colors.HexColor("#4D5D6C"))
+    canvas.drawString(16 * mm, 8 * mm, "Prompterator · Operator Fischer · AI Operations")
+    canvas.drawRightString(A4[0] - 16 * mm, 8 * mm, f"Seite {canvas.getPageNumber()}")
+    canvas.restoreState()
+
+
+def build_pdf_document(title: str, content: str, source: str) -> bytes:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=16 * mm,
+        rightMargin=16 * mm,
+        topMargin=16 * mm,
+        bottomMargin=18 * mm,
+        title=title,
+        author="Prompterator / Operator Fischer",
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name="DeckTitle",
+        parent=styles["Title"],
+        fontName="Helvetica-Bold",
+        fontSize=24,
+        leading=28,
+        textColor=colors.HexColor("#123847"),
+        spaceAfter=8,
+    ))
+    styles.add(ParagraphStyle(
+        name="DeckSubtitle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=12,
+        leading=16,
+        textColor=colors.HexColor("#445766"),
+        spaceAfter=6,
+    ))
+    styles.add(ParagraphStyle(
+        name="SectionTitle",
+        parent=styles["Heading2"],
+        fontName="Helvetica-Bold",
+        fontSize=15,
+        leading=18,
+        textColor=colors.HexColor("#133B4A"),
+        spaceBefore=10,
+        spaceAfter=6,
+    ))
+    styles.add(ParagraphStyle(
+        name="BodyCopy",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=14,
+        textColor=colors.HexColor("#1B2430"),
+        spaceAfter=6,
+    ))
+    styles.add(ParagraphStyle(
+        name="SmallMeta",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor("#5A6978"),
+        spaceAfter=4,
+    ))
+
+    now_label = time.strftime("%d.%m.%Y", time.localtime())
+    sections = split_pdf_sections(content)
+    executive_summary = sections[0][1].splitlines()[0].strip() if sections and sections[0][1].strip() else content.strip().splitlines()[0].strip()
+    if not executive_summary:
+        executive_summary = "Kein zusammenfassender Inhalt vorhanden."
+
+    story = [
+        Paragraph(pdf_text(title), styles["DeckTitle"]),
+        Paragraph("KI-gestuetztes Arbeitsartefakt", styles["DeckSubtitle"]),
+        Spacer(1, 6 * mm),
+    ]
+
+    meta_table = Table(
+        [
+            ["Datum", now_label],
+            ["Quelle", source or "prompterator"],
+            ["Hinweis", "Erstellt mit Prompterator / Operator Fischer"],
+        ],
+        colWidths=[34 * mm, 130 * mm],
+    )
+    meta_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#EAF1F4")),
+        ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#F7FAFC")),
+        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#21313F")),
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("LEADING", (0, 0), (-1, -1), 12),
+        ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#AEBCC7")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D3DCE3")),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.extend([meta_table, Spacer(1, 10 * mm)])
+
+    summary_sections = [
+        ("Executive Summary", executive_summary),
+        ("Strukturierter Use Case", "Die folgenden Abschnitte wurden aus dem aktuellen Prompterator-Output fuer ein professionelles Use-Case-Portfolio aufbereitet."),
+        ("Problemklasse und Zielbild", "Relevante Problem-, Ziel- und Wirklogik sind im strukturierten Inhalt dokumentiert."),
+        ("Artefakt / Direktes Arbeitsprodukt", "Der Prompterator-Output dient als direkt nutzbare Arbeitsgrundlage und als Portfolio-Baustein."),
+        ("Qualitaetspruefung", "Pruefhinweise, KPI-Annahmen und Belastbarkeit sollten vor produktivem Einsatz validiert werden."),
+        ("Governance", "Mensch bleibt Owner. Kritische Inhalte benoetigen Fachpruefung und Freigabe."),
+        ("Naechste Schritte", "Portfolio-Inhalt pruefen, verdichten und freigeben; danach kann ein finaler Export- oder Bewerbungsfluss folgen."),
+    ]
+    for heading, body in summary_sections:
+        story.append(Paragraph(pdf_text(heading), styles["SectionTitle"]))
+        story.append(Paragraph(pdf_text(body), styles["BodyCopy"]))
+
+    story.append(PageBreak())
+
+    for heading, body in sections:
+        story.append(Paragraph(pdf_text(heading), styles["SectionTitle"]))
+        normalized_body = body.strip() or "Kein Inhalt vorhanden."
+        for chunk in normalized_body.split("\n\n"):
+            if chunk.strip():
+                story.append(Paragraph(pdf_text(chunk.strip()), styles["BodyCopy"]))
+        story.append(Spacer(1, 2 * mm))
+
+    story.append(PageBreak())
+    story.append(Paragraph(pdf_text("Anhang: Original-Output"), styles["SectionTitle"]))
+    story.append(Paragraph(pdf_text(content.strip() or "Kein Output vorhanden."), styles["BodyCopy"]))
+
+    doc.build(story, onFirstPage=pdf_footer, onLaterPages=pdf_footer)
+    return buffer.getvalue()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "Prompterator"
     sys_version = ""
@@ -422,6 +608,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def _send_json(self, status: int, payload: dict):
         self._send(status, json.dumps(payload, ensure_ascii=False), "application/json; charset=utf-8")
+
+    def _send_bytes(self, status: int, data: bytes, content_type: str, extra_headers: dict | None = None):
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        if extra_headers:
+            for key, value in extra_headers.items():
+                self.send_header(key, value)
+        self._security_headers()
+        self._cors_headers()
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(data)
 
     def _send_asset(self, asset_path: str) -> bool:
         entry = ASSET_FILES.get(asset_path)
@@ -515,15 +714,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self._firewall_blocked():
             return
-        if self.path != "/api/generate":
+        if self.path not in ("/api/generate", "/api/pdf"):
             self._send_json(404, {"error": "Nicht gefunden"})
-            return
-        if not GENERATE_ENABLED:
-            self._send_json(503, {"error": "Generator vorübergehend deaktiviert."})
-            return
-        if REQUIRE_ORIGIN_FOR_GENERATE and not normalize_origin(self.headers.get("Origin")):
-            record_blocked_request()
-            self._send_json(403, {"error": "Origin erforderlich"})
             return
         if not origin_allowed(self.headers.get("Origin")):
             record_blocked_request()
@@ -535,22 +727,11 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         ip = client_ip(self)
-        if is_rate_limited(ip):
-            self._send_json(429, {"error": "Rate Limit erreicht. Bitte kurz warten."})
-            return
-
-        allowed, message = budget_guard_allows_request()
-        if not allowed:
-            self._send_json(429, {"error": message})
-            return
 
         try:
             length = int(self.headers.get("Content-Length", 0))
             if length <= 0:
                 self._send_json(400, {"error": "Request Body fehlt"})
-                return
-            if length > MAX_BODY_BYTES:
-                self._send_json(413, {"error": "Input zu groß"})
                 return
 
             body = self.rfile.read(length).decode("utf-8")
@@ -558,21 +739,73 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(payload, dict):
                 self._send_json(400, {"error": "Ungültiges JSON"})
                 return
-            if set(payload.keys()) - {"raw_input"}:
-                self._send_json(400, {"error": "Unerwartete Felder im Request"})
-                return
-            raw_input = str(payload.get("raw_input", "")).strip()
 
-            if not raw_input:
-                self._send_json(400, {"error": "Bitte erst Text eingeben."})
-                return
-            if len(raw_input) > MAX_INPUT_CHARS:
-                self._send_json(413, {"error": f"Input zu lang. Maximum: {MAX_INPUT_CHARS} Zeichen."})
+            if self.path == "/api/generate":
+                if not GENERATE_ENABLED:
+                    self._send_json(503, {"error": "Generator vorübergehend deaktiviert."})
+                    return
+                if REQUIRE_ORIGIN_FOR_GENERATE and not normalize_origin(self.headers.get("Origin")):
+                    record_blocked_request()
+                    self._send_json(403, {"error": "Origin erforderlich"})
+                    return
+                if is_rate_limited(ip):
+                    self._send_json(429, {"error": "Rate Limit erreicht. Bitte kurz warten."})
+                    return
+
+                allowed, message = budget_guard_allows_request()
+                if not allowed:
+                    self._send_json(429, {"error": message})
+                    return
+
+                if length > MAX_BODY_BYTES:
+                    self._send_json(413, {"error": "Input zu groß"})
+                    return
+                if set(payload.keys()) - {"raw_input"}:
+                    self._send_json(400, {"error": "Unerwartete Felder im Request"})
+                    return
+                raw_input = str(payload.get("raw_input", "")).strip()
+
+                if not raw_input:
+                    self._send_json(400, {"error": "Bitte erst Text eingeben."})
+                    return
+                if len(raw_input) > MAX_INPUT_CHARS:
+                    self._send_json(413, {"error": f"Input zu lang. Maximum: {MAX_INPUT_CHARS} Zeichen."})
+                    return
+
+                result = call_openai(raw_input)
+                record_billable_request()
+                self._send_json(200, {"result": result})
                 return
 
-            result = call_openai(raw_input)
-            record_billable_request()
-            self._send_json(200, {"result": result})
+            if is_rate_limited_for_bucket(pdf_request_log, ip, PDF_RATE_LIMIT_MAX_REQUESTS):
+                self._send_json(429, {"error": "PDF Rate Limit erreicht. Bitte kurz warten."})
+                return
+            if length > MAX_PDF_BODY_BYTES:
+                self._send_json(413, {"error": f"PDF-Request zu groß. Maximum: {MAX_PDF_BODY_BYTES} Bytes."})
+                return
+            if set(payload.keys()) - {"title", "content", "source"}:
+                self._send_json(400, {"error": "Unerwartete Felder im PDF-Request"})
+                return
+
+            title = str(payload.get("title", "Prompterator Use-Case Portfolio")).strip() or "Prompterator Use-Case Portfolio"
+            content = str(payload.get("content", "")).strip()
+            source = str(payload.get("source", "prompterator")).strip()
+
+            if not content:
+                self._send_json(400, {"error": "content darf nicht leer sein"})
+                return
+            if len(content) > MAX_PDF_CONTENT_CHARS:
+                self._send_json(413, {"error": f"content zu lang. Maximum: {MAX_PDF_CONTENT_CHARS} Zeichen."})
+                return
+
+            pdf_bytes = build_pdf_document(title, content, source)
+            self._send_bytes(
+                200,
+                pdf_bytes,
+                "application/pdf",
+                {"Content-Disposition": 'attachment; filename="prompterator-usecase-portfolio.pdf"'},
+            )
+            return
 
         except json.JSONDecodeError:
             self._send_json(400, {"error": "Ungültiges JSON"})
