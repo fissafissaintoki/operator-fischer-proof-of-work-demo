@@ -292,6 +292,16 @@
       font-size:12px;
       line-height:1.5;
     }
+    .micro-note{
+      margin:10px 0 0;
+      color:#96a5b3;
+      font-size:12px;
+      line-height:1.55;
+    }
+    .micro-note strong{
+      color:#c9d4de;
+      font-weight:700;
+    }
 
     #copyStatus{color:var(--amber);font:600 12px/1 var(--mono);min-height:14px}
 
@@ -304,6 +314,91 @@
       border-radius:4px;
     }
     .build b{color:var(--muted);font-weight:700}
+    .policy-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      padding:12px 14px;
+      border:1px solid var(--steel-line);
+      border-radius:4px;
+      background:linear-gradient(180deg,rgba(12,18,24,.96),rgba(7,11,15,.98));
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.5;
+    }
+    .policy-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .policy-link{
+      border:1px solid var(--steel-line-2);
+      background:linear-gradient(180deg,#111922,#0b1117);
+      color:var(--text);
+      padding:8px 12px;
+      font:700 11px/1 var(--mono);
+      letter-spacing:.1em;
+      text-transform:uppercase;
+    }
+    .modal-shell{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      background:rgba(2,6,10,.78);
+      z-index:50;
+    }
+    .modal-shell[data-open="true"]{display:flex}
+    .modal-panel{
+      width:min(720px,100%);
+      max-height:min(88vh,920px);
+      overflow:auto;
+      border:1px solid var(--steel-line-2);
+      border-radius:6px;
+      background:linear-gradient(180deg,rgba(15,22,29,.99),rgba(8,12,16,.99));
+      box-shadow:0 26px 70px rgba(0,0,0,.6);
+      padding:18px 18px 16px;
+    }
+    .modal-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .modal-title{
+      margin:0;
+      color:var(--text);
+      font:800 18px/1.2 "Segoe UI",system-ui,sans-serif;
+    }
+    .modal-close{
+      min-width:auto;
+      padding:8px 10px;
+      color:#ffd7dc;
+      background:linear-gradient(180deg,#7b2a33,#56111a);
+    }
+    .modal-copy p,
+    .modal-copy li{
+      color:#b7c3ce;
+      font-size:14px;
+      line-height:1.65;
+    }
+    .modal-copy p{margin:0 0 10px}
+    .modal-copy ul{
+      margin:0 0 12px 18px;
+      padding:0;
+    }
+    .modal-copy strong{color:#eaf2f8}
+    .modal-copy code{
+      color:#d5f6ff;
+      font-family:var(--mono);
+      font-size:.95em;
+    }
 
     @media(max-width:640px){
       .shell{width:min(100% - 14px,980px);padding-top:12px}
@@ -327,6 +422,7 @@
       .actions .hint,.statusline .hint{width:100%;margin-left:0}
       .topstrip{align-items:flex-start;flex-direction:column}
       .topstrip .right{flex-wrap:wrap;gap:10px}
+      .policy-bar{align-items:flex-start}
     }
 
     /* === Print: PDF One-Pager === */
@@ -389,6 +485,7 @@
               <span class="right">Rohinput · max <b>2500</b> chars</span>
             </header>
             <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
+            <p class="micro-note">Datenschutz-Hinweis: Bitte geben Sie keine personenbezogenen, sensiblen oder vertraulichen Daten ein. Eingaben werden zur Generierung des Outputs technisch verarbeitet und koennen an einen KI-Dienst uebermittelt werden.</p>
             <div class="statusline">
               <div class="actions">
                 <button class="btn-create" onclick="run()">Create</button>
@@ -403,6 +500,7 @@
               <p class="pdf-bridge-label">Portfolio Bridge</p>
               <button class="btn-pdf" onclick="exportPdfPortfolio()" title="PDF-Usecase-Portfolio exportieren">PDF</button>
               <p class="pdf-copy">Erstellen Sie hier Ihr professionelles PDF-Use-Case-Portfolio.</p>
+              <p class="micro-note">PDF-Hinweis: Der aktuelle Output wird zur Erstellung des PDFs verarbeitet. Es erfolgt keine dauerhafte Speicherung der PDF-Datei auf dem Server.</p>
             </div>
           </div>
 
@@ -437,11 +535,54 @@
       <span>OPERATOR FISCHER · PROMPTERATOR</span>
       <span>HUMAN OWNS · AI SERVES · CONTROL BUS ACTIVE</span>
     </div>
+    <footer class="policy-bar no-print">
+      <span>Datenschutz by Design: keine sensiblen Eingaben, kein externes Tracking, transparente Verarbeitungshinweise.</span>
+      <div class="policy-actions">
+        <button class="policy-link" type="button" data-modal-open="impressumModal">Impressum</button>
+        <button class="policy-link" type="button" data-modal-open="datenschutzModal">Datenschutz</button>
+      </div>
+    </footer>
 
   </main>
+  <div class="modal-shell" id="impressumModal" role="dialog" aria-modal="true" aria-labelledby="impressumTitle" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2 class="modal-title" id="impressumTitle">Impressum</h2>
+        <button class="modal-close" type="button" data-modal-close>Schliessen</button>
+      </div>
+      <div class="modal-copy">
+        <p><strong>Verantwortlich:</strong> Peter Fischer</p>
+        <p><strong>Anschrift:</strong> &lt;ANSCHRIFT_ERGAENZEN&gt;</p>
+        <p><strong>E-Mail:</strong> &lt;E-MAIL_ERGAENZEN&gt;</p>
+        <p>Bitte vor Veroeffentlichung vollstaendig ergaenzen und rechtlich pruefen.</p>
+      </div>
+    </div>
+  </div>
+  <div class="modal-shell" id="datenschutzModal" role="dialog" aria-modal="true" aria-labelledby="datenschutzTitle" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2 class="modal-title" id="datenschutzTitle">Datenschutz</h2>
+        <button class="modal-close" type="button" data-modal-close>Schliessen</button>
+      </div>
+      <div class="modal-copy">
+        <p><strong>Verantwortlicher:</strong> Peter Fischer / &lt;ANSCHRIFT_ERGAENZEN&gt; / &lt;E-MAIL_ERGAENZEN&gt;</p>
+        <p><strong>Zweck der Verarbeitung:</strong> Verarbeitung von Eingabetexten zur Generierung von Arbeitsartefakten sowie optional zur Erstellung eines PDF-Use-Case-Portfolios.</p>
+        <p><strong>Verarbeitete Daten:</strong> Eingabetext, generierter Output, technische Zugriffsdaten sowie IP-/Serverlogs, soweit dies durch Hosting oder Provider technisch erforderlich ist.</p>
+        <p><strong>KI-Dienst:</strong> OpenAI API / &lt;ANBIETER_ERGAENZEN&gt;</p>
+        <p><strong>Hosting:</strong> Render / &lt;HOSTER_ERGAENZEN&gt;</p>
+        <p><strong>Domain/DNS:</strong> checkdomain / &lt;ANBIETER_ERGAENZEN&gt;</p>
+        <p><strong>Speicherdauer:</strong> Die App soll Eingaben und PDF-Dateien nicht dauerhaft speichern. Hosting- und Providerlogs koennen nach Anbieterbedingungen verarbeitet werden.</p>
+        <p><strong>Rechtsgrundlage:</strong> &lt;RECHTSGRUNDLAGE_JURISTISCH_PRUEFEN&gt;</p>
+        <p><strong>Betroffenenrechte:</strong> Auskunft, Berichtigung, Loeschung, Einschraenkung, Widerspruch, Datenuebertragbarkeit sowie Beschwerde bei einer Aufsichtsbehoerde.</p>
+        <p><strong>Hinweis zu sensiblen Daten:</strong> Bitte keine sensiblen, vertraulichen oder personenbezogenen Daten eingeben.</p>
+        <p><strong>Drittlandtransfer / Anbieterbedingungen:</strong> &lt;JURISTISCH_PRUEFEN&gt;</p>
+      </div>
+    </div>
+  </div>
 <script>
 let workingTimer=null;
 let flashTimer=null;
+let activeModal=null;
 function startWorkingAnimation(el){let d=0;el.textContent="Arbeite";workingTimer=setInterval(()=>{d=(d+1)%4;el.textContent="Arbeite"+".".repeat(d)},380)}
 function stopWorkingAnimation(){if(workingTimer){clearInterval(workingTimer);workingTimer=null}}
 
@@ -530,6 +671,42 @@ async function exportPdfPortfolio(){
     flash("PDF konnte nicht erstellt werden.");
   }
 }
+
+function openModal(id){
+  const modal=document.getElementById(id);
+  if(!modal){return}
+  modal.dataset.open="true";
+  modal.setAttribute("aria-hidden","false");
+  activeModal=modal;
+  const closeButton=modal.querySelector("[data-modal-close]");
+  if(closeButton){closeButton.focus()}
+}
+
+function closeModal(modal){
+  const target=modal||activeModal;
+  if(!target){return}
+  target.dataset.open="false";
+  target.setAttribute("aria-hidden","true");
+  activeModal=null;
+}
+
+document.querySelectorAll("[data-modal-open]").forEach((button)=>{
+  button.addEventListener("click",()=>openModal(button.dataset.modalOpen));
+});
+
+document.querySelectorAll("[data-modal-close]").forEach((button)=>{
+  button.addEventListener("click",()=>closeModal(button.closest(".modal-shell")));
+});
+
+document.querySelectorAll(".modal-shell").forEach((modal)=>{
+  modal.addEventListener("click",(event)=>{
+    if(event.target===modal){closeModal(modal)}
+  });
+});
+
+document.addEventListener("keydown",(event)=>{
+  if(event.key==="Escape"){closeModal()}
+});
 </script>
 </body>
 </html>
