@@ -42,6 +42,14 @@ SEO_ROUTES = {
     "/operator-fischer-method": "pages/operator-fischer-method.html",
 }
 
+# Statische Assets, ausschliesslich ueber Allowlist. Kein freier File-Server,
+# keine Path-Traversal-Moeglichkeit. Werte: (content_type, relativer Dateiname
+# unterhalb von BASE_DIR/assets).
+ASSET_FILES = {
+    "/assets/ffooc-banner.jpg":  ("image/jpeg", "ffooc-banner.jpg"),
+    "/assets/ffooc-banner.webp": ("image/webp", "ffooc-banner.webp"),
+}
+
 DEFAULT_ALLOWED_ORIGINS = {
     "https://prompterator.de",
     "https://www.prompterator.de",
@@ -383,6 +391,32 @@ class Handler(BaseHTTPRequestHandler):
     def _send_json(self, status: int, payload: dict):
         self._send(status, json.dumps(payload, ensure_ascii=False), "application/json; charset=utf-8")
 
+    def _send_asset(self, asset_path: str) -> bool:
+        entry = ASSET_FILES.get(asset_path)
+        if not entry:
+            return False
+        content_type, filename = entry
+        full = BASE_DIR / "assets" / filename
+        try:
+            data = full.read_bytes()
+        except FileNotFoundError:
+            self._send_json(404, {"error": "Asset fehlt"})
+            return True
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        # Cache fuer statische Assets: ein Tag, public.
+        self.send_header("Cache-Control", "public, max-age=86400")
+        # Sicherheitsheader ohne Cache-Override (Standard ueberschriebe sonst no-store).
+        self.send_header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(data)
+        return True
+
     def _firewall_blocked(self) -> bool:
         if headers_too_large(self) or firewall_blocks_path(self.path):
             record_blocked_request()
@@ -405,6 +439,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         if self._firewall_blocked():
             return
+        if self.path in ASSET_FILES:
+            self._send_asset(self.path)
+            return
         if self.path in ("/", "/index.html", "/health", "/robots.txt", "/sitemap.xml", *SEO_ROUTES.keys()):
             self._send(200, "")
         elif self.path == "/api/usage" and admin_authorized(self):
@@ -414,6 +451,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self._firewall_blocked():
+            return
+        if self.path in ASSET_FILES:
+            self._send_asset(self.path)
             return
         if self.path in ("/", "/index.html"):
             html = (BASE_DIR / "index.html").read_text(encoding="utf-8")
