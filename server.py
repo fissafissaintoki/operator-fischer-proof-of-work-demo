@@ -502,7 +502,10 @@ def parse_prompterator_output(content: str) -> dict:
 def structure_agent_parse_output(content: str) -> dict:
     parsed = parse_prompterator_output(content)
     parsed["recognized_sections"] = parsed.get("order", [])
-    parsed["has_masterprompt"] = "Masterprompt" in parsed.get("sections", {})
+    parsed["has_masterprompt"] = any(
+        normalize_section_name(name) in {"masterprompt", "master prompt", "systemprompt", "system prompt"}
+        for name in parsed.get("sections", {})
+    )
     parsed["has_governance"] = any(
         normalize_section_name(name) in {"governance", "risiken und governance"}
         for name in parsed.get("sections", {})
@@ -588,6 +591,29 @@ def get_subsection_from_section(sections: dict[str, dict], section_names: list[s
                 if sub_body:
                     return sub_body
     return ""
+
+
+def format_parsed_output_for_appendix(parsed_output: dict | None, fallback: str = "") -> str:
+    if not parsed_output:
+        return fallback.strip()
+    blocks: list[str] = []
+    for title in parsed_output.get("order", []):
+        section = parsed_output.get("sections", {}).get(title, {})
+        section_parts = []
+        body = section.get("body", "").strip()
+        if body:
+            section_parts.append(body)
+        for subsection in section.get("subsection_order", []):
+            sub_body = section.get("subsections", {}).get(subsection, "").strip()
+            if sub_body:
+                section_parts.append(f"### {subsection}\n{sub_body}")
+            else:
+                section_parts.append(f"### {subsection}")
+        if section_parts:
+            blocks.append(f"## {title}\n" + "\n\n".join(section_parts))
+    if blocks:
+        return "\n\n".join(blocks).strip()
+    return fallback.strip()
 
 
 def first_meaningful_line(text: str, fallback: str = "Fachlich zu konkretisieren.") -> str:
@@ -705,6 +731,8 @@ def build_visual_search_queries(model: dict) -> dict:
             model.get("target_state", ""),
             model.get("process_overview", ""),
             model.get("governance", ""),
+            model.get("summary", ""),
+            model.get("background", ""),
         ] if part
     )
     keywords = derive_visual_keywords(domain_text)
@@ -718,8 +746,8 @@ def build_visual_search_queries(model: dict) -> dict:
     combined = f"{seed_one} {seed_two}".strip()
 
     return {
-        "hero": [seed_one, seed_two, combined, "business operations"],
-        "process": [seed_three, f"{seed_one} workflow", f"{seed_two} process", f"{combined} operations"],
+        "hero": [seed_one, f"{seed_one} illustration", seed_two, combined, "business operations illustration"],
+        "process": [f"{seed_three} workflow", f"{seed_one} process diagram", f"{seed_two} control flow", f"{combined} operations"],
     }
 
 
@@ -820,6 +848,9 @@ def visual_relevance_terms(model: dict) -> list[str]:
             model.get("usecase_title", ""),
             model.get("problem_class", ""),
             model.get("target_state", ""),
+            model.get("summary", ""),
+            model.get("background", ""),
+            model.get("process_overview", ""),
         ] if part
     )
     terms = derive_visual_keywords(source_text, limit=8)
@@ -840,11 +871,15 @@ def score_visual_candidate(candidate: dict, target_terms: list[str], slot: str) 
         candidate.get("origin", ""),
     ]))
     score = 0
+    matched = 0
     for term in target_terms:
         if len(term) < 3:
             continue
         if term in text:
+            matched += 1
             score += 6 if " " in term else 3
+    if not matched:
+        score -= 4
     for token in VISUAL_UNWANTED_TOKENS:
         if token in text:
             score -= 5
@@ -862,12 +897,12 @@ def score_visual_candidate(candidate: dict, target_terms: list[str], slot: str) 
         if any(term in text for term in ("plunge", "dashboard", "car", "speaker")):
             score -= 8
     if slot == "process":
-        if any(term in text for term in ("workflow", "process", "logistics", "warehouse", "medical", "digestive", "quality")):
+        if any(term in text for term in ("workflow", "process", "diagram", "flowchart", "inspection", "logistics", "warehouse", "medical", "digestive", "quality")):
             score += 3
         if any(term in text for term in ("portrait", "speaker", "meeting", "conference")):
             score -= 4
     if slot == "hero":
-        if any(term in text for term in ("illustration", "medical", "warehouse", "logistics", "operations", "digestive")):
+        if any(term in text for term in ("illustration", "medical", "warehouse", "logistics", "operations", "digestive", "control", "industry")):
             score += 2
     return score
 
@@ -903,7 +938,7 @@ def asset_selection_agent_fetch_images(model: dict) -> dict:
                     shortlisted.append((score, candidate))
         shortlisted.sort(key=lambda item: item[0], reverse=True)
         selected = None
-        minimum_score = 6 if slot == "process" else 4
+        minimum_score = 10 if slot == "process" else 8
         for score, candidate in shortlisted[:8]:
             if score < minimum_score:
                 continue
@@ -1020,17 +1055,20 @@ def extract_domain_context(sections: dict[str, dict]) -> dict:
 
 
 def build_usecase_dossier_model(title: str, sections: dict[str, dict], source: str) -> dict:
-    artifact_title = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Use-Case-Titel"])
-    artifact_summary = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Portfolio-Zusammenfassung"])
-    artifact_target = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Zielbild und Nutzen", "Zielbild"])
-    artifact_background = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Ausgangslage"])
-    artifact_logic = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Lösungslogik", "Loesungslogik"])
-    artifact_process = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Operativer Ablauf", "Prozess"])
-    artifact_inputs = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Datenbasis und Inputs"])
-    artifact_outputs = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Erwarteter Output"])
-    artifact_kpis = get_subsection_from_section(sections, ["Direktes Artefakt"], ["KPI- und Wirkungsannahmen"])
-    artifact_risks = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Risiken und Governance"])
-    artifact_next_steps = get_subsection_from_section(sections, ["Direktes Artefakt"], ["Nächste Schritte", "Naechste Schritte"])
+    artifact_sections = ["Direktes Artefakt", "Artefakt"]
+    masterprompt_sections = ["Masterprompt", "Master Prompt", "Systemprompt", "System Prompt"]
+    artifact_title = get_subsection_from_section(sections, artifact_sections, ["Use-Case-Titel"])
+    artifact_summary = get_subsection_from_section(sections, artifact_sections, ["Portfolio-Zusammenfassung"])
+    artifact_target = get_subsection_from_section(sections, artifact_sections, ["Zielbild und Nutzen", "Zielbild"])
+    artifact_background = get_subsection_from_section(sections, artifact_sections, ["Ausgangslage"])
+    artifact_logic = get_subsection_from_section(sections, artifact_sections, ["Lösungslogik", "Loesungslogik", "Entscheidungslogik"])
+    artifact_process = get_subsection_from_section(sections, artifact_sections, ["Operativer Ablauf", "Prozess"])
+    artifact_inputs = get_subsection_from_section(sections, artifact_sections, ["Datenbasis und Inputs"])
+    artifact_outputs = get_subsection_from_section(sections, artifact_sections, ["Erwarteter Output"])
+    artifact_kpis = get_subsection_from_section(sections, artifact_sections, ["KPI- und Wirkungsannahmen"])
+    artifact_risks = get_subsection_from_section(sections, artifact_sections, ["Risiken und Governance"])
+    artifact_next_steps = get_subsection_from_section(sections, artifact_sections, ["Nächste Schritte", "Naechste Schritte"])
+    artifact_case = get_subsection_from_section(sections, artifact_sections, ["Fallbeispiel"])
     model = {
         "title": title or "Prompterator Use-Case Portfolio",
         "source": source or "prompterator",
@@ -1041,9 +1079,9 @@ def build_usecase_dossier_model(title: str, sections: dict[str, dict], source: s
         "background": get_section(sections, ["Ausgangslage", "Fakten / Annahmen / Hypothesen", "Artefakt-Blueprint"]) or artifact_background,
         "problem_class": get_section(sections, ["Problemklasse"]),
         "artifact_blueprint": get_section(sections, ["Artefakt-Blueprint"]),
-        "artifact": get_section(sections, ["Direktes Artefakt"]),
+        "artifact": get_section(sections, artifact_sections),
         "process_overview": get_section(sections, ["Operativer Ablauf", "Artefakt-Blueprint", "Loesungslogik"]) or artifact_process or artifact_logic,
-        "decision_logic": get_section(sections, ["Loesungslogik", "Modus", "Masterprompt"]) or artifact_logic,
+        "decision_logic": get_section(sections, ["Loesungslogik", "Lösungslogik", "Entscheidungslogik", "Modus"]) or artifact_logic,
         "inputs_outputs": get_section(sections, ["Datenbasis und Inputs", "Erwarteter Output"]) or artifact_inputs or artifact_outputs,
         "governance": get_section(sections, ["Governance", "Risiken und Governance"]),
         "risks": get_section(sections, ["Risiken und Governance", "Fakten / Annahmen / Hypothesen"]) or artifact_risks,
@@ -1051,7 +1089,8 @@ def build_usecase_dossier_model(title: str, sections: dict[str, dict], source: s
         "kpis": get_section(sections, ["KPI- und Wirkungsannahmen", "Erwarteter Output"]) or artifact_kpis,
         "mode": get_section(sections, ["Modus"]),
         "next_steps": get_section(sections, ["Naechste Schritte", "Nächste Schritte"]) or artifact_next_steps,
-        "masterprompt": get_section(sections, ["Masterprompt"]),
+        "masterprompt": get_section(sections, masterprompt_sections),
+        "case_seed": artifact_case,
         "raw_content": get_section(sections, ["Use-Case Inhalt"]) or "",
     }
     model["context"] = extract_domain_context(sections)
@@ -1246,15 +1285,16 @@ def expand_business_context(model: dict) -> dict:
 def build_case_examples(model: dict) -> dict:
     steps = extract_list_items(model["process_overview"])[:4]
     next_steps = extract_list_items(model["next_steps"])[:3]
+    case_seed = model.get("case_seed", "")
     case_one = {
         "title": "Fallbeispiel 1: Regelfall",
-        "Ausgangslage": first_sentence(model["background"] or model["problem_class"], "Fallbeispiel muss fachlich ergänzt werden."),
+        "Ausgangslage": first_sentence(case_seed or model["background"] or model["problem_class"], "Fallbeispiel muss fachlich ergänzt werden."),
         "Entscheidungssituation": first_sentence(model["decision_logic"] or model["target_state"], professional_gap("den Entscheidungspunkt im Regelfall", "eine Konkretisierung der Entscheidungssituation anhand eines Fachfalls")),
-        "Vorgehen": " / ".join(steps) if steps else "Vorgehen fachlich ergänzen.",
+        "Vorgehen": " / ".join(steps) if steps else professional_gap("das Vorgehen im Regelfall", "eine Schrittfolge vom Eingangssignal bis zum verwertbaren Artefakt"),
         "Risiko": first_sentence(model["risks"], "Risiko fachlich ergänzen."),
         "Prüfung / Governance": first_sentence(model["quality"] or model["governance"], professional_gap("Prüfung und Governance im Regelfall", "die Benennung von Freigabe- und Prüfmechanismen")),
         "Ergebnis": first_sentence(model["target_state"] or model["artifact"], "Ergebnis fachlich ergänzen."),
-        "Lernpunkt": first_sentence(model["next_steps"], "Lernpunkt fachlich ergänzen."),
+        "Lernpunkt": first_sentence(model["next_steps"] or model["quality"], "Lernpunkt fachlich ergänzen."),
     }
     case_two = {
         "title": "Fallbeispiel 2: Ausnahme- oder Eskalationsfall",
@@ -1297,14 +1337,22 @@ def build_process_matrix(model: dict) -> dict:
 
 
 def build_training_module(model: dict) -> dict:
+    exercise = "Anhand eines realitätsnahen Beispiels die Eingangslage strukturieren, Entscheidungslogik markieren und Freigabepunkt benennen."
+    if model.get("case_seed"):
+        exercise = shorten_text(model["case_seed"], exercise, 150)
+    transfer_task = shorten_text(
+        model["next_steps"] or model["process_overview"],
+        "Transferaufgabe fachlich ergänzen: den Use Case auf einen konkreten eigenen Fall anwenden.",
+        150,
+    )
     model["training_rows"] = [
         ["Lernziel", shorten_text(model["target_state"] or model["summary"], "Lernziel fachlich ergänzen.", 150)],
         ["Zielgruppe", shorten_text(model["usecase_title"] or model["problem_class"], "Zielgruppe fachlich ergänzen.", 150)],
         ["Dauer / Format", "[ANNAHME] Dauer: 30–45 Minuten für eine Kurzschulung. Format: kompaktes Review mit Fallbeispiel und Checkliste."],
-        ["Übung", shorten_text(model["process_overview"] or model["artifact"], professional_gap("die praktische Übung", "eine kurze Simulation oder einen Durchlauf anhand eines echten Falls"), 150)],
+        ["Übung", exercise],
         ["Typische Anwendung", shorten_text(model["process_overview"] or model["artifact"], "Typische Anwendung fachlich ergänzen.", 150)],
         ["Prüffragen", "Welche Entscheidung wird vorbereitet, welche Daten liegen vor, welche Freigabe ist erforderlich?"],
-        ["Transfer in den Alltag", shorten_text(model["next_steps"] or model["governance"], "Transferlogik fachlich ergänzen.", 150)],
+        ["Transfer in den Alltag", transfer_task],
         ["Trainerhinweis", "Offene Punkte, Annahmen und Governance-Hinweise explizit markieren; keine nicht geprüften Schlüsse als Freigabe interpretieren."],
     ]
     model["training_questions"] = [
@@ -1471,7 +1519,9 @@ def chapter_text(title: str, purpose: str, model: dict) -> str:
 
 def build_appendix(model: dict) -> dict:
     appendix_parts = []
-    if model["raw_content"]:
+    if model.get("parsed_output"):
+        appendix_parts.append(format_parsed_output_for_appendix(model["parsed_output"], model.get("raw_content", "")))
+    elif model["raw_content"]:
         appendix_parts.append(model["raw_content"])
     elif model["artifact"]:
         appendix_parts.append(f"## Direktes Artefakt\n{model['artifact']}")

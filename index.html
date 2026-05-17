@@ -904,6 +904,23 @@ let flashTimer=null;
 let activeModal=null;
 let latestGeneratedText="";
 
+const ARTIFACT_SECTION_NAMES = ["Direktes Artefakt", "Artefakt"];
+const MASTERPROMPT_SECTION_NAMES = ["Masterprompt", "Master Prompt", "Systemprompt", "System Prompt"];
+
+function isPlaceholderText(text){
+  return [
+    "",
+    "Noch kein Output.",
+    "Noch kein Artefakt.",
+    "Noch kein Masterprompt.",
+  ].includes((text || "").trim());
+}
+
+function resetStructuredOutputs(){
+  document.getElementById("artifactOut").textContent = "Noch kein Artefakt.";
+  document.getElementById("masterpromptOut").textContent = "Noch kein Masterprompt.";
+}
+
 function normalizeSectionName(name){
   return (name || "")
     .toLowerCase()
@@ -987,7 +1004,9 @@ function buildOverviewText(parsed){
       normalizedTitle==="direktes artefakt" ||
       normalizedTitle==="artefakt" ||
       normalizedTitle==="masterprompt" ||
-      normalizedTitle==="master prompt"
+      normalizedTitle==="master prompt" ||
+      normalizedTitle==="systemprompt" ||
+      normalizedTitle==="system prompt"
     ){continue}
     const body=formatStructuredSection(parsed.sections[title]);
     if(!body){continue}
@@ -1019,6 +1038,8 @@ function setProcessingState(active, message="Input wird verarbeitet...", mode="g
   bannerHelper.setAttribute("aria-hidden", active ? "false" : "true");
   processOverlay.dataset.active=active ? "true" : "false";
   processOverlay.setAttribute("aria-hidden", active ? "false" : "true");
+  document.body.setAttribute("aria-busy", active ? "true" : "false");
+  document.querySelector(".shell")?.setAttribute("aria-busy", active ? "true" : "false");
   createBtn.disabled=active;
   pdfBtn.disabled=active;
   document.body.dataset.busy=active ? "true" : "false";
@@ -1052,10 +1073,10 @@ function extractSection(text,title){
 function renderSplitOutput(text){
   const parsed=parseStructuredOutput(text);
   const artifact = formatStructuredSection(
-    findStructuredSection(parsed, ["Direktes Artefakt", "Artefakt"])
+    findStructuredSection(parsed, ARTIFACT_SECTION_NAMES)
   );
   const masterprompt = formatStructuredSection(
-    findStructuredSection(parsed, ["Masterprompt", "Master Prompt"])
+    findStructuredSection(parsed, MASTERPROMPT_SECTION_NAMES)
   );
   document.getElementById("artifactOut").textContent = artifact || "Noch kein Artefakt.";
   document.getElementById("masterpromptOut").textContent = masterprompt || "Noch kein Masterprompt.";
@@ -1074,7 +1095,11 @@ async function run(){
   const raw_input=document.getElementById("raw").value.trim();
   const copyStatus=document.getElementById("copyStatus");
   copyStatus.textContent="";
-  if(!raw_input){document.getElementById("out").textContent="Bitte erst Text eingeben.";return}
+  if(!raw_input){
+    document.getElementById("out").textContent="Bitte erst Text eingeben.";
+    resetStructuredOutputs();
+    return;
+  }
   setProcessingState(true, "Input wird verarbeitet...", "generate");
   try{
     const res=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({raw_input})});
@@ -1082,6 +1107,8 @@ async function run(){
     const text=data.result||data.error||JSON.stringify(data,null,2);
     renderResult(text);
   }catch(err){
+    latestGeneratedText="";
+    resetStructuredOutputs();
     document.getElementById("out").textContent="Fehler: "+err.message;
   }finally{
     setProcessingState(false);
@@ -1095,9 +1122,9 @@ function deleteInput(){
 
 function deleteOutput(){
   latestGeneratedText="";
+  setProcessingState(false);
   document.getElementById("out").textContent="Noch kein Output.";
-  document.getElementById("artifactOut").textContent="Noch kein Artefakt.";
-  document.getElementById("masterpromptOut").textContent="Noch kein Masterprompt.";
+  resetStructuredOutputs();
   flash("Output gelöscht.");
 }
 
@@ -1110,14 +1137,14 @@ function flash(msg){
 
 async function copyOutput(){
   const text=document.getElementById("out").textContent.trim();
-  if(!text||text==="Noch kein Output."){flash("Noch kein Output.");return}
+  if(isPlaceholderText(text)){flash("Noch kein Output.");return}
   try{await navigator.clipboard.writeText(text);flash("Output kopiert.")}
   catch{flash("Bitte manuell markieren.")}
 }
 
 async function copySection(id, successMessage){
   const text=document.getElementById(id).textContent.trim();
-  if(!text||text==="Noch kein Artefakt."||text==="Noch kein Masterprompt."){flash("Noch kein Inhalt.");return}
+  if(isPlaceholderText(text)){flash("Noch kein Inhalt.");return}
   try{await navigator.clipboard.writeText(text);flash(successMessage)}
   catch{flash("Bitte manuell markieren.")}
 }
