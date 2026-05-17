@@ -394,7 +394,7 @@
                 <button class="btn-create" onclick="run()">Create</button>
                 <button class="btn-delete-small" onclick="deleteInput()" title="Input leeren">Delete</button>
               </div>
-              <span class="hint">Rohinput → strukturierter Output</span>
+              <span class="hint">Rohinput → strukturierter Portfolio-Output</span>
             </div>
           </section>
 
@@ -409,7 +409,7 @@
           <section class="bay">
             <header class="bay-head">
               <span><span class="led green"></span>Bay 02 · Output Bus</span>
-              <span class="right">Artefakt · structured</span>
+              <span class="right">Portfolio-Output · structured</span>
             </header>
             <pre id="out">Noch kein Output.</pre>
             <div class="statusline">
@@ -425,8 +425,8 @@
         <!-- PRINT-ONLY supplementary content -->
         <section class="print-only" aria-hidden="true">
           <h2>Workflow-Hinweise</h2>
-          <p>Tipp: Der Output kann direkt als Grundlage fuer ein strukturiertes PDF-Usecase-Portfolio weiterverarbeitet werden.</p>
-          <p>Fallbeispiel: Operative Use Cases sollten Domäne, Rolle, Ziel, Outputformat und Prüfregeln enthalten.</p>
+          <p>Tipp: Der Output ist fuer feste Portfolio-Abschnitte vorbereitet und kann direkt als Grundlage fuer ein strukturiertes PDF-Usecase-Portfolio weiterverarbeitet werden.</p>
+          <p>Fallbeispiel: Operative Use Cases sollten Zusammenfassung, Titel, Zielbild, Ablauf, Datenbasis, KPI-Annahmen und Governance enthalten.</p>
           <p>Governance: Bei Medizin, Recht, Finanzen und Personal immer Fachprüfung ergänzen.</p>
         </section>
       </div>
@@ -493,7 +493,7 @@ async function copyOutput(){
   catch{flash("Bitte manuell markieren.")}
 }
 
-function pdfNotice(){flash("PDF-Portfolio-Export folgt. Aktueller Output kann bereits kopiert und weiterverarbeitet werden.")}
+function pdfNotice(){flash("PDF-Portfolio-Export folgt. Der aktuelle Output ist bereits fuer feste Portfolio-Abschnitte vorbereitet und kann weiterverarbeitet werden.")}
 
 function exportPdf(){window.print()}
 </script>
