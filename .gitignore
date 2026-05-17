@@ -13,3 +13,7 @@ server.local-backup-*.py
 *.swp
 *.tmp
 *.bak
+
+# private family documents
+geburtsvorbereitung-*.pdf
+*.private.pdf
