@@ -20,10 +20,13 @@
     .card{border:1px solid var(--line);border-radius:28px;background:linear-gradient(180deg,rgba(8,20,33,.92),rgba(3,8,14,.92));box-shadow:0 28px 100px rgba(0,0,0,.42),inset 0 0 0 1px rgba(255,255,255,.03);overflow:hidden}
     .banner-wrap{padding:18px 18px 0;background:linear-gradient(180deg,rgba(0,0,0,.72),transparent)}
     .hero-banner{display:block;width:100%;height:auto;border-radius:18px;border:1px solid rgba(255,191,77,.24);background:#000;box-shadow:0 18px 70px rgba(0,0,0,.45),0 0 38px rgba(255,191,77,.12)}
-    header{padding:24px 30px 20px;border-bottom:1px solid rgba(34,221,255,.12)}
+    header{padding:24px 30px 20px;border-bottom:1px solid rgba(34,221,255,.12);text-align:center}
     .kicker{margin:0 0 10px;color:var(--green);font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
-    h1{margin:0;font-size:clamp(42px,8vw,76px);line-height:.92;font-weight:1000;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 0 10px rgba(34,221,255,.62),0 0 34px rgba(34,221,255,.24)}
-    .claim{max-width:720px;margin:14px 0 0;color:var(--muted);font-size:15px;line-height:1.55}
+    h1{margin:0;font-size:clamp(42px,8vw,76px);line-height:.92;font-weight:1000;letter-spacing:.02em;text-transform:uppercase;position:relative;display:inline-block;isolation:isolate}
+    h1 span{display:inline-block;text-shadow:0 0 12px currentColor,0 0 28px rgba(255,255,255,.18)}
+    h1::after{content:"";position:absolute;inset:-6px -10px;pointer-events:none;background:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.30) 50%,transparent 62%);transform:translateX(-120%);animation:shimmer 6s ease-in-out infinite;mix-blend-mode:screen;border-radius:14px}
+    @keyframes shimmer{0%{transform:translateX(-120%)}55%{transform:translateX(120%)}100%{transform:translateX(120%)}}
+    .claim{max-width:720px;margin:14px auto 0;color:var(--muted);font-size:15px;line-height:1.55}
     .main{padding:24px 30px 30px;display:grid;gap:18px}
     .block{border:1px solid rgba(34,221,255,.18);border-radius:20px;background:rgba(2,8,16,.58);padding:18px}
     .block-title{margin:0 0 10px;color:#dff7ff;font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
@@ -58,7 +61,7 @@
       </div>
       <header>
         <p class="kicker">Control Interface</p>
-        <h1>Prompterator</h1>
+        <h1 aria-label="Prompterator"><span style="color:#22ddff">P</span><span style="color:#38bdf8">r</span><span style="color:#b388ff">o</span><span style="color:#ff6bd3">m</span><span style="color:#ff5e6c">p</span><span style="color:#ff7a18">t</span><span style="color:#ffbf4d">e</span><span style="color:#fcd34d">r</span><span style="color:#3ef0a1">a</span><span style="color:#5eead4">t</span><span style="color:#38bdf8">o</span><span style="color:#b388ff">r</span></h1>
         <p class="claim">Gib Rohinput ein. Prompterator macht daraus eine strukturierte Arbeitsfassung mit Problemklasse, Artefakt, Prüfung und nächsten Schritten.</p>
       </header>
       <div class="main">
