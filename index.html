@@ -156,8 +156,8 @@
     .bays{padding:22px 24px 18px;display:grid;gap:18px}
     .main-grid{
       display:grid;
-      grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);
-      gap:18px;
+      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+      gap:20px;
       align-items:stretch;
     }
     .bay{
@@ -225,12 +225,12 @@
     .btn-copy{color:#1a0d00;background:linear-gradient(180deg,#ffd685,var(--amber) 60%,#cc8a1a)}
     .btn-pdf{
       width:100%;
-      padding:12px 10px;
-      font-size:11px;
+      padding:12px 18px;
+      font-size:12px;
       letter-spacing:.14em;
-      color:#120900;
-      background:linear-gradient(180deg,#ffd493,var(--amber) 55%,#c77410);
-      box-shadow:0 0 20px rgba(255,176,79,.18),0 2px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14);
+      color:#03131a;
+      background:linear-gradient(180deg,#9defff,#57dfff 55%,#1094ae);
+      box-shadow:0 0 20px rgba(69,216,255,.18),0 2px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14);
     }
     .btn-pdf::before{content:"";opacity:.7}
     .pdf-lane{
@@ -239,6 +239,7 @@
       justify-content:center;
       position:relative;
       min-height:100%;
+      min-width:180px;
     }
     .pdf-lane::before,
     .pdf-lane::after{
@@ -259,7 +260,30 @@
       bottom:0;
       background:linear-gradient(180deg,transparent,rgba(255,176,79,.22),transparent);
     }
-    .pdf-lane button{position:relative;z-index:1}
+    .pdf-bridge{
+      position:relative;
+      z-index:1;
+      width:180px;
+      padding:16px 14px;
+      border:1px solid rgba(69,216,255,.20);
+      border-radius:4px;
+      background:linear-gradient(180deg,rgba(15,22,29,.98),rgba(8,12,16,.98));
+      box-shadow:0 20px 38px rgba(0,0,0,.32),inset 0 0 0 1px rgba(255,255,255,.02);
+      text-align:center;
+    }
+    .pdf-bridge-label{
+      margin:0 0 10px;
+      color:var(--muted);
+      font:700 10px/1 var(--mono);
+      letter-spacing:.18em;
+      text-transform:uppercase;
+    }
+    .pdf-copy{
+      margin:10px 0 0;
+      color:#9eacb9;
+      font-size:12px;
+      line-height:1.5;
+    }
 
     #copyStatus{color:var(--amber);font:600 12px/1 var(--mono);min-height:14px}
 
@@ -286,6 +310,7 @@
       .main-grid{grid-template-columns:1fr;gap:14px}
       .pdf-lane{min-height:auto}
       .pdf-lane::before,.pdf-lane::after{display:none}
+      .pdf-bridge{width:100%}
       .bay{padding:14px 12px 12px}
       textarea,pre{min-height:170px}
       button{padding:10px 12px}
@@ -298,7 +323,7 @@
     /* === Print: PDF One-Pager === */
     @media print{
       body{background:#fff;color:#0a1f3d}
-      .topstrip,.banner-wrap,.actions,.kicker,.btn-pdf,.build,.no-print{display:none !important}
+      .topstrip,.banner-wrap,.actions,.kicker,.btn-pdf,.pdf-copy,.pdf-bridge-label,.build,.no-print{display:none !important}
       .chassis,.bay{background:#fff;border-color:#b6c5d5;box-shadow:none}
       .chassis::before{display:none}
       .plate{background:#fff;border-color:#b6c5d5}
@@ -358,14 +383,17 @@
             <div class="statusline">
               <div class="actions">
                 <button class="btn-create" onclick="run()">Create</button>
-                <button class="btn-delete" onclick="deleteAll()">Delete Input</button>
               </div>
               <span class="hint">Rohinput → strukturierter Output</span>
             </div>
           </section>
 
           <div class="pdf-lane">
-            <button class="btn-pdf" onclick="pdfNotice()" title="PDF-Export folgt.">PDF</button>
+            <div class="pdf-bridge">
+              <p class="pdf-bridge-label">Portfolio Bridge</p>
+              <button class="btn-pdf" onclick="pdfNotice()" title="PDF-Portfolio-Export folgt.">PDF</button>
+              <p class="pdf-copy">Erstellen Sie hier Ihr perfektes PDF-Usecase-Portfolio.</p>
+            </div>
           </div>
 
           <section class="bay">
@@ -384,22 +412,10 @@
           </section>
         </div>
 
-        <section class="bay" id="mpBay" style="display:none">
-          <header class="bay-head">
-            <span><span class="led green"></span>Bay 03 · Masterprompt</span>
-            <span class="right">auto-separiert · wiederverwendbar</span>
-          </header>
-          <pre id="mpOut" class="mp"></pre>
-          <div class="actions right" aria-label="Masterprompt actions">
-            <span class="hint">Wiederverwendbarer Prompt</span>
-            <button class="btn-copy" onclick="copyMaster()" id="copyMpBtn" title="Masterprompt kopieren" disabled>Copy Master</button>
-          </div>
-        </section>
-
         <!-- PRINT-ONLY supplementary content -->
         <section class="print-only" aria-hidden="true">
           <h2>Workflow-Hinweise</h2>
-          <p>Tipp: Output und Masterprompt sind getrennt. Den Masterprompt kannst du in jedem KI-Tool wiederverwenden.</p>
+          <p>Tipp: Der Output kann direkt als Grundlage fuer ein strukturiertes PDF-Usecase-Portfolio weiterverarbeitet werden.</p>
           <p>Fallbeispiel: Operative Use Cases sollten Domäne, Rolle, Ziel, Outputformat und Prüfregeln enthalten.</p>
           <p>Governance: Bei Medizin, Recht, Finanzen und Personal immer Fachprüfung ergänzen.</p>
         </section>
@@ -419,32 +435,9 @@ let flashTimer=null;
 function startWorkingAnimation(el){let d=0;el.textContent="Arbeite";workingTimer=setInterval(()=>{d=(d+1)%4;el.textContent="Arbeite"+".".repeat(d)},380)}
 function stopWorkingAnimation(){if(workingTimer){clearInterval(workingTimer);workingTimer=null}}
 
-function splitMasterprompt(text){
-  if(!text) return {rest:"", masterprompt:""};
-  const re=/##\s*Masterprompt\s*\n([\s\S]*?)(?=\n##\s|$)/i;
-  const m=text.match(re);
-  if(!m) return {rest:text.trim(), masterprompt:""};
-  const masterprompt=m[1].trim();
-  const rest=text.replace(m[0],"").replace(/\n{3,}/g,"\n\n").trim();
-  return {rest, masterprompt};
-}
-
 function renderResult(text){
   const out=document.getElementById("out");
-  const mpOut=document.getElementById("mpOut");
-  const mpBay=document.getElementById("mpBay");
-  const mpBtn=document.getElementById("copyMpBtn");
-  const {rest, masterprompt}=splitMasterprompt(text);
-  out.textContent = rest || "(Output leer)";
-  if(masterprompt){
-    mpOut.textContent=masterprompt;
-    mpBay.style.display="block";
-    mpBtn.disabled=false;
-  } else {
-    mpOut.textContent="";
-    mpBay.style.display="none";
-    mpBtn.disabled=true;
-  }
+  out.textContent = text?.trim() || "(Output leer)";
 }
 
 async function run(){
@@ -466,16 +459,8 @@ async function run(){
   }
 }
 
-function deleteAll(){
-  document.getElementById("raw").value="";
-  flash("Input geleert.");
-}
-
 function deleteOutput(){
   document.getElementById("out").textContent="Noch kein Output.";
-  document.getElementById("mpOut").textContent="";
-  document.getElementById("mpBay").style.display="none";
-  document.getElementById("copyMpBtn").disabled=true;
   flash("Output gelöscht.");
 }
 
@@ -493,14 +478,7 @@ async function copyOutput(){
   catch{flash("Bitte manuell markieren.")}
 }
 
-async function copyMaster(){
-  const text=document.getElementById("mpOut").textContent.trim();
-  if(!text){flash("Kein Masterprompt da.");return}
-  try{await navigator.clipboard.writeText(text);flash("Masterprompt kopiert.")}
-  catch{flash("Bitte manuell markieren.")}
-}
-
-function pdfNotice(){flash("PDF-Export folgt.")}
+function pdfNotice(){flash("PDF-Portfolio-Export folgt. Aktueller Output kann bereits kopiert und weiterverarbeitet werden.")}
 
 function exportPdf(){window.print()}
 </script>
