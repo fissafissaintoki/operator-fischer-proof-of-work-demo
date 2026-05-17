@@ -752,6 +752,7 @@ def build_usecase_dossier_model(title: str, sections: dict[str, dict], source: s
 
 def business_case_agent_build_model(sections: dict, title: str, source: str) -> dict:
     model = build_usecase_dossier_model(title, sections, source)
+    model = build_management_recommendation(model)
     model = expand_business_context(model)
     model = build_case_examples(model)
     model = build_process_matrix(model)
@@ -760,6 +761,9 @@ def business_case_agent_build_model(sections: dict, title: str, source: str) -> 
 
 
 def expand_business_context(model: dict) -> dict:
+    management_recommendation = model.get("management_recommendation") or {
+        "decision": "Management-Entscheidung fachlich definieren.",
+    }
     summary_source = model["summary"] or model["artifact"] or model["background"]
     model["portfolio_headline"] = choose_portfolio_headline(model)
     model["problem_statement"] = first_sentence(
@@ -919,7 +923,7 @@ def expand_business_context(model: dict) -> dict:
                 {"label": "Risiken & Annahmen", "text": shorten_text(model["risks"], "Risiken fachlich ergänzen.", 180)},
                 {"label": "Schulungsnutzen", "text": shorten_text(model["target_state"], "Schulungsnutzen fachlich ergänzen.", 180)},
                 {"label": "KPI-Fokus", "text": shorten_text(model["kpis"], "Erfolgskriterien fachlich ergänzen.", 180)},
-                {"label": "Management-Review", "text": shorten_text(model["management_recommendation"]["decision"], "Management-Entscheidung definieren.", 180)},
+                {"label": "Management-Review", "text": shorten_text(management_recommendation["decision"], "Management-Entscheidung definieren.", 180)},
             ],
         },
     ]
