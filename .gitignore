@@ -17,3 +17,20 @@ server.local-backup-*.py
 # private family documents
 geburtsvorbereitung-*.pdf
 *.private.pdf
+data/visit-counter.json
+# ── Prompterator zusaetzliche Eintraege ──
+# generierte PDFs
+*.pdf
+prompterator-usecase-portfolio.pdf
+# Backups
+*.backup-*
+index.backup-before-laser-ui.html
+server.backup-before-executive-pdf.py
+# pycache
+__pycache__/
+*.pyc
+# OS
+.DS_Store
+# Visit-counter / data Verzeichnis (falls jemals genutzt)
+data/visit-counter.json
+data/
