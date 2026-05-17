@@ -107,8 +107,42 @@
     .led-band::after{right:0;background:linear-gradient(90deg,transparent 0%,#000 100%)}
     .led-track{display:flex;align-items:center;height:100%;width:max-content;animation:bandeScroll 24s linear infinite;will-change:transform}
     .led-track img{display:block;height:100%;width:auto;object-fit:contain;margin-right:18px;flex:0 0 auto}
+    .banner-helper{
+      position:absolute;right:14px;bottom:14px;z-index:3;
+      display:inline-flex;align-items:center;gap:8px;
+      padding:7px 10px;
+      border:1px solid rgba(69,216,255,.34);
+      border-radius:999px;
+      background:linear-gradient(180deg,rgba(6,16,22,.92),rgba(4,10,15,.96));
+      color:#d7f8ff;
+      font:700 10px/1 var(--mono);
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      box-shadow:0 0 16px rgba(69,216,255,.18);
+      opacity:0;
+      transform:translateY(8px);
+      transition:opacity 140ms ease,transform 140ms ease;
+      pointer-events:none;
+    }
+    .banner-helper.active{opacity:1;transform:translateY(0)}
+    .banner-helper .elf{
+      display:inline-block;
+      font-size:16px;
+      line-height:1;
+      filter:drop-shadow(0 0 8px rgba(69,216,255,.45));
+      animation:elfHop 1.15s ease-in-out infinite;
+      transform-origin:center bottom;
+    }
+    @keyframes elfHop{
+      0%,100%{transform:translateY(0) rotate(0deg)}
+      45%{transform:translateY(-3px) rotate(-7deg)}
+      75%{transform:translateY(1px) rotate(6deg)}
+    }
     @keyframes bandeScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-    @media(prefers-reduced-motion:reduce){.led-track{animation:none}}
+    @media(prefers-reduced-motion:reduce){
+      .led-track{animation:none}
+      .banner-helper .elf{animation:none}
+    }
 
     .plate{
       position:relative;padding:28px 28px 20px;text-align:center;
@@ -222,6 +256,47 @@
       margin-top:12px;
     }
     .statusline .hint{margin-left:0}
+    .workline{
+      margin-top:12px;
+      display:grid;
+      gap:8px;
+      padding:10px 12px;
+      border:1px solid rgba(69,216,255,.18);
+      border-radius:3px;
+      background:linear-gradient(180deg,rgba(8,16,22,.84),rgba(5,10,15,.92));
+    }
+    .workline[hidden]{display:none}
+    .workbar{
+      position:relative;
+      overflow:hidden;
+      height:8px;
+      border-radius:999px;
+      border:1px solid rgba(69,216,255,.18);
+      background:rgba(255,255,255,.03);
+      box-shadow:inset 0 0 12px rgba(0,0,0,.45);
+    }
+    .workbar-fill{
+      position:absolute;
+      inset:0 auto 0 0;
+      width:34%;
+      border-radius:999px;
+      background:linear-gradient(90deg,rgba(69,216,255,.12),rgba(69,216,255,.92),rgba(255,176,79,.78));
+      box-shadow:0 0 16px rgba(69,216,255,.26);
+      animation:workSlide 1.2s linear infinite;
+    }
+    .worklabel{
+      color:#b9d9e2;
+      font:600 11px/1.35 var(--mono);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    @keyframes workSlide{
+      0%{transform:translateX(-128%)}
+      100%{transform:translateX(360%)}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .workbar-fill{animation:none;width:68%}
+    }
 
     button{
       position:relative;
@@ -459,6 +534,10 @@
             <img src="/assets/ffooc-banner.jpg" alt="" aria-hidden="true">
             <img src="/assets/ffooc-banner.jpg" alt="" aria-hidden="true">
           </div>
+          <div class="banner-helper" id="bannerHelper" aria-hidden="true">
+            <span class="elf" aria-hidden="true">🧝</span>
+            <span>Processing</span>
+          </div>
         </div>
       </div>
 
@@ -481,17 +560,21 @@
             <p class="micro-note">Datenschutz-Hinweis: Bitte geben Sie keine personenbezogenen, sensiblen oder vertraulichen Daten ein. Eingaben werden zur Generierung des Outputs technisch verarbeitet und koennen an einen KI-Dienst uebermittelt werden.</p>
             <div class="statusline">
               <div class="actions">
-                <button class="btn-create" onclick="run()">Create</button>
+                <button class="btn-create" id="createBtn" onclick="run()">Create</button>
                 <button class="btn-delete-small" onclick="deleteInput()" title="Input leeren">Delete</button>
               </div>
               <span class="hint">Rohinput → strukturierter Portfolio-Output</span>
+            </div>
+            <div class="workline" id="workline" hidden aria-live="polite">
+              <div class="workbar" aria-hidden="true"><span class="workbar-fill"></span></div>
+              <span class="worklabel" id="workLabel">Input wird verarbeitet...</span>
             </div>
           </section>
 
           <div class="pdf-lane">
             <div class="pdf-bridge">
               <p class="pdf-bridge-label">Portfolio Bridge</p>
-              <button class="btn-pdf" onclick="exportPdfPortfolio()" title="PDF-Usecase-Portfolio exportieren">PDF</button>
+              <button class="btn-pdf" id="pdfBtn" onclick="exportPdfPortfolio()" title="PDF-Usecase-Portfolio exportieren">PDF</button>
               <p class="pdf-copy">Erstellen Sie hier Ihr professionelles PDF-Use-Case-Portfolio.</p>
               <p class="micro-note">PDF-Hinweis: Der aktuelle Output wird zur Erstellung des PDFs verarbeitet. Es erfolgt keine dauerhafte Speicherung der PDF-Datei auf dem Server.</p>
             </div>
@@ -599,11 +682,92 @@
     </div>
   </div>
 <script>
-let workingTimer=null;
 let flashTimer=null;
 let activeModal=null;
-function startWorkingAnimation(el){let d=0;el.textContent="Arbeite";workingTimer=setInterval(()=>{d=(d+1)%4;el.textContent="Arbeite"+".".repeat(d)},380)}
-function stopWorkingAnimation(){if(workingTimer){clearInterval(workingTimer);workingTimer=null}}
+let latestGeneratedText="";
+
+function parseStructuredOutput(text){
+  const parsed={order:[],sections:{}};
+  let currentSection=null;
+  let currentSubsection=null;
+
+  function ensureSection(title){
+    if(!parsed.sections[title]){
+      parsed.sections[title]={bodyLines:[],subsections:{},subsectionOrder:[]};
+      parsed.order.push(title);
+    }
+    return parsed.sections[title];
+  }
+
+  for(const rawLine of (text||"").split("\n")){
+    const line=rawLine.replace(/\r$/, "");
+    if(line.startsWith("## ") || line.startsWith("# ")){
+      currentSection=line.replace(/^#{1,2}\s+/,"").trim()||"Abschnitt";
+      currentSubsection=null;
+      ensureSection(currentSection);
+      continue;
+    }
+    if(line.startsWith("### ")){
+      if(!currentSection){currentSection="Use-Case Inhalt"}
+      const section=ensureSection(currentSection);
+      currentSubsection=line.replace(/^#{3}\s+/,"").trim()||"Unterabschnitt";
+      if(!section.subsections[currentSubsection]){
+        section.subsections[currentSubsection]=[];
+        section.subsectionOrder.push(currentSubsection);
+      }
+      continue;
+    }
+    if(!currentSection){currentSection="Use-Case Inhalt"}
+    const section=ensureSection(currentSection);
+    if(currentSubsection){
+      section.subsections[currentSubsection].push(line);
+    }else{
+      section.bodyLines.push(line);
+    }
+  }
+  return parsed;
+}
+
+function formatStructuredSection(section){
+  if(!section){return ""}
+  const parts=[];
+  const body=section.bodyLines.join("\n").trim();
+  if(body){parts.push(body)}
+  for(const title of section.subsectionOrder){
+    const subsectionBody=(section.subsections[title]||[]).join("\n").trim();
+    parts.push(subsectionBody ? `### ${title}\n${subsectionBody}` : `### ${title}`);
+  }
+  return parts.join("\n\n").trim();
+}
+
+function buildOverviewText(parsed){
+  const parts=[];
+  for(const title of parsed.order){
+    if(title==="Direktes Artefakt" || title==="Masterprompt"){continue}
+    const body=formatStructuredSection(parsed.sections[title]);
+    if(!body){continue}
+    if(title==="Use-Case Inhalt" && parsed.order.length===1){
+      parts.push(body);
+    }else{
+      parts.push(`## ${title}\n${body}`);
+    }
+  }
+  return parts.join("\n\n").trim();
+}
+
+function setProcessingState(active, message="Input wird verarbeitet..."){
+  const workline=document.getElementById("workline");
+  const workLabel=document.getElementById("workLabel");
+  const bannerHelper=document.getElementById("bannerHelper");
+  const createBtn=document.getElementById("createBtn");
+  const pdfBtn=document.getElementById("pdfBtn");
+  workLabel.textContent=message;
+  workline.hidden=!active;
+  bannerHelper.classList.toggle("active", active);
+  bannerHelper.setAttribute("aria-hidden", active ? "false" : "true");
+  createBtn.disabled=active;
+  pdfBtn.disabled=active;
+}
 
 function extractSection(text,title){
   const escaped = title.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
@@ -613,35 +777,37 @@ function extractSection(text,title){
 }
 
 function renderSplitOutput(text){
-  const artifact = extractSection(text, "Direktes Artefakt");
-  const masterprompt = extractSection(text, "Masterprompt");
+  const parsed=parseStructuredOutput(text);
+  const artifact = formatStructuredSection(parsed.sections["Direktes Artefakt"]);
+  const masterprompt = formatStructuredSection(parsed.sections["Masterprompt"]);
   document.getElementById("artifactOut").textContent = artifact || "Noch kein Artefakt.";
   document.getElementById("masterpromptOut").textContent = masterprompt || "Noch kein Masterprompt.";
+  return buildOverviewText(parsed);
 }
 
 function renderResult(text){
   const out=document.getElementById("out");
   const normalized = text?.trim() || "(Output leer)";
-  out.textContent = normalized;
-  renderSplitOutput(normalized);
+  latestGeneratedText = normalized;
+  const overview = renderSplitOutput(normalized);
+  out.textContent = overview || "Artefakt und Masterprompt wurden separat aufbereitet.";
 }
 
 async function run(){
   const raw_input=document.getElementById("raw").value.trim();
-  const out=document.getElementById("out");
   const copyStatus=document.getElementById("copyStatus");
   copyStatus.textContent="";
-  if(!raw_input){out.textContent="Bitte erst Text eingeben.";return}
-  startWorkingAnimation(out);
+  if(!raw_input){document.getElementById("out").textContent="Bitte erst Text eingeben.";return}
+  setProcessingState(true);
   try{
     const res=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({raw_input})});
     const data=await res.json();
-    stopWorkingAnimation();
     const text=data.result||data.error||JSON.stringify(data,null,2);
     renderResult(text);
   }catch(err){
-    stopWorkingAnimation();
     document.getElementById("out").textContent="Fehler: "+err.message;
+  }finally{
+    setProcessingState(false);
   }
 }
 
@@ -651,6 +817,7 @@ function deleteInput(){
 }
 
 function deleteOutput(){
+  latestGeneratedText="";
   document.getElementById("out").textContent="Noch kein Output.";
   document.getElementById("artifactOut").textContent="Noch kein Artefakt.";
   document.getElementById("masterpromptOut").textContent="Noch kein Masterprompt.";
@@ -679,17 +846,18 @@ async function copySection(id, successMessage){
 }
 
 async function exportPdfPortfolio(){
+  const outputText = latestGeneratedText.trim();
   const artifactText = document.getElementById("artifactOut").textContent.trim();
-  const outputText = artifactText && artifactText!=="Noch kein Artefakt." ? artifactText : document.getElementById("out").textContent.trim();
-  if(!outputText || outputText==="Noch kein Output."){flash("Erst Output erzeugen.");return}
+  const dossierText = outputText && outputText!=="Noch kein Output." ? outputText : artifactText;
+  if(!dossierText || dossierText==="Noch kein Artefakt." || dossierText==="Noch kein Output."){flash("Erst Output erzeugen.");return}
   try{
-    flash("PDF wird erstellt...");
+    flash("PDF-Dossier wird erstellt...");
     const res = await fetch("/api/pdf", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
         title:"Prompterator Use-Case Portfolio",
-        content:outputText,
+        content:dossierText,
         source:"prompterator"
       })
     });
@@ -711,7 +879,7 @@ async function exportPdfPortfolio(){
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    flash("PDF erstellt.");
+    flash("PDF-Dossier erstellt.");
   }catch(err){
     flash("PDF konnte nicht erstellt werden.");
   }
