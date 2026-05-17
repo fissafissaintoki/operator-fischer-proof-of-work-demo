@@ -18,6 +18,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import Image as RLImage
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
@@ -637,6 +638,11 @@ VISUAL_TOPIC_MAP = {
     "supply chain": ["supply chain operations", "warehouse logistics", "distribution center"],
     "warehouse": ["warehouse operations", "warehouse quality control", "industrial logistics"],
     "wareneingang": ["goods receiving warehouse", "warehouse inspection", "quality control logistics"],
+    "medizinisch": ["medical illustration", "healthcare consultation", "digestive health illustration"],
+    "medizin": ["medical illustration", "healthcare workflow", "medical quality review"],
+    "darm": ["digestive system illustration", "intestinal health diagram", "medical anatomy illustration"],
+    "stuhlgang": ["digestive health illustration", "medical consultation", "intestinal health diagram"],
+    "verstopfung": ["digestive health illustration", "intestinal health diagram", "medical consultation"],
     "sap": ["enterprise software dashboard", "business process software", "operations dashboard"],
     "logistik": ["industrial logistics", "warehouse operations", "process control logistics"],
     "governance": ["compliance review meeting", "operations governance", "quality review process"],
@@ -645,6 +651,12 @@ VISUAL_TOPIC_MAP = {
     "quality": ["quality control process", "industrial inspection", "operations review"],
     "finance": ["finance operations dashboard", "business review meeting", "financial controls"],
     "medizin": ["hospital operations workflow", "clinical review process", "medical quality control"],
+}
+
+VISUAL_UNWANTED_TOKENS = {
+    "forum", "conference", "summit", "speaker", "audience", "meeting", "plunge", "ski", "snow",
+    "wedding", "concert", "celebration", "protest", "parliament", "minister", "football", "car",
+    "dashboard", "compliance-package", "crowd", "stage", "politician",
 }
 
 
@@ -674,6 +686,16 @@ def derive_visual_keywords(text: str, limit: int = 6) -> list[str]:
     return results
 
 
+def keyword_visual_priority(term: str) -> int:
+    normalized = normalize_section_name(term)
+    score = len(normalized.replace(" ", ""))
+    if any(token in normalized for token in ("digestive", "intestinal", "bowel", "gastro", "darm", "stuhlgang", "cold chain", "warehouse", "logistics", "wareneingang")):
+        score += 20
+    elif any(token in normalized for token in ("medical", "healthcare", "operations", "process")):
+        score += 8
+    return score
+
+
 def build_visual_search_queries(model: dict) -> dict:
     domain_text = " ".join(
         part for part in [
@@ -688,6 +710,7 @@ def build_visual_search_queries(model: dict) -> dict:
     keywords = derive_visual_keywords(domain_text)
     if not keywords:
         keywords = ["business operations", "process workflow", "industrial control"]
+    keywords = sorted(keywords, key=keyword_visual_priority, reverse=True)
 
     seed_one = keywords[0]
     seed_two = keywords[1] if len(keywords) > 1 else seed_one
@@ -718,14 +741,15 @@ def fetch_image_bytes(url: str) -> tuple[bytes, str]:
     return data, content_type
 
 
-def search_openverse_image(query: str) -> dict | None:
+def collect_openverse_candidates(query: str) -> list[dict]:
     url = f"https://api.openverse.org/v1/images/?q={quote_plus(query)}&page_size=6"
     data = fetch_json(url)
+    candidates = []
     for item in data.get("results", []):
         image_url = item.get("thumbnail") or item.get("url")
         if not image_url:
             continue
-        return {
+        candidates.append({
             "source": "Openverse",
             "query": query,
             "title": (item.get("title") or query).strip()[:180],
@@ -733,11 +757,11 @@ def search_openverse_image(query: str) -> dict | None:
             "credit": (item.get("creator") or "Unbekannt").strip()[:120],
             "license": (item.get("license") or "Lizenz beachten").strip()[:80],
             "origin": (item.get("source") or "openverse").strip()[:40],
-        }
-    return None
+        })
+    return candidates
 
 
-def search_commons_image(query: str) -> dict | None:
+def collect_commons_candidates(query: str) -> list[dict]:
     url = (
         "https://commons.wikimedia.org/w/api.php"
         f"?action=query&generator=search&gsrsearch={quote_plus(query)}"
@@ -745,6 +769,7 @@ def search_commons_image(query: str) -> dict | None:
     )
     data = fetch_json(url)
     pages = data.get("query", {}).get("pages", {})
+    candidates = []
     for page in pages.values():
         title = page.get("title") or query
         if not re.search(r"\.(jpg|jpeg|png|webp|svg)$", title, re.IGNORECASE):
@@ -757,7 +782,9 @@ def search_commons_image(query: str) -> dict | None:
         license_value = (metadata.get("LicenseShortName") or {}).get("value") or "Lizenz beachten"
         artist = (metadata.get("Artist") or {}).get("value") or "Wikimedia Commons"
         artist = re.sub(r"<[^>]+>", "", artist).strip() or "Wikimedia Commons"
-        return {
+        if "http" in artist.lower():
+            artist = "Wikimedia Commons"
+        candidates.append({
             "source": "Wikimedia Commons",
             "query": query,
             "title": title.replace("File:", "")[:180],
@@ -765,8 +792,8 @@ def search_commons_image(query: str) -> dict | None:
             "credit": artist[:120],
             "license": license_value[:80],
             "origin": "commons",
-        }
-    return None
+        })
+    return candidates
 
 
 def download_visual_asset(candidate: dict) -> dict | None:
@@ -774,12 +801,75 @@ def download_visual_asset(candidate: dict) -> dict | None:
         return None
     try:
         image_bytes, content_type = fetch_image_bytes(candidate["image_url"])
+        width_px, height_px = ImageReader(io.BytesIO(image_bytes)).getSize()
     except Exception:
         return None
     asset = dict(candidate)
     asset["image_bytes"] = image_bytes
     asset["content_type"] = content_type
+    asset["width_px"] = width_px
+    asset["height_px"] = height_px
+    asset["aspect_ratio"] = (width_px / height_px) if height_px else 1
     return asset
+
+
+def visual_relevance_terms(model: dict) -> list[str]:
+    source_text = " ".join(
+        part for part in [
+            model.get("title", ""),
+            model.get("usecase_title", ""),
+            model.get("problem_class", ""),
+            model.get("target_state", ""),
+        ] if part
+    )
+    terms = derive_visual_keywords(source_text, limit=8)
+    normalized_terms = []
+    seen = set()
+    for term in terms:
+        normalized = normalize_section_name(term)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            normalized_terms.append(normalized)
+    return normalized_terms
+
+
+def score_visual_candidate(candidate: dict, target_terms: list[str], slot: str) -> int:
+    text = normalize_section_name(" ".join([
+        candidate.get("title", ""),
+        candidate.get("query", ""),
+        candidate.get("origin", ""),
+    ]))
+    score = 0
+    for term in target_terms:
+        if len(term) < 3:
+            continue
+        if term in text:
+            score += 6 if " " in term else 3
+    for token in VISUAL_UNWANTED_TOKENS:
+        if token in text:
+            score -= 5
+    target_blob = " ".join(target_terms)
+    digestive_context = any(term in target_blob for term in ("digestive", "intestinal", "bowel", "gastro", "darm", "stuhlgang"))
+    logistics_context = any(term in target_blob for term in ("cold chain", "warehouse", "logistics", "wareneingang", "supply chain"))
+    if digestive_context:
+        if any(term in text for term in ("digestive", "intestinal", "bowel", "gastro", "colon", "abdomen")):
+            score += 8
+        if any(term in text for term in ("brain", "meninges", "neuro", "skull")):
+            score -= 10
+    if logistics_context:
+        if any(term in text for term in ("cold chain", "warehouse", "logistics", "distribution", "freight")):
+            score += 8
+        if any(term in text for term in ("plunge", "dashboard", "car", "speaker")):
+            score -= 8
+    if slot == "process":
+        if any(term in text for term in ("workflow", "process", "logistics", "warehouse", "medical", "digestive", "quality")):
+            score += 3
+        if any(term in text for term in ("portrait", "speaker", "meeting", "conference")):
+            score -= 4
+    if slot == "hero":
+        if any(term in text for term in ("illustration", "medical", "warehouse", "logistics", "operations", "digestive")):
+            score += 2
+    return score
 
 
 def visual_concept_agent_plan_images(model: dict) -> dict:
@@ -796,26 +886,40 @@ def asset_selection_agent_fetch_images(model: dict) -> dict:
         return model
 
     query_plan = model.get("visual_query_plan") or build_visual_search_queries(model)
+    target_terms = visual_relevance_terms(model)
     seen_urls = set()
     for slot in ("hero", "process"):
-        selected = None
+        shortlisted: list[tuple[int, dict]] = []
         for query in query_plan.get(slot, []):
-            for provider in (search_openverse_image, search_commons_image):
+            for provider in (collect_openverse_candidates, collect_commons_candidates):
                 try:
-                    candidate = provider(query)
+                    candidates = provider(query)
                 except Exception:
-                    candidate = None
-                if not candidate or candidate.get("image_url") in seen_urls:
-                    continue
-                asset = download_visual_asset(candidate)
-                if not asset:
-                    continue
-                asset["slot"] = slot
-                selected = asset
-                seen_urls.add(asset["image_url"])
-                break
-            if selected:
-                break
+                    candidates = []
+                for candidate in candidates:
+                    if candidate.get("image_url") in seen_urls:
+                        continue
+                    score = score_visual_candidate(candidate, target_terms, slot)
+                    shortlisted.append((score, candidate))
+        shortlisted.sort(key=lambda item: item[0], reverse=True)
+        selected = None
+        minimum_score = 6 if slot == "process" else 4
+        for score, candidate in shortlisted[:8]:
+            if score < minimum_score:
+                continue
+            asset = download_visual_asset(candidate)
+            if not asset:
+                continue
+            aspect_ratio = asset.get("aspect_ratio", 1)
+            if slot == "hero" and aspect_ratio < 0.55:
+                continue
+            if slot == "process" and aspect_ratio < 0.7:
+                continue
+            asset["slot"] = slot
+            asset["score"] = score
+            selected = asset
+            seen_urls.add(asset["image_url"])
+            break
         if selected:
             assets.append(selected)
         if len(assets) >= PDF_IMAGE_MAX_ASSETS:
