@@ -170,7 +170,7 @@
     .chassis-corner.bl{bottom:0;left:0;border-bottom:1px solid var(--cyan-mid);border-left:1px solid var(--cyan-mid)}
     .chassis-corner.br{bottom:0;right:0;border-bottom:1px solid var(--cyan-mid);border-right:1px solid var(--cyan-mid)}
 
-    /* ── BANNER ── */
+    /* ── BANNER (statisch, voll ausgefüllt, einmal) ── */
     .banner-wrap{
       padding:10px 12px 0;
       background:linear-gradient(180deg,#010203,#020407);
@@ -178,7 +178,7 @@
     .led-band{
       position:relative;
       width:100%;
-      height:90px;
+      height:140px;
       overflow:hidden;
       border:1px solid var(--steel-line-2);
       background:#000;
@@ -187,25 +187,18 @@
         0 8px 30px rgba(0,0,0,.6),
         inset 0 0 0 1px rgba(255,255,255,.025),
         0 0 20px rgba(255,176,79,.10);
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
-    .led-band::before,.led-band::after{
-      content:"";
-      position:absolute;top:0;bottom:0;
-      width:64px;z-index:2;pointer-events:none;
+    .led-band img{
+      display:block;
+      max-width:100%;
+      max-height:100%;
+      width:auto;
+      height:auto;
+      object-fit:contain;
     }
-    .led-band::before{left:0;background:linear-gradient(90deg,#000 0%,transparent 100%)}
-    .led-band::after{right:0;background:linear-gradient(90deg,transparent 0%,#000 100%)}
-    .led-track{
-      display:flex;align-items:center;height:100%;
-      width:max-content;
-      animation:bandeScroll 28s linear infinite;
-      will-change:transform;
-    }
-    .led-track img{
-      display:block;height:100%;width:auto;
-      object-fit:contain;margin-right:20px;flex:0 0 auto;
-    }
-    @keyframes bandeScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 
     /* ── PLATE (TITLE AREA) ── */
     .plate{
@@ -390,10 +383,9 @@
     /* ── BAYS / MAIN GRID ── */
     .bays{padding:24px 22px 20px;display:grid;gap:20px}
     .main-grid{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) 200px minmax(0,1fr);
-      gap:22px;
-      align-items:stretch;
+      display:flex;
+      flex-direction:column;
+      gap:20px;
     }
 
     /* ── BAY PANELS ── */
@@ -579,34 +571,35 @@
         inset 0 1px 0 rgba(255,255,255,.18);
     }
 
-    /* ── PDF LANE ── */
+    /* ── PDF LANE (horizontal, da gestapelt) ── */
     .pdf-lane{
       display:flex;align-items:center;
       justify-content:center;
       position:relative;
-      min-height:100%;
+      padding:8px 0;
     }
-    /* Vertical energy lines */
+    /* Horizontale Energielinien links/rechts */
     .pdf-lane::before,.pdf-lane::after{
       content:"";
       position:absolute;
-      left:50%;width:1px;
-      transform:translateX(-50%);z-index:0;
+      top:50%;height:1px;
+      transform:translateY(-50%);z-index:0;
     }
     .pdf-lane::before{
-      top:0;bottom:52%;
-      background:linear-gradient(180deg,transparent,rgba(69,216,255,.38),rgba(69,216,255,.15));
+      left:0;right:55%;
+      background:linear-gradient(90deg,transparent,rgba(69,216,255,.15),rgba(69,216,255,.38));
     }
     .pdf-lane::after{
-      top:52%;bottom:0;
-      background:linear-gradient(180deg,rgba(255,176,79,.15),rgba(255,176,79,.30),transparent);
+      left:55%;right:0;
+      background:linear-gradient(90deg,rgba(255,176,79,.30),rgba(255,176,79,.15),transparent);
     }
 
     /* ── PDF BRIDGE ── */
     .pdf-bridge{
       position:relative;z-index:1;
-      width:196px;
-      padding:18px 14px;
+      width:340px;
+      max-width:100%;
+      padding:18px 18px;
       border:1px solid rgba(69,216,255,.28);
       border-radius:4px;
       background:linear-gradient(180deg,rgba(10,16,22,.99),rgba(5,8,12,.99));
@@ -694,7 +687,6 @@
         animation-iteration-count:1 !important;
         scroll-behavior:auto !important;
       }
-      .led-track{animation:none}
       h1.laser-title{animation:none}
       h1.laser-title::after{display:none}
       .laser-scan{animation:none}
@@ -702,16 +694,13 @@
 
     /* ── MOBILE ── */
     @media(max-width:840px){
-      .main-grid{grid-template-columns:1fr;gap:16px}
-      .pdf-lane{min-height:auto}
       .pdf-lane::before,.pdf-lane::after{display:none}
       .pdf-bridge{width:100%}
     }
     @media(max-width:640px){
       .shell{width:calc(100% - 14px);padding-top:12px}
       .banner-wrap{padding:8px 8px 0}
-      .led-band{height:72px}
-      .led-track{animation-duration:22s}
+      .led-band{height:100px}
       .plate{padding:20px 14px 18px}
       .plate-tag,.plate-rev{position:static;display:block;text-align:center;margin:0 0 4px}
       h1.laser-title{font-size:36px}
@@ -772,12 +761,7 @@
 
       <div class="banner-wrap">
         <div class="led-band" aria-label="FissaFissa Out of Control Werbebande">
-          <div class="led-track">
-            <img src="/assets/ffooc-banner.jpg" alt="FissaFissa Out of Control">
-            <img src="/assets/ffooc-banner.jpg" alt="" aria-hidden="true">
-            <img src="/assets/ffooc-banner.jpg" alt="" aria-hidden="true">
-            <img src="/assets/ffooc-banner.jpg" alt="" aria-hidden="true">
-          </div>
+          <img src="/assets/ffooc-banner.jpg" alt="FissaFissa Out of Control">
         </div>
       </div>
 
@@ -821,12 +805,48 @@
             </div>
           </div>
 
-          <!-- OUTPUT BAY -->
+          <!-- MASTERPROMPT BAY -->
           <section class="bay">
             <span class="bay-corner-tr" aria-hidden="true"></span>
             <span class="bay-corner-bl" aria-hidden="true"></span>
             <header class="bay-head">
-              <span><span class="led green"></span>Bay 02 · Output Bus</span>
+              <span><span class="led"></span>Bay 02 · Masterprompt</span>
+              <span class="right">Section · <b>Masterprompt</b></span>
+            </header>
+            <pre id="outPrompt" aria-live="polite" aria-label="Masterprompt-Feld">Noch kein Masterprompt.</pre>
+            <div class="statusline">
+              <span id="copyStatusPrompt" aria-live="polite"></span>
+              <div class="actions output-actions" aria-label="Masterprompt actions">
+                <button class="btn-copy" onclick="copySection('outPrompt','copyStatusPrompt')" title="Masterprompt kopieren" aria-label="Masterprompt kopieren">Copy</button>
+                <button class="btn-delete" onclick="deleteSection('outPrompt','copyStatusPrompt','Noch kein Masterprompt.')" title="Masterprompt löschen" aria-label="Masterprompt löschen">Delete</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ARTEFAKT BAY -->
+          <section class="bay">
+            <span class="bay-corner-tr" aria-hidden="true"></span>
+            <span class="bay-corner-bl" aria-hidden="true"></span>
+            <header class="bay-head">
+              <span><span class="led green"></span>Bay 03 · Artefakt</span>
+              <span class="right">Section · <b>Direktes Artefakt</b></span>
+            </header>
+            <pre id="outArtefact" aria-live="polite" aria-label="Artefakt-Feld">Noch kein Artefakt.</pre>
+            <div class="statusline">
+              <span id="copyStatusArtefact" aria-live="polite"></span>
+              <div class="actions output-actions" aria-label="Artefakt actions">
+                <button class="btn-copy" onclick="copySection('outArtefact','copyStatusArtefact')" title="Artefakt kopieren" aria-label="Artefakt kopieren">Copy</button>
+                <button class="btn-delete" onclick="deleteSection('outArtefact','copyStatusArtefact','Noch kein Artefakt.')" title="Artefakt löschen" aria-label="Artefakt löschen">Delete</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- FULL OUTPUT BAY (gesamter strukturierter Output) -->
+          <section class="bay">
+            <span class="bay-corner-tr" aria-hidden="true"></span>
+            <span class="bay-corner-bl" aria-hidden="true"></span>
+            <header class="bay-head">
+              <span><span class="led"></span>Bay 04 · Gesamter Output</span>
               <span class="right">Artefakt · structured</span>
             </header>
             <pre id="out" aria-live="polite" aria-label="Output-Feld">Noch kein Output.</pre>
@@ -859,7 +879,7 @@
 
 <script>
 let workingTimer=null;
-let flashTimer=null;
+let flashTimers={};
 
 function startWorkingAnimation(el){
   let d=0;
@@ -877,16 +897,53 @@ function stopWorkingAnimation(){
   }
 }
 
+/* ── Section-Parser ──
+   Liest den Output und extrahiert einzelne ## Abschnitte. */
+function extractSection(text, sectionNames){
+  if(!text) return "";
+  const lines = text.split("\n");
+  const norm = s => s.toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss").replace(/[-/]/g," ").replace(/\s+/g," ").trim();
+  const targets = sectionNames.map(norm);
+  let capture = false;
+  const result = [];
+  for(const raw of lines){
+    const line = raw.replace(/\s+$/,"");
+    if(/^#{1,3}\s/.test(line)){
+      const title = line.replace(/^#{1,3}\s+/,"").trim();
+      if(targets.includes(norm(title))){
+        capture = true;
+        continue;
+      }
+      // anderer Header → capture beenden
+      if(capture) break;
+      capture = false;
+      continue;
+    }
+    if(capture) result.push(line);
+  }
+  return result.join("\n").trim();
+}
+
 function renderResult(text){
-  const out=document.getElementById("out");
-  out.textContent = text?.trim() || "(Output leer)";
+  const safeText = text?.trim() || "(Output leer)";
+  document.getElementById("out").textContent = safeText;
+
+  // Masterprompt + Artefakt automatisch befuellen, wenn Sections vorhanden
+  const masterprompt = extractSection(safeText, ["Masterprompt"]);
+  const artefakt = extractSection(safeText, ["Direktes Artefakt","Artefakt","Direct Artefact"]);
+
+  document.getElementById("outPrompt").textContent = masterprompt || "Kein Masterprompt-Abschnitt im Output gefunden.";
+  document.getElementById("outArtefact").textContent = artefakt || "Kein Artefakt-Abschnitt im Output gefunden.";
 }
 
 async function run(){
   const raw_input=document.getElementById("raw").value.trim();
   const out=document.getElementById("out");
-  const copyStatus=document.getElementById("copyStatus");
-  copyStatus.textContent="";
+  // alle Status-Felder leeren
+  ["copyStatus","copyStatusPrompt","copyStatusArtefact"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = "";
+  });
   if(!raw_input){
     out.textContent="Bitte erst Text eingeben.";
     return;
@@ -910,46 +967,68 @@ async function run(){
 
 function deleteInput(){
   document.getElementById("raw").value="";
-  flash("Input geleert.");
+  flash("copyStatus","Input geleert.");
 }
 
 function deleteOutput(){
   document.getElementById("out").textContent="Noch kein Output.";
-  flash("Output gelöscht.");
+  flash("copyStatus","Output gelöscht.");
 }
 
-function flash(msg){
-  const el=document.getElementById("copyStatus");
-  if(flashTimer){clearTimeout(flashTimer)}
+/* Generic helpers für die Sub-Bays */
+function deleteSection(targetId, statusId, placeholderText){
+  document.getElementById(targetId).textContent = placeholderText;
+  flash(statusId, "Geleert.");
+}
+
+async function copySection(targetId, statusId){
+  const el = document.getElementById(targetId);
+  const text = (el?.textContent || "").trim();
+  if(!text || text.startsWith("Noch kein") || text.startsWith("Kein ")){
+    flash(statusId, "Kein Inhalt zum Kopieren.");
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    flash(statusId, "Kopiert.");
+  }catch{
+    flash(statusId, "Bitte manuell markieren.");
+  }
+}
+
+function flash(statusId, msg){
+  const el=document.getElementById(statusId);
+  if(!el) return;
+  if(flashTimers[statusId]){clearTimeout(flashTimers[statusId])}
   el.textContent=msg;
-  flashTimer=setTimeout(()=>{
+  flashTimers[statusId]=setTimeout(()=>{
     el.textContent="";
-    flashTimer=null;
+    flashTimers[statusId]=null;
   },2200);
 }
 
 async function copyOutput(){
   const text=document.getElementById("out").textContent.trim();
   if(!text||text==="Noch kein Output."){
-    flash("Noch kein Output.");
+    flash("copyStatus","Noch kein Output.");
     return;
   }
   try{
     await navigator.clipboard.writeText(text);
-    flash("Output kopiert.");
+    flash("copyStatus","Output kopiert.");
   }catch{
-    flash("Bitte manuell markieren.");
+    flash("copyStatus","Bitte manuell markieren.");
   }
 }
 
 async function exportPdfPortfolio(){
   const text=document.getElementById("out").textContent.trim();
   if(!text || text==="Noch kein Output."){
-    flash("Erst Output erzeugen.");
+    flash("copyStatus","Erst Output erzeugen.");
     return;
   }
 
-  flash("PDF wird erstellt...");
+  flash("copyStatus","PDF wird erstellt...");
 
   try{
     const res = await fetch("/api/pdf", {
@@ -975,9 +1054,9 @@ async function exportPdfPortfolio(){
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    flash("PDF erstellt.");
+    flash("copyStatus","PDF erstellt.");
   }catch(err){
-    flash("PDF konnte nicht erstellt werden.");
+    flash("copyStatus","PDF konnte nicht erstellt werden.");
   }
 }
 
