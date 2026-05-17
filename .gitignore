@@ -17,3 +17,4 @@ server.local-backup-*.py
 # private family documents
 geburtsvorbereitung-*.pdf
 *.private.pdf
+index.backup-before-laser-ui.html
