@@ -904,6 +904,17 @@ let flashTimer=null;
 let activeModal=null;
 let latestGeneratedText="";
 
+function normalizeSectionName(name){
+  return (name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ß/g, "ss")
+    .replace(/[-_/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function parseStructuredOutput(text){
   const parsed={order:[],sections:{}};
   let currentSection=null;
@@ -958,10 +969,26 @@ function formatStructuredSection(section){
   return parts.join("\n\n").trim();
 }
 
+function findStructuredSection(parsed, names){
+  const targets = (names || []).map(normalizeSectionName);
+  for(const title of parsed.order){
+    if(targets.includes(normalizeSectionName(title))){
+      return parsed.sections[title];
+    }
+  }
+  return null;
+}
+
 function buildOverviewText(parsed){
   const parts=[];
   for(const title of parsed.order){
-    if(title==="Direktes Artefakt" || title==="Masterprompt"){continue}
+    const normalizedTitle = normalizeSectionName(title);
+    if(
+      normalizedTitle==="direktes artefakt" ||
+      normalizedTitle==="artefakt" ||
+      normalizedTitle==="masterprompt" ||
+      normalizedTitle==="master prompt"
+    ){continue}
     const body=formatStructuredSection(parsed.sections[title]);
     if(!body){continue}
     if(title==="Use-Case Inhalt" && parsed.order.length===1){
@@ -1024,8 +1051,12 @@ function extractSection(text,title){
 
 function renderSplitOutput(text){
   const parsed=parseStructuredOutput(text);
-  const artifact = formatStructuredSection(parsed.sections["Direktes Artefakt"]);
-  const masterprompt = formatStructuredSection(parsed.sections["Masterprompt"]);
+  const artifact = formatStructuredSection(
+    findStructuredSection(parsed, ["Direktes Artefakt", "Artefakt"])
+  );
+  const masterprompt = formatStructuredSection(
+    findStructuredSection(parsed, ["Masterprompt", "Master Prompt"])
+  );
   document.getElementById("artifactOut").textContent = artifact || "Noch kein Artefakt.";
   document.getElementById("masterpromptOut").textContent = masterprompt || "Noch kein Masterprompt.";
   return buildOverviewText(parsed);
