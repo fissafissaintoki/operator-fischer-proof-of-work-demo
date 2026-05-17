@@ -156,8 +156,8 @@
     .bays{padding:22px 24px 18px;display:grid;gap:18px}
     .main-grid{
       display:grid;
-      grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
-      gap:20px;
+      grid-template-columns:1fr;
+      gap:18px;
       align-items:stretch;
     }
     .bay{
@@ -204,6 +204,19 @@
     .actions.right{justify-content:flex-end}
     .actions.right .hint{margin:0;margin-right:auto}
     .output-actions{justify-content:flex-end}
+    .stack-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+    .stack-copy{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
     .statusline{
       display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
       margin-top:12px;
@@ -246,32 +259,13 @@
       align-items:center;
       justify-content:center;
       position:relative;
-      min-height:100%;
-      min-width:180px;
-    }
-    .pdf-lane::before,
-    .pdf-lane::after{
-      content:"";
-      position:absolute;
-      left:50%;
-      width:1px;
-      transform:translateX(-50%);
-      z-index:0;
-    }
-    .pdf-lane::before{
-      top:0;
-      bottom:52%;
-      background:linear-gradient(180deg,transparent,rgba(69,216,255,.26),transparent);
-    }
-    .pdf-lane::after{
-      top:52%;
-      bottom:0;
-      background:linear-gradient(180deg,transparent,rgba(255,176,79,.22),transparent);
+      min-height:auto;
+      width:100%;
     }
     .pdf-bridge{
       position:relative;
       z-index:1;
-      width:180px;
+      width:min(100%,560px);
       padding:16px 14px;
       border:1px solid rgba(69,216,255,.20);
       border-radius:4px;
@@ -412,7 +406,6 @@
       .bays{padding:14px 12px}
       .main-grid{grid-template-columns:1fr;gap:14px}
       .pdf-lane{min-height:auto}
-      .pdf-lane::before,.pdf-lane::after{display:none}
       .pdf-bridge{width:100%}
       .bay{padding:14px 12px 12px}
       textarea,pre{min-height:170px}
@@ -507,7 +500,7 @@
           <section class="bay">
             <header class="bay-head">
               <span><span class="led green"></span>Bay 02 · Output Bus</span>
-              <span class="right">Portfolio-Output · structured</span>
+              <span class="right">Gesamtausgabe · structured</span>
             </header>
             <pre id="out">Noch kein Output.</pre>
             <div class="statusline">
@@ -517,6 +510,32 @@
                 <button class="btn-delete" onclick="deleteOutput()" title="Output löschen">Delete</button>
               </div>
             </div>
+          </section>
+
+          <section class="bay">
+            <div class="stack-head">
+              <header class="bay-head" style="margin:0">
+                <span><span class="led green"></span>Bay 03 · Artefakt</span>
+                <span class="right">direkt nutzbar</span>
+              </header>
+              <div class="stack-copy">
+                <button class="btn-copy" onclick="copySection('artifactOut','Artefakt kopiert.')" title="Artefakt kopieren">Copy</button>
+              </div>
+            </div>
+            <pre id="artifactOut">Noch kein Artefakt.</pre>
+          </section>
+
+          <section class="bay">
+            <div class="stack-head">
+              <header class="bay-head" style="margin:0">
+                <span><span class="led"></span>Bay 04 · Masterprompt</span>
+                <span class="right">separat ausgabebereit</span>
+              </header>
+              <div class="stack-copy">
+                <button class="btn-copy" onclick="copySection('masterpromptOut','Masterprompt kopiert.')" title="Masterprompt kopieren">Copy</button>
+              </div>
+            </div>
+            <pre id="masterpromptOut">Noch kein Masterprompt.</pre>
           </section>
         </div>
 
@@ -586,9 +605,25 @@ let activeModal=null;
 function startWorkingAnimation(el){let d=0;el.textContent="Arbeite";workingTimer=setInterval(()=>{d=(d+1)%4;el.textContent="Arbeite"+".".repeat(d)},380)}
 function stopWorkingAnimation(){if(workingTimer){clearInterval(workingTimer);workingTimer=null}}
 
+function extractSection(text,title){
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  const regex = new RegExp(`(^|\\n)## ${escaped}\\s*\\n([\\s\\S]*?)(?=\\n## [^\\n]+|$)`, "i");
+  const match = text.match(regex);
+  return match ? match[2].trim() : "";
+}
+
+function renderSplitOutput(text){
+  const artifact = extractSection(text, "Direktes Artefakt");
+  const masterprompt = extractSection(text, "Masterprompt");
+  document.getElementById("artifactOut").textContent = artifact || "Noch kein Artefakt.";
+  document.getElementById("masterpromptOut").textContent = masterprompt || "Noch kein Masterprompt.";
+}
+
 function renderResult(text){
   const out=document.getElementById("out");
-  out.textContent = text?.trim() || "(Output leer)";
+  const normalized = text?.trim() || "(Output leer)";
+  out.textContent = normalized;
+  renderSplitOutput(normalized);
 }
 
 async function run(){
@@ -617,6 +652,8 @@ function deleteInput(){
 
 function deleteOutput(){
   document.getElementById("out").textContent="Noch kein Output.";
+  document.getElementById("artifactOut").textContent="Noch kein Artefakt.";
+  document.getElementById("masterpromptOut").textContent="Noch kein Masterprompt.";
   flash("Output gelöscht.");
 }
 
@@ -634,8 +671,16 @@ async function copyOutput(){
   catch{flash("Bitte manuell markieren.")}
 }
 
+async function copySection(id, successMessage){
+  const text=document.getElementById(id).textContent.trim();
+  if(!text||text==="Noch kein Artefakt."||text==="Noch kein Masterprompt."){flash("Noch kein Inhalt.");return}
+  try{await navigator.clipboard.writeText(text);flash(successMessage)}
+  catch{flash("Bitte manuell markieren.")}
+}
+
 async function exportPdfPortfolio(){
-  const outputText = document.getElementById("out").textContent.trim();
+  const artifactText = document.getElementById("artifactOut").textContent.trim();
+  const outputText = artifactText && artifactText!=="Noch kein Artefakt." ? artifactText : document.getElementById("out").textContent.trim();
   if(!outputText || outputText==="Noch kein Output."){flash("Erst Output erzeugen.");return}
   try{
     flash("PDF wird erstellt...");
