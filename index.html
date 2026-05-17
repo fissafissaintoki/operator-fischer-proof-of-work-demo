@@ -222,6 +222,14 @@
     button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
     .btn-create{color:#001a23;background:linear-gradient(180deg,#7ae8ff,var(--cyan) 60%,#0aa9c8)}
     .btn-delete{color:#fff;background:linear-gradient(180deg,#ff7682,var(--red) 60%,#b22732)}
+    .btn-delete-small{
+      padding:8px 10px;
+      font-size:10px;
+      letter-spacing:.12em;
+      color:#ffd7dc;
+      background:linear-gradient(180deg,#8f2d3a,#691520 65%,#430b13);
+      box-shadow:0 1px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08);
+    }
     .btn-copy{color:#1a0d00;background:linear-gradient(180deg,#ffd685,var(--amber) 60%,#cc8a1a)}
     .btn-pdf{
       width:100%;
@@ -314,6 +322,7 @@
       .bay{padding:14px 12px 12px}
       textarea,pre{min-height:170px}
       button{padding:10px 12px}
+      .btn-delete-small{padding:8px 10px}
       .statusline{align-items:flex-start}
       .actions .hint,.statusline .hint{width:100%;margin-left:0}
       .topstrip{align-items:flex-start;flex-direction:column}
@@ -383,6 +392,7 @@
             <div class="statusline">
               <div class="actions">
                 <button class="btn-create" onclick="run()">Create</button>
+                <button class="btn-delete-small" onclick="deleteInput()" title="Input leeren">Delete</button>
               </div>
               <span class="hint">Rohinput → strukturierter Output</span>
             </div>
@@ -457,6 +467,11 @@ async function run(){
     stopWorkingAnimation();
     document.getElementById("out").textContent="Fehler: "+err.message;
   }
+}
+
+function deleteInput(){
+  document.getElementById("raw").value="";
+  flash("Input geleert.");
 }
 
 function deleteOutput(){
