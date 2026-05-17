@@ -12,12 +12,13 @@ import urllib.request
 from collections import defaultdict, deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.platypus import Image as RLImage
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -46,8 +47,13 @@ MAX_USER_AGENT_CHARS = int(os.environ.get("MAX_USER_AGENT_CHARS", "180"))
 ADMIN_TOKEN_MIN_LENGTH = int(os.environ.get("ADMIN_TOKEN_MIN_LENGTH", "32"))
 GENERATE_ENABLED = os.environ.get("GENERATE_ENABLED", "true").lower() == "true"
 REQUIRE_ORIGIN_FOR_GENERATE = os.environ.get("REQUIRE_ORIGIN_FOR_GENERATE", "true").lower() == "true"
+PDF_IMAGE_SEARCH_ENABLED = os.environ.get("PDF_IMAGE_SEARCH_ENABLED", "true").lower() == "true"
+PDF_IMAGE_TIMEOUT_SECONDS = float(os.environ.get("PDF_IMAGE_TIMEOUT_SECONDS", "8"))
+PDF_IMAGE_DOWNLOAD_MAX_BYTES = int(os.environ.get("PDF_IMAGE_DOWNLOAD_MAX_BYTES", str(4 * 1024 * 1024)))
+PDF_IMAGE_MAX_ASSETS = int(os.environ.get("PDF_IMAGE_MAX_ASSETS", "2"))
 
 BASE_URL = "https://www.prompterator.de"
+APP_USER_AGENT = "Prompterator/1.0 (+https://www.prompterator.de)"
 SEO_ROUTES = {
     "/ki-prompt-generator": "pages/ki-prompt-generator.html",
     "/ki-use-case-generator": "pages/ki-use-case-generator.html",
@@ -618,6 +624,209 @@ def professional_gap(topic: str, guidance: str = "") -> str:
     return base + " Empfohlen wird eine Ergänzung durch Fachbereich, Prozessverantwortliche oder Qualitätsmanagement."
 
 
+VISUAL_STOPWORDS = {
+    "und", "oder", "der", "die", "das", "dem", "den", "ein", "eine", "einer", "eines",
+    "mit", "von", "fuer", "für", "zum", "zur", "ist", "sind", "bei", "als", "des",
+    "use", "case", "prozess", "analyse", "arbeitsartefakt", "prompterator", "management",
+    "naechste", "nächste", "schritte", "next", "steps", "input", "output", "direktes",
+    "artefakt", "portfolio", "professional", "professionelles",
+}
+
+VISUAL_TOPIC_MAP = {
+    "cold chain": ["cold chain logistics", "temperature controlled warehouse", "cold chain management"],
+    "supply chain": ["supply chain operations", "warehouse logistics", "distribution center"],
+    "warehouse": ["warehouse operations", "warehouse quality control", "industrial logistics"],
+    "wareneingang": ["goods receiving warehouse", "warehouse inspection", "quality control logistics"],
+    "sap": ["enterprise software dashboard", "business process software", "operations dashboard"],
+    "logistik": ["industrial logistics", "warehouse operations", "process control logistics"],
+    "governance": ["compliance review meeting", "operations governance", "quality review process"],
+    "qualitaet": ["quality control process", "industrial inspection", "operations review"],
+    "qualität": ["quality control process", "industrial inspection", "operations review"],
+    "quality": ["quality control process", "industrial inspection", "operations review"],
+    "finance": ["finance operations dashboard", "business review meeting", "financial controls"],
+    "medizin": ["hospital operations workflow", "clinical review process", "medical quality control"],
+}
+
+
+def derive_visual_keywords(text: str, limit: int = 6) -> list[str]:
+    normalized = normalize_section_name(text)
+    found = []
+    for phrase in VISUAL_TOPIC_MAP:
+        if phrase in normalized:
+            found.extend(VISUAL_TOPIC_MAP[phrase])
+
+    tokens = []
+    for token in re.findall(r"[a-zA-ZäöüÄÖÜß0-9][a-zA-ZäöüÄÖÜß0-9-]{2,}", normalized):
+        if token in VISUAL_STOPWORDS or token.isdigit():
+            continue
+        tokens.append(token)
+
+    seen = set()
+    results = []
+    for item in found + tokens:
+        key = item.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        results.append(item.strip())
+        if len(results) >= limit:
+            break
+    return results
+
+
+def build_visual_search_queries(model: dict) -> dict:
+    domain_text = " ".join(
+        part for part in [
+            model.get("title", ""),
+            model.get("usecase_title", ""),
+            model.get("problem_class", ""),
+            model.get("target_state", ""),
+            model.get("process_overview", ""),
+            model.get("governance", ""),
+        ] if part
+    )
+    keywords = derive_visual_keywords(domain_text)
+    if not keywords:
+        keywords = ["business operations", "process workflow", "industrial control"]
+
+    seed_one = keywords[0]
+    seed_two = keywords[1] if len(keywords) > 1 else seed_one
+    seed_three = keywords[2] if len(keywords) > 2 else seed_two
+    combined = f"{seed_one} {seed_two}".strip()
+
+    return {
+        "hero": [seed_one, seed_two, combined, "business operations"],
+        "process": [seed_three, f"{seed_one} workflow", f"{seed_two} process", f"{combined} operations"],
+    }
+
+
+def fetch_json(url: str) -> dict:
+    request = urllib.request.Request(url, headers={"User-Agent": APP_USER_AGENT, "Accept": "application/json"})
+    with urllib.request.urlopen(request, timeout=PDF_IMAGE_TIMEOUT_SECONDS) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def fetch_image_bytes(url: str) -> tuple[bytes, str]:
+    request = urllib.request.Request(url, headers={"User-Agent": APP_USER_AGENT, "Accept": "image/*"})
+    with urllib.request.urlopen(request, timeout=PDF_IMAGE_TIMEOUT_SECONDS) as response:
+        content_type = response.headers.get("Content-Type", "")
+        if not content_type.startswith("image/"):
+            raise ValueError("Kein Bildinhalt")
+        data = response.read(PDF_IMAGE_DOWNLOAD_MAX_BYTES + 1)
+    if len(data) > PDF_IMAGE_DOWNLOAD_MAX_BYTES:
+        raise ValueError("Bilddatei zu gross")
+    return data, content_type
+
+
+def search_openverse_image(query: str) -> dict | None:
+    url = f"https://api.openverse.org/v1/images/?q={quote_plus(query)}&page_size=6"
+    data = fetch_json(url)
+    for item in data.get("results", []):
+        image_url = item.get("thumbnail") or item.get("url")
+        if not image_url:
+            continue
+        return {
+            "source": "Openverse",
+            "query": query,
+            "title": (item.get("title") or query).strip()[:180],
+            "image_url": image_url,
+            "credit": (item.get("creator") or "Unbekannt").strip()[:120],
+            "license": (item.get("license") or "Lizenz beachten").strip()[:80],
+            "origin": (item.get("source") or "openverse").strip()[:40],
+        }
+    return None
+
+
+def search_commons_image(query: str) -> dict | None:
+    url = (
+        "https://commons.wikimedia.org/w/api.php"
+        f"?action=query&generator=search&gsrsearch={quote_plus(query)}"
+        "&gsrnamespace=6&gsrlimit=6&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1200&format=json"
+    )
+    data = fetch_json(url)
+    pages = data.get("query", {}).get("pages", {})
+    for page in pages.values():
+        title = page.get("title") or query
+        if not re.search(r"\.(jpg|jpeg|png|webp|svg)$", title, re.IGNORECASE):
+            continue
+        image_info = (page.get("imageinfo") or [{}])[0]
+        image_url = image_info.get("thumburl") or image_info.get("url")
+        if not image_url:
+            continue
+        metadata = image_info.get("extmetadata") or {}
+        license_value = (metadata.get("LicenseShortName") or {}).get("value") or "Lizenz beachten"
+        artist = (metadata.get("Artist") or {}).get("value") or "Wikimedia Commons"
+        artist = re.sub(r"<[^>]+>", "", artist).strip() or "Wikimedia Commons"
+        return {
+            "source": "Wikimedia Commons",
+            "query": query,
+            "title": title.replace("File:", "")[:180],
+            "image_url": image_url,
+            "credit": artist[:120],
+            "license": license_value[:80],
+            "origin": "commons",
+        }
+    return None
+
+
+def download_visual_asset(candidate: dict) -> dict | None:
+    if not candidate:
+        return None
+    try:
+        image_bytes, content_type = fetch_image_bytes(candidate["image_url"])
+    except Exception:
+        return None
+    asset = dict(candidate)
+    asset["image_bytes"] = image_bytes
+    asset["content_type"] = content_type
+    return asset
+
+
+def visual_concept_agent_plan_images(model: dict) -> dict:
+    model["visual_query_plan"] = build_visual_search_queries(model)
+    trace = model.setdefault("agent_trace", [])
+    trace.append("visual_concept_agent")
+    return model
+
+
+def asset_selection_agent_fetch_images(model: dict) -> dict:
+    assets = []
+    if not PDF_IMAGE_SEARCH_ENABLED:
+        model["visual_assets"] = assets
+        return model
+
+    query_plan = model.get("visual_query_plan") or build_visual_search_queries(model)
+    seen_urls = set()
+    for slot in ("hero", "process"):
+        selected = None
+        for query in query_plan.get(slot, []):
+            for provider in (search_openverse_image, search_commons_image):
+                try:
+                    candidate = provider(query)
+                except Exception:
+                    candidate = None
+                if not candidate or candidate.get("image_url") in seen_urls:
+                    continue
+                asset = download_visual_asset(candidate)
+                if not asset:
+                    continue
+                asset["slot"] = slot
+                selected = asset
+                seen_urls.add(asset["image_url"])
+                break
+            if selected:
+                break
+        if selected:
+            assets.append(selected)
+        if len(assets) >= PDF_IMAGE_MAX_ASSETS:
+            break
+
+    model["visual_assets"] = assets
+    trace = model.setdefault("agent_trace", [])
+    trace.append("asset_selection_agent")
+    return model
+
+
 def compact_points(text: str, fallback: list[str], max_items: int = 4, max_len: int = 140) -> list[str]:
     items = extract_list_items(text)
     if not items:
@@ -1177,6 +1386,7 @@ def build_appendix(model: dict) -> dict:
 
 
 def build_pdf_chapters(model: dict) -> list[dict]:
+    process_asset = get_visual_asset(model.get("visual_assets", []), "process")
     roles_rows = [
         ["Fachlicher Owner", shorten_text(model["governance"] or model["problem_class"], "Owner fachlich ergänzen.", 150), "Freigabe, Priorisierung, fachliche Verantwortung"],
         ["Operative Rolle", shorten_text(model["process_overview"] or model["artifact"], "Operative Rolle fachlich ergänzen.", 150), "Durchführung, Pflege, Rückmeldung"],
@@ -1301,6 +1511,7 @@ def build_pdf_chapters(model: dict) -> list[dict]:
             "title": "Prozessübersicht",
             "purpose": "Verdichtet den Ablauf zu einer verständlichen Gesamtlogik fuer Fachbereich und Management.",
             "paragraphs": [chapter_text("Prozessübersicht", "", model)],
+            "image_asset": process_asset,
         },
         {
             "title": "Prozessmodell / Ablaufmatrix",
@@ -1506,6 +1717,49 @@ def split_cards(cards: list[dict], per_row: int = 2) -> list[list[dict]]:
     return [cards[idx: idx + per_row] for idx in range(0, len(cards), per_row)]
 
 
+def get_visual_asset(assets: list[dict], slot: str) -> dict | None:
+    for asset in assets or []:
+        if asset.get("slot") == slot:
+            return asset
+    return None
+
+
+def build_visual_asset_panel(asset: dict, styles, width_mm: float = 160, max_height_mm: float = 58):
+    image = RLImage(io.BytesIO(asset["image_bytes"]))
+    max_width = width_mm * mm
+    max_height = max_height_mm * mm
+    img_width = float(image.drawWidth or max_width)
+    img_height = float(image.drawHeight or max_height)
+    scale = min(max_width / img_width, max_height / img_height)
+    image.drawWidth = img_width * scale
+    image.drawHeight = img_height * scale
+
+    caption = (
+        f"{asset.get('title', 'Visualisierung')} · Quelle: {asset.get('source', 'Web')} · "
+        f"Credit: {asset.get('credit', 'Unbekannt')} · Lizenz: {asset.get('license', 'Lizenz beachten')}"
+    )
+    caption_text = sanitize_pdf_text(caption)
+
+    inner = Table(
+        [
+            [image],
+            [Paragraph(caption_text, styles["ImageCaption"])],
+        ],
+        colWidths=[max_width],
+    )
+    inner.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F8FB")),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#D0DCE6")),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    return inner
+
+
 def build_management_box(label: str, text: str, styles):
     box = Table(
         [[Paragraph(sanitize_pdf_text(label), styles["BoxLabel"]), Paragraph(sanitize_pdf_text(text), styles["BoxBody"])]],
@@ -1545,6 +1799,7 @@ def render_text_content(story: list, styles, text: str):
 
 
 def build_cover_page(story: list, styles, metadata: dict):
+    hero_asset = get_visual_asset(metadata.get("visual_assets", []), "hero")
     story.append(Paragraph("Executive Use-Case Dossier", styles["DeckEyebrow"]))
     story.append(Spacer(1, 2 * mm))
     story.append(Paragraph(sanitize_pdf_text(metadata["headline"]), styles["DeckHeadline"]))
@@ -1553,6 +1808,9 @@ def build_cover_page(story: list, styles, metadata: dict):
     story.append(Spacer(1, 4 * mm))
     story.append(build_management_box("Executive Context", metadata["context_line"], styles))
     story.append(Spacer(1, 5 * mm))
+    if hero_asset:
+        story.append(KeepTogether([build_visual_asset_panel(hero_asset, styles, width_mm=160, max_height_mm=64)]))
+        story.append(Spacer(1, 5 * mm))
     meta_rows = [
         ["Datum", metadata["date"]],
         ["Quelle", metadata["source"]],
@@ -1605,6 +1863,10 @@ def build_pdf_chapter(story: list, styles, chapter: dict):
     story.append(Spacer(1, 1.5 * mm))
     story.append(Paragraph(sanitize_pdf_text(chapter["purpose"]), styles["PurposeCopy"]))
     story.append(Spacer(1, 1.2 * mm))
+
+    if chapter.get("image_asset"):
+        story.append(KeepTogether([build_visual_asset_panel(chapter["image_asset"], styles, width_mm=160, max_height_mm=56)]))
+        story.append(Spacer(1, 2.2 * mm))
 
     if chapter.get("box"):
         story.append(KeepTogether([build_management_box(chapter["box"]["label"], chapter["box"]["text"], styles)]))
@@ -1810,6 +2072,15 @@ def render_executive_dossier_pdf(chapters: list[dict], metadata: dict) -> bytes:
         textColor=colors.HexColor("#324A5F"),
     ))
     styles.add(ParagraphStyle(
+        name="ImageCaption",
+        parent=styles["BodyText"],
+        fontName="Helvetica",
+        fontSize=8.2,
+        leading=10.4,
+        textColor=colors.HexColor("#516575"),
+        alignment=1,
+    ))
+    styles.add(ParagraphStyle(
         name="SectionMini",
         parent=styles["BodyText"],
         fontName="Helvetica-Bold",
@@ -1880,7 +2151,7 @@ def render_executive_dossier_pdf(chapters: list[dict], metadata: dict) -> bytes:
 
 def pdf_render_agent_render_dossier(chapters: list[dict], metadata: dict) -> bytes:
     metadata = dict(metadata)
-    metadata.setdefault("pipeline", "intake -> structure -> business_case -> training -> governance -> visual_layout -> pdf_render")
+    metadata.setdefault("pipeline", "intake -> structure -> business_case -> training -> governance -> visual_concept -> asset_selection -> visual_layout -> pdf_render")
     return render_executive_dossier_pdf(chapters, metadata)
 
 
@@ -1909,6 +2180,8 @@ def build_pdf_portfolio(title: str, content: str, source: str) -> bytes:
     model["parsed_output"] = parsed
     model = training_agent_add_learning_layer(model)
     model = governance_agent_add_controls(model)
+    model = visual_concept_agent_plan_images(model)
+    model = asset_selection_agent_fetch_images(model)
     chapters = visual_layout_agent_build_chapters(model)
     metadata = {
         "title": title or "Prompterator Use-Case Portfolio",
@@ -1928,6 +2201,7 @@ def build_pdf_portfolio(title: str, content: str, source: str) -> bytes:
         "cover_summary_rows": model["cover_summary_rows"],
         "cover_cards": model["cover_cards"],
         "chapter_intro_cards": model["chapter_intro_cards"],
+        "visual_assets": model.get("visual_assets", []),
         "agent_trace": model.get("agent_trace", []),
     }
     return pdf_render_agent_render_dossier(chapters, metadata)
