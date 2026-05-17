@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Datenschutz · Prompterator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Datenschutzerklärung für Prompterator nach DSGVO">
+  <meta name="robots" content="index,follow">
+  <style>
+    :root{
+      --bg:#020507;
+      --ink:#d8e8f2;
+      --ink-soft:#a8b8c5;
+      --ink-muted:#7a8e9e;
+      --ink-dim:#4a5a68;
+      --rule:#1e2b38;
+      --rule-2:#2d3e4f;
+      --accent:#45d8ff;
+      --accent-dk:#0E7C95;
+      --amber:#ffb04f;
+      --green:#42f0aa;
+      --mono:'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+      background:#010305;
+      color:var(--ink);
+      line-height:1.65;
+      min-height:100vh;
+      padding:32px 20px 60px;
+    }
+    .shell{max-width:820px;margin:0 auto}
+    .topbar{
+      display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:32px;padding-bottom:12px;
+      border-bottom:1px solid var(--rule);
+    }
+    .topbar a{
+      color:var(--accent);text-decoration:none;
+      font:600 12px/1 var(--mono);letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+    .topbar a:hover{filter:brightness(1.2)}
+    .eyebrow{
+      font:700 10px/1 var(--mono);letter-spacing:.22em;
+      color:var(--accent-dk);text-transform:uppercase;
+      margin-bottom:10px;
+    }
+    h1{font-size:32px;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+    .rule{width:48px;height:2px;background:var(--accent);margin:14px 0 26px;border-radius:1px}
+    h2{
+      font-size:18px;font-weight:700;
+      margin:32px 0 10px;color:var(--ink);
+      letter-spacing:.01em;
+    }
+    h3{
+      font-size:14px;font-weight:700;
+      margin:18px 0 6px;color:var(--ink);
+      letter-spacing:.02em;
+    }
+    p{font-size:14px;color:var(--ink-soft);margin-bottom:10px}
+    ul{margin:8px 0 14px 22px}
+    ul li{font-size:14px;color:var(--ink-soft);margin-bottom:6px;padding-left:4px}
+    a{color:var(--accent);word-break:break-word}
+    .box{
+      padding:14px 18px;
+      background:rgba(12,18,26,.6);
+      border-left:2px solid var(--accent);
+      border-radius:0 3px 3px 0;
+      margin:12px 0 16px;
+    }
+    .box.amber{
+      background:rgba(255,176,79,.06);
+      border-left-color:var(--amber);
+    }
+    .box.amber b{color:#ffd8a0}
+    .box.green{
+      background:rgba(66,240,170,.05);
+      border-left-color:var(--green);
+    }
+    .box.green b{color:#a8f5d4}
+    .box p{margin-bottom:4px}
+    .toc{
+      padding:14px 18px;
+      background:rgba(12,18,26,.5);
+      border:1px solid var(--rule);
+      border-radius:3px;
+      margin:18px 0 26px;
+    }
+    .toc h3{margin:0 0 8px;color:var(--ink-muted)}
+    .toc ol{margin:0 0 0 22px}
+    .toc li{font-size:13px;color:var(--ink-soft);margin-bottom:3px}
+    .toc a{color:var(--ink-soft)}
+    .toc a:hover{color:var(--accent)}
+    footer{
+      margin-top:48px;padding-top:18px;
+      border-top:1px solid var(--rule);
+      font:700 9px/1 var(--mono);
+      letter-spacing:.18em;color:var(--ink-dim);
+      text-transform:uppercase;
+      display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <nav class="topbar">
+      <a href="/">← Zurück zu Prompterator</a>
+      <a href="/impressum">Impressum</a>
+    </nav>
+
+    <p class="eyebrow">Datenschutz nach DSGVO</p>
+    <h1>Datenschutzerklärung</h1>
+    <div class="rule"></div>
+
+    <p>
+      Stand: Mai 2026. Diese Erklärung beschreibt, welche Daten bei der Nutzung
+      von Prompterator verarbeitet werden, auf welcher Rechtsgrundlage dies
+      geschieht und welche Rechte Sie als betroffene Person haben.
+    </p>
+
+    <div class="box amber">
+      <p>
+        <b>Wichtiger Hinweis.</b> Prompterator ist ein technischer Proof of
+        Work und kein produktiver Dienst. Bitte geben Sie <b>keine personenbezogenen,
+        sensiblen, vertraulichen oder geschäftskritischen Daten</b> in das
+        Eingabefeld ein. Die Nutzung erfolgt freiwillig und auf eigenes Risiko.
+      </p>
+    </div>
+
+    <div class="toc">
+      <h3>Inhalt</h3>
+      <ol>
+        <li><a href="#verantwortlicher">Verantwortlicher</a></li>
+        <li><a href="#daten">Welche Daten werden verarbeitet</a></li>
+        <li><a href="#zwecke">Zwecke und Rechtsgrundlagen</a></li>
+        <li><a href="#empfaenger">Empfänger und Auftragsverarbeiter</a></li>
+        <li><a href="#drittland">Datenübermittlung in Drittländer</a></li>
+        <li><a href="#speicherdauer">Speicherdauer</a></li>
+        <li><a href="#rechte">Ihre Rechte</a></li>
+        <li><a href="#sicherheit">Datensicherheit</a></li>
+        <li><a href="#beschwerde">Beschwerderecht</a></li>
+        <li><a href="#aenderungen">Änderungen dieser Erklärung</a></li>
+      </ol>
+    </div>
+
+    <h2 id="verantwortlicher">1. Verantwortlicher</h2>
+    <p>Verantwortlich im Sinne der DSGVO ist:</p>
+    <div class="box">
+      <p>
+        Peter Fischer<br>
+        Theodor-Heuss-Straße 10<br>
+        69469 Weinheim<br>
+        Deutschland<br>
+        E-Mail: <a href="mailto:fissafissa@outlook.de">fissafissa@outlook.de</a>
+      </p>
+    </div>
+
+    <h2 id="daten">2. Welche Daten werden verarbeitet</h2>
+
+    <h3>2.1 Beim Aufruf der Webseite</h3>
+    <p>
+      Beim Aufruf der Webseite werden durch den Hosting-Anbieter technische
+      Daten verarbeitet, die der Browser automatisch übermittelt. Dies umfasst:
+    </p>
+    <ul>
+      <li>IP-Adresse (gekürzt oder anonymisiert beim Hosting-Anbieter)</li>
+      <li>Datum und Uhrzeit des Zugriffs</li>
+      <li>Aufgerufene URL</li>
+      <li>Browsertyp und Betriebssystem (User-Agent)</li>
+      <li>Referrer-URL</li>
+    </ul>
+    <p>
+      Diese Daten werden ausschließlich zur Bereitstellung und Sicherheit
+      des Dienstes verwendet (z.B. Schutz vor Missbrauch, Rate-Limiting).
+    </p>
+
+    <h3>2.2 Bei Nutzung des Eingabefeldes</h3>
+    <p>
+      Wenn Sie Text in das Eingabefeld eingeben und "Create" auswählen,
+      wird der eingegebene Text an die OpenAI-API übermittelt, um eine
+      strukturierte Antwort zu erzeugen.
+    </p>
+
+    <div class="box green">
+      <p>
+        <b>Wichtig:</b> Der Server speichert die eingegebenen Inhalte nicht
+        dauerhaft. Eingaben werden im laufenden Request verarbeitet und
+        anschließend nicht in Datenbanken oder Logdateien abgelegt. Es
+        findet kein inhaltliches Logging der Userinhalte statt.
+      </p>
+    </div>
+
+    <h3>2.3 Bei Nutzung des PDF-Exports</h3>
+    <p>
+      Wenn Sie auf "PDF" klicken, wird der aktuelle Output zur Erstellung
+      einer PDF-Datei verarbeitet. Auch hier erfolgt keine dauerhafte
+      Speicherung auf dem Server. Die PDF-Datei wird an Ihren Browser
+      ausgeliefert und nicht zwischengespeichert.
+    </p>
+
+    <h2 id="zwecke">3. Zwecke und Rechtsgrundlagen</h2>
+    <p>
+      Die Verarbeitung erfolgt auf Grundlage von <b>Art. 6 Abs. 1 lit. f DSGVO</b>
+      (berechtigtes Interesse an der Bereitstellung eines funktionsfähigen
+      Dienstes und an dessen Schutz vor Missbrauch) sowie bei aktiver Eingabe
+      auf Grundlage von <b>Art. 6 Abs. 1 lit. b DSGVO</b> (Erfüllung des
+      gewünschten Dienstes auf Veranlassung der nutzenden Person).
+    </p>
+
+    <h2 id="empfaenger">4. Empfänger und Auftragsverarbeiter</h2>
+    <p>
+      Im Rahmen der Bereitstellung des Dienstes werden Daten an folgende
+      Auftragsverarbeiter weitergegeben:
+    </p>
+
+    <h3>4.1 OpenAI</h3>
+    <p>
+      Die Texteingaben werden zur Erzeugung der strukturierten Antwort an
+      OpenAI übermittelt:
+    </p>
+    <div class="box">
+      <p>
+        OpenAI Ireland Ltd.<br>
+        1st Floor, The Liffey Trust Centre<br>
+        117–126 Sheriff Street Upper<br>
+        Dublin 1, D01 YC43, Irland
+      </p>
+    </div>
+    <p>
+      OpenAI verarbeitet API-Eingaben nach eigener Aussage <b>nicht zum
+      Training</b> ihrer Modelle (Stand der OpenAI-API-Policy). Übermittelte
+      Daten können zur Missbrauchserkennung kurzzeitig zwischengespeichert
+      werden. Mit OpenAI besteht ein Auftragsverarbeitungsvertrag
+      (Data Processing Addendum) gemäß Art. 28 DSGVO.
+    </p>
+    <p>
+      Weitere Informationen: <a href="https://openai.com/policies/privacy-policy" rel="noopener" target="_blank">openai.com/policies/privacy-policy</a>
+    </p>
+
+    <h3>4.2 Render</h3>
+    <p>
+      Der Dienst wird auf der Hosting-Plattform Render gehostet:
+    </p>
+    <div class="box">
+      <p>
+        Render Services Inc.<br>
+        525 Brannan Street, Suite 300<br>
+        San Francisco, CA 94107, USA
+      </p>
+    </div>
+    <p>
+      Render verarbeitet im Rahmen des Hostings technische Daten
+      (z.B. IP-Adresse, Logdaten) zur Bereitstellung der Infrastruktur. Mit
+      Render bestehen Standardvertragsklauseln (SCC) der Europäischen Kommission.
+    </p>
+    <p>
+      Weitere Informationen: <a href="https://render.com/privacy" rel="noopener" target="_blank">render.com/privacy</a>
+    </p>
+
+    <h2 id="drittland">5. Datenübermittlung in Drittländer</h2>
+    <p>
+      Sowohl OpenAI als auch Render haben ihren Hauptsitz bzw. ihre
+      Verarbeitungsorte (auch) in den USA. Damit erfolgt eine Übermittlung
+      personenbezogener Daten in ein Drittland im Sinne von Art. 44 DSGVO.
+    </p>
+    <p>
+      Als Schutzmaßnahmen kommen die <b>Standardvertragsklauseln (SCC) der
+      Europäischen Kommission</b> nach Art. 46 Abs. 2 lit. c DSGVO sowie
+      ergänzende Maßnahmen der jeweiligen Anbieter zur Anwendung.
+    </p>
+    <div class="box amber">
+      <p>
+        <b>Hinweis:</b> Trotz dieser Schutzmaßnahmen besteht das Restrisiko,
+        dass US-Behörden unter bestimmten Voraussetzungen Zugriff auf bei
+        US-Anbietern verarbeitete Daten erhalten können. Bitte berücksichtigen
+        Sie dies bei der Auswahl der Eingaben.
+      </p>
+    </div>
+
+    <h2 id="speicherdauer">6. Speicherdauer</h2>
+    <ul>
+      <li>Eingabetexte und Outputs: <b>nicht dauerhaft serverseitig gespeichert</b></li>
+      <li>Technische Hosting-Logs: gemäß Voreinstellung des Hosters (Render), in der Regel kurzfristig</li>
+      <li>Bei OpenAI: gemäß deren Privacy Policy, kurzfristige Speicherung zur Missbrauchserkennung</li>
+    </ul>
+
+    <h2 id="rechte">7. Ihre Rechte</h2>
+    <p>Sie haben gegenüber dem Verantwortlichen folgende Rechte:</p>
+    <ul>
+      <li><b>Auskunft</b> über die Sie betreffenden personenbezogenen Daten (Art. 15 DSGVO)</li>
+      <li><b>Berichtigung</b> unrichtiger Daten (Art. 16 DSGVO)</li>
+      <li><b>Löschung</b> (Art. 17 DSGVO)</li>
+      <li><b>Einschränkung der Verarbeitung</b> (Art. 18 DSGVO)</li>
+      <li><b>Datenübertragbarkeit</b> (Art. 20 DSGVO)</li>
+      <li><b>Widerspruch</b> gegen die Verarbeitung (Art. 21 DSGVO)</li>
+    </ul>
+    <p>
+      Zur Ausübung Ihrer Rechte wenden Sie sich an
+      <a href="mailto:fissafissa@outlook.de">fissafissa@outlook.de</a>.
+    </p>
+
+    <h2 id="sicherheit">8. Datensicherheit</h2>
+    <p>
+      Die Webseite wird verschlüsselt per HTTPS ausgeliefert. API-Anfragen
+      an OpenAI erfolgen ebenfalls verschlüsselt über HTTPS. Es gelten
+      technische und organisatorische Schutzmaßnahmen wie Rate-Limiting,
+      Eingabelimits und sicherheitsrelevante HTTP-Header.
+    </p>
+
+    <h2 id="beschwerde">9. Beschwerderecht bei der Aufsichtsbehörde</h2>
+    <p>
+      Sie haben das Recht, sich bei einer Datenschutzaufsichtsbehörde zu
+      beschweren. Für mich zuständig ist:
+    </p>
+    <div class="box">
+      <p>
+        Der Landesbeauftragte für den Datenschutz und die Informationsfreiheit Baden-Württemberg<br>
+        Königstraße 10a<br>
+        70173 Stuttgart<br>
+        <a href="https://www.baden-wuerttemberg.datenschutz.de" rel="noopener" target="_blank">www.baden-wuerttemberg.datenschutz.de</a>
+      </p>
+    </div>
+
+    <h2 id="aenderungen">10. Änderungen dieser Erklärung</h2>
+    <p>
+      Diese Datenschutzerklärung wird bei Änderungen am Dienst, an
+      Verarbeitungsprozessen oder an gesetzlichen Vorgaben angepasst. Den
+      aktuellen Stand finden Sie jeweils auf dieser Seite.
+    </p>
+
+    <footer>
+      <span>Prompterator · Proof of Work</span>
+      <span>Stand: Mai 2026</span>
+    </footer>
+  </main>
+</body>
+</html>
