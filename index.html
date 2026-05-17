@@ -15,90 +15,107 @@
   <meta name="twitter:card" content="summary_large_image">
   <style>
     :root{
-      --bg:#000;
-      --steel:#101418;
-      --steel-2:#161b21;
-      --steel-3:#1c232b;
-      --steel-line:#2a3138;
-      --steel-line-2:#3a434c;
-      --text:#e2eaf2;
-      --muted:#8a96a3;
-      --dim:#5a6470;
-      --cyan:#22ddff;
-      --cyan-soft:#0fa5c2;
-      --warn:#ffbf4d;
+      --bg:#020507;
+      --bg-deep:#05090d;
+      --steel:#0d1217;
+      --steel-2:#121922;
+      --steel-3:#18212a;
+      --panel:#0a0f14;
+      --panel-2:#0f161d;
+      --steel-line:#25313c;
+      --steel-line-2:#3a4650;
+      --text:#e6edf4;
+      --muted:#8e9eac;
+      --dim:#5f6d7b;
+      --cyan:#45d8ff;
+      --cyan-soft:#0ea3be;
+      --amber:#ffb04f;
+      --amber-hot:#ff7f32;
       --red:#ff4d5a;
-      --green:#3ef0a1;
+      --green:#42f0aa;
       --mono:'JetBrains Mono','SFMono-Regular',Menlo,Monaco,Consolas,ui-monospace,monospace;
+      --display:'Arial Black','Helvetica Neue',sans-serif;
     }
     *{box-sizing:border-box}
     html,body{margin:0}
     body{
       min-height:100vh;
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      font-family:"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
       color:var(--text);
-      background:#000;
+      background:
+        radial-gradient(circle at top left,rgba(69,216,255,.11),transparent 28%),
+        radial-gradient(circle at 88% 14%,rgba(255,127,50,.10),transparent 24%),
+        linear-gradient(180deg,var(--bg) 0%,var(--bg-deep) 52%,#010304 100%);
     }
     body::before{
       content:"";position:fixed;inset:0;z-index:-1;
       background:
-        linear-gradient(90deg,rgba(34,221,255,.03) 1px,transparent 1px),
-        linear-gradient(rgba(34,221,255,.025) 1px,transparent 1px);
-      background-size:56px 56px;opacity:.7;
+        linear-gradient(90deg,rgba(69,216,255,.05) 1px,transparent 1px),
+        linear-gradient(rgba(69,216,255,.035) 1px,transparent 1px),
+        linear-gradient(120deg,transparent 0 43%,rgba(255,176,79,.06) 50%,transparent 57%);
+      background-size:64px 64px,64px 64px,100% 100%;
+      opacity:.78;
       mask-image:linear-gradient(180deg,black,transparent 92%);
     }
+    body::after{
+      content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+      background:
+        linear-gradient(90deg,transparent 0 13%,rgba(69,216,255,.08) 20%,transparent 31%),
+        linear-gradient(180deg,transparent 0 58%,rgba(255,176,79,.06) 72%,transparent 88%);
+      opacity:.55;
+    }
 
-    .shell{width:min(980px,calc(100% - 24px));margin:0 auto;padding:22px 0 60px}
+    .shell{width:min(1180px,calc(100% - 24px));margin:0 auto;padding:22px 0 60px}
 
-    /* === Top status strip === */
     .topstrip{
       display:flex;align-items:center;justify-content:space-between;gap:12px;
       padding:7px 14px;margin:0 0 14px;border:1px solid var(--steel-line);
-      background:linear-gradient(180deg,var(--steel-2),var(--steel));
+      background:linear-gradient(180deg,rgba(18,25,34,.96),rgba(10,14,18,.98));
       font:11px/1 var(--mono);letter-spacing:.10em;color:var(--muted);text-transform:uppercase;
       border-radius:4px;
+      box-shadow:0 14px 36px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.03);
     }
     .topstrip .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);margin-right:6px;animation:pulse 2.2s ease-in-out infinite}
     @keyframes pulse{50%{opacity:.55}}
     .topstrip .right{display:flex;gap:14px}
     .topstrip span b{color:var(--cyan);font-weight:700}
 
-    /* === Outer card / chassis === */
     .chassis{
       position:relative;
       border:1px solid var(--steel-line-2);
-      background:linear-gradient(180deg,var(--steel),#050709 70%);
-      box-shadow:0 24px 70px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.02);
+      background:
+        linear-gradient(180deg,rgba(16,21,28,.96),rgba(5,8,11,.98) 72%),
+        linear-gradient(90deg,rgba(69,216,255,.03),transparent 24%,transparent 76%,rgba(255,176,79,.03));
+      box-shadow:0 24px 70px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.02),0 0 40px rgba(69,216,255,.05);
       border-radius:6px;overflow:hidden;
     }
-    /* warning tape stripe on top */
     .chassis::before{
       content:"";display:block;height:6px;
-      background:repeating-linear-gradient(45deg,var(--warn) 0 14px,#000 14px 28px);
+      background:repeating-linear-gradient(45deg,var(--amber) 0 14px,#000 14px 28px);
       opacity:.88;
     }
 
-    /* === Banner / LED bande === */
-    .banner-wrap{padding:14px 14px 0;background:#000}
+    .banner-wrap{padding:12px 12px 0;background:#010203}
     .led-band{
-      position:relative;width:100%;height:110px;overflow:hidden;
+      position:relative;width:100%;height:128px;overflow:hidden;
       border:1px solid var(--steel-line-2);background:#000;
       border-radius:4px;
-      box-shadow:0 10px 36px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.03),0 0 24px rgba(255,191,77,.10);
+      box-shadow:0 10px 36px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.03),0 0 24px rgba(255,176,79,.12);
     }
-    .led-band::before,.led-band::after{content:"";position:absolute;top:0;bottom:0;width:48px;z-index:2;pointer-events:none}
+    .led-band::before,.led-band::after{content:"";position:absolute;top:0;bottom:0;width:56px;z-index:2;pointer-events:none}
     .led-band::before{left:0;background:linear-gradient(90deg,#000 0%,transparent 100%)}
     .led-band::after{right:0;background:linear-gradient(90deg,transparent 0%,#000 100%)}
-    .led-track{display:flex;align-items:center;height:100%;width:max-content;animation:bandeScroll 28s linear infinite;will-change:transform}
-    .led-track img{display:block;height:110px;width:auto;margin-right:24px;flex:0 0 auto}
+    .led-track{display:flex;align-items:center;height:100%;width:max-content;animation:bandeScroll 24s linear infinite;will-change:transform}
+    .led-track img{display:block;height:100%;width:auto;object-fit:contain;margin-right:18px;flex:0 0 auto}
     @keyframes bandeScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
     @media(prefers-reduced-motion:reduce){.led-track{animation:none}}
 
-    /* === Header / console plate === */
     .plate{
-      position:relative;padding:24px 28px 18px;text-align:center;
+      position:relative;padding:28px 28px 20px;text-align:center;
       border-top:1px solid var(--steel-line);border-bottom:1px solid var(--steel-line);
-      background:linear-gradient(180deg,var(--steel-2),#0a0d11);
+      background:
+        linear-gradient(180deg,rgba(18,25,34,.94),rgba(8,11,15,.98)),
+        linear-gradient(90deg,rgba(69,216,255,.03),transparent 24%,transparent 76%,rgba(255,176,79,.035));
     }
     .plate-tag{
       position:absolute;top:8px;left:14px;
@@ -108,7 +125,19 @@
       position:absolute;top:8px;right:14px;
       font:10px/1 var(--mono);letter-spacing:.18em;color:var(--dim);text-transform:uppercase;
     }
-    .kicker{margin:0 0 8px;color:var(--green);font:700 11px/1 var(--mono);letter-spacing:.20em;text-transform:uppercase}
+    .kicker{
+      margin:0 0 10px;
+      font:900 clamp(14px,2vw,19px)/1 var(--display);
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      color:#ffd59a;
+      background:linear-gradient(180deg,#fff4d0 0%,#ffce78 18%,#ff9d3f 44%,#f85d27 68%,#7a1808 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
+      text-shadow:0 1px 0 rgba(0,0,0,.7),0 0 10px rgba(255,127,50,.22),0 0 22px rgba(255,176,79,.12);
+      -webkit-text-stroke:.55px rgba(18,8,2,.62);
+    }
     h1{
       margin:0;font-size:clamp(40px,7.4vw,72px);line-height:.92;font-weight:1000;letter-spacing:.04em;
       text-transform:uppercase;position:relative;display:inline-block;isolation:isolate;
@@ -122,19 +151,25 @@
       animation:shimmer 7s ease-in-out infinite;mix-blend-mode:screen;border-radius:6px;
     }
     @keyframes shimmer{0%{transform:translateX(-120%)}55%{transform:translateX(120%)}100%{transform:translateX(120%)}}
-    .claim{max-width:720px;margin:14px auto 0;color:var(--muted);font-size:14px;line-height:1.55}
+    .claim{max-width:720px;margin:14px auto 0;color:#b5c1cd;font-size:15px;line-height:1.6}
 
-    /* === Bays (Input/Output/Masterprompt) === */
-    .bays{padding:20px 24px 18px;display:grid;gap:16px}
+    .bays{padding:22px 24px 18px;display:grid;gap:18px}
+    .main-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 86px minmax(0,1fr);
+      gap:18px;
+      align-items:stretch;
+    }
     .bay{
       position:relative;
       border:1px solid var(--steel-line);
-      background:linear-gradient(180deg,var(--steel-2),var(--steel));
-      box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+      background:
+        linear-gradient(180deg,rgba(16,23,30,.96),rgba(9,14,19,.98)),
+        linear-gradient(135deg,rgba(69,216,255,.035),transparent 35%,rgba(255,176,79,.03) 100%);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.02),0 18px 40px rgba(0,0,0,.25);
       border-radius:4px;
       padding:16px 16px 14px;
     }
-    /* Corner brackets - 4 corners */
     .bay::before,.bay::after{
       content:"";position:absolute;width:14px;height:14px;border:1px solid var(--cyan-soft);
       pointer-events:none;opacity:.55;
@@ -152,27 +187,32 @@
     .bay-head .right b{color:var(--cyan);font-weight:700}
 
     textarea,pre{
-      width:100%;min-height:200px;
+      width:100%;min-height:240px;
       border:1px solid var(--steel-line-2);border-radius:3px;
-      padding:14px;color:var(--text);background:#05080b;outline:none;
+      padding:14px;color:var(--text);background:linear-gradient(180deg,#04070a,#071018);outline:none;
       font:14.5px/1.55 var(--mono);
-      box-shadow:inset 0 0 24px rgba(0,0,0,.55);
+      box-shadow:inset 0 0 24px rgba(0,0,0,.55),inset 0 0 0 1px rgba(69,216,255,.03);
     }
     textarea{resize:vertical}
     textarea::placeholder{color:#4d5a68}
     textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(34,221,255,.10),inset 0 0 24px rgba(0,0,0,.55)}
-    pre{margin:0;white-space:pre-wrap;word-break:break-word;border-color:rgba(255,191,77,.22);min-height:240px}
+    pre{margin:0;white-space:pre-wrap;word-break:break-word;border-color:rgba(255,176,79,.26);min-height:240px}
     pre.mp{border-color:rgba(62,240,161,.30);min-height:140px}
 
-    /* === Action rows === */
     .actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
     .actions .hint{color:var(--dim);font-size:11px;margin-left:auto;font-family:var(--mono);letter-spacing:.06em}
     .actions.right{justify-content:flex-end}
     .actions.right .hint{margin:0;margin-right:auto}
+    .output-actions{justify-content:flex-end}
+    .statusline{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .statusline .hint{margin-left:0}
 
     button{
       position:relative;
-      border:0;border-radius:3px;padding:9px 14px;cursor:pointer;
+      border:0;border-radius:3px;padding:10px 14px;cursor:pointer;
       font:800 12px/1 var(--mono);letter-spacing:.10em;text-transform:uppercase;
       transition:transform 100ms ease,filter 120ms ease,box-shadow 120ms ease;
       box-shadow:0 2px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.10);
@@ -180,41 +220,79 @@
     button:hover{filter:brightness(1.10)}
     button:active{transform:translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.06)}
     button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.4)}
-    .btn-create{color:#001a23;background:linear-gradient(180deg,#54e6ff,var(--cyan) 60%,#0aa9c8)}
+    .btn-create{color:#001a23;background:linear-gradient(180deg,#7ae8ff,var(--cyan) 60%,#0aa9c8)}
     .btn-delete{color:#fff;background:linear-gradient(180deg,#ff7682,var(--red) 60%,#b22732)}
-    .btn-copy{color:#1a0d00;background:linear-gradient(180deg,#ffd685,var(--warn) 60%,#cc8a1a)}
+    .btn-copy{color:#1a0d00;background:linear-gradient(180deg,#ffd685,var(--amber) 60%,#cc8a1a)}
     .btn-pdf{
-      position:absolute;top:10px;right:10px;z-index:3;
-      padding:6px 10px;font-size:11px;letter-spacing:.12em;
-      color:#001a23;background:linear-gradient(180deg,#a5f3ff,var(--cyan) 60%,#0aa9c8);
+      width:100%;
+      padding:12px 10px;
+      font-size:11px;
+      letter-spacing:.14em;
+      color:#120900;
+      background:linear-gradient(180deg,#ffd493,var(--amber) 55%,#c77410);
+      box-shadow:0 0 20px rgba(255,176,79,.18),0 2px 0 rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.14);
     }
-    .btn-pdf::before{content:"▾ ";opacity:.6}
+    .btn-pdf::before{content:"";opacity:.7}
+    .pdf-lane{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      min-height:100%;
+    }
+    .pdf-lane::before,
+    .pdf-lane::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      width:1px;
+      transform:translateX(-50%);
+      z-index:0;
+    }
+    .pdf-lane::before{
+      top:0;
+      bottom:52%;
+      background:linear-gradient(180deg,transparent,rgba(69,216,255,.26),transparent);
+    }
+    .pdf-lane::after{
+      top:52%;
+      bottom:0;
+      background:linear-gradient(180deg,transparent,rgba(255,176,79,.22),transparent);
+    }
+    .pdf-lane button{position:relative;z-index:1}
 
-    #copyStatus{color:var(--warn);font:600 12px/1 var(--mono);min-height:14px}
+    #copyStatus{color:var(--amber);font:600 12px/1 var(--mono);min-height:14px}
 
-    /* === Footer / build plate === */
     .build{
       display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
       padding:10px 14px;margin-top:12px;
-      border:1px solid var(--steel-line);background:linear-gradient(180deg,var(--steel-2),var(--steel));
+      border:1px solid var(--steel-line);
+      background:linear-gradient(180deg,rgba(18,25,34,.96),rgba(10,14,18,.98));
       font:10px/1 var(--mono);letter-spacing:.16em;color:var(--dim);text-transform:uppercase;
       border-radius:4px;
     }
     .build b{color:var(--muted);font-weight:700}
 
-    /* === Responsive === */
     @media(max-width:640px){
       .shell{width:min(100% - 14px,980px);padding-top:12px}
       .banner-wrap{padding:10px 10px 0}
-      .led-band{height:78px}
-      .led-track img{height:78px;margin-right:18px}
+      .led-band{height:94px}
+      .led-track{animation-duration:20s}
+      .led-track img{height:100%;margin-right:14px}
       .plate{padding:18px 16px 14px}
       .plate-tag,.plate-rev{position:static;display:block;text-align:center;margin:0 0 4px}
       h1{font-size:38px}
       .bays{padding:14px 12px}
+      .main-grid{grid-template-columns:1fr;gap:14px}
+      .pdf-lane{min-height:auto}
+      .pdf-lane::before,.pdf-lane::after{display:none}
       .bay{padding:14px 12px 12px}
       textarea,pre{min-height:170px}
       button{padding:10px 12px}
+      .statusline{align-items:flex-start}
+      .actions .hint,.statusline .hint{width:100%;margin-left:0}
+      .topstrip{align-items:flex-start;flex-direction:column}
+      .topstrip .right{flex-wrap:wrap;gap:10px}
     }
 
     /* === Print: PDF One-Pager === */
@@ -245,7 +323,7 @@
       <div class="right">
         <span>BUILD <b>2026.05</b></span>
         <span>REV <b>1.0</b></span>
-        <span>RING <b>10</b></span>
+        <span>MODE <b>INDUSTRIAL</b></span>
       </div>
     </div>
 
@@ -264,52 +342,59 @@
       <div class="plate">
         <span class="plate-tag">SN-2026-05-PR0M-T3R</span>
         <span class="plate-rev">UNIT REV 1.0 · CLEAR</span>
-        <p class="kicker">Operator Console</p>
+        <p class="kicker">Control Interface</p>
         <h1>Prompterator</h1>
-        <p class="claim">Gib Rohinput ein. Prompterator macht daraus eine strukturierte Arbeitsfassung mit Problemklasse, Artefakt, Prüfung und nächsten Schritten.</p>
+        <p class="claim">Prompterator macht aus rohem Input arbeitsfähige Use Cases.</p>
       </div>
 
       <div class="bays">
+        <div class="main-grid">
+          <section class="bay">
+            <header class="bay-head">
+              <span><span class="led"></span>Bay 01 · Input Bus</span>
+              <span class="right">Rohinput · max <b>2500</b> chars</span>
+            </header>
+            <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
+            <div class="statusline">
+              <div class="actions">
+                <button class="btn-create" onclick="run()">Create</button>
+                <button class="btn-delete" onclick="deleteAll()">Delete Input</button>
+              </div>
+              <span class="hint">Rohinput → strukturierter Output</span>
+            </div>
+          </section>
 
-        <!-- INPUT BAY -->
-        <section class="bay">
-          <header class="bay-head">
-            <span><span class="led"></span>Bay 01 · Input Bus</span>
-            <span class="right">Rohinput · max <b>2500</b> chars</span>
-          </header>
-          <textarea id="raw" placeholder="Hier Text eingeben"></textarea>
-          <div class="actions">
-            <button class="btn-create" onclick="run()">Create</button>
-            <button class="btn-delete" onclick="deleteAll()">Delete</button>
-            <span class="hint">Rohinput → strukturierter Output</span>
+          <div class="pdf-lane">
+            <button class="btn-pdf" onclick="pdfNotice()" title="PDF-Export folgt.">PDF</button>
           </div>
-        </section>
 
-        <!-- OUTPUT BAY -->
-        <section class="bay">
-          <button class="btn-pdf" onclick="exportPdf()" title="One-Pager als PDF speichern">PDF</button>
-          <header class="bay-head">
-            <span><span class="led green"></span>Bay 02 · Output Bus</span>
-            <span class="right">Artefakt · structured</span>
-          </header>
-          <pre id="out">Noch kein Output.</pre>
-        </section>
+          <section class="bay">
+            <header class="bay-head">
+              <span><span class="led green"></span>Bay 02 · Output Bus</span>
+              <span class="right">Artefakt · structured</span>
+            </header>
+            <pre id="out">Noch kein Output.</pre>
+            <div class="statusline">
+              <span id="copyStatus"></span>
+              <div class="actions output-actions" aria-label="Output actions">
+                <button class="btn-copy" onclick="copyOutput()" title="Output kopieren">Copy</button>
+                <button class="btn-delete" onclick="deleteOutput()" title="Output löschen">Delete</button>
+              </div>
+            </div>
+          </section>
+        </div>
 
-        <!-- MASTERPROMPT BAY -->
         <section class="bay" id="mpBay" style="display:none">
           <header class="bay-head">
             <span><span class="led green"></span>Bay 03 · Masterprompt</span>
             <span class="right">auto-separiert · wiederverwendbar</span>
           </header>
           <pre id="mpOut" class="mp"></pre>
+          <div class="actions right" aria-label="Masterprompt actions">
+            <span class="hint">Wiederverwendbarer Prompt</span>
+            <button class="btn-copy" onclick="copyMaster()" id="copyMpBtn" title="Masterprompt kopieren" disabled>Copy Master</button>
+          </div>
         </section>
-
-        <!-- COPY ROW -->
-        <div class="actions right" aria-label="Copy controls">
-          <span id="copyStatus"></span>
-          <button class="btn-copy" onclick="copyOutput()" title="Output kopieren">Copy Output</button>
-          <button class="btn-copy" onclick="copyMaster()" id="copyMpBtn" title="Masterprompt kopieren" disabled>Copy Master</button>
-        </div>
 
         <!-- PRINT-ONLY supplementary content -->
         <section class="print-only" aria-hidden="true">
@@ -318,19 +403,19 @@
           <p>Fallbeispiel: Operative Use Cases sollten Domäne, Rolle, Ziel, Outputformat und Prüfregeln enthalten.</p>
           <p>Governance: Bei Medizin, Recht, Finanzen und Personal immer Fachprüfung ergänzen.</p>
         </section>
-
       </div>
 
     </section>
 
     <div class="build">
       <span>OPERATOR FISCHER · PROMPTERATOR</span>
-      <span>HUMAN OWNS · AI SERVES · RING 1–10 ACTIVE</span>
+      <span>HUMAN OWNS · AI SERVES · CONTROL BUS ACTIVE</span>
     </div>
 
   </main>
 <script>
 let workingTimer=null;
+let flashTimer=null;
 function startWorkingAnimation(el){let d=0;el.textContent="Arbeite";workingTimer=setInterval(()=>{d=(d+1)%4;el.textContent="Arbeite"+".".repeat(d)},380)}
 function stopWorkingAnimation(){if(workingTimer){clearInterval(workingTimer);workingTimer=null}}
 
@@ -383,17 +468,22 @@ async function run(){
 
 function deleteAll(){
   document.getElementById("raw").value="";
+  flash("Input geleert.");
+}
+
+function deleteOutput(){
   document.getElementById("out").textContent="Noch kein Output.";
   document.getElementById("mpOut").textContent="";
   document.getElementById("mpBay").style.display="none";
   document.getElementById("copyMpBtn").disabled=true;
-  flash("Geleert.");
+  flash("Output gelöscht.");
 }
 
 function flash(msg){
   const el=document.getElementById("copyStatus");
+  if(flashTimer){clearTimeout(flashTimer)}
   el.textContent=msg;
-  setTimeout(()=>{el.textContent=""},1500);
+  flashTimer=setTimeout(()=>{el.textContent="";flashTimer=null},1800);
 }
 
 async function copyOutput(){
@@ -409,6 +499,8 @@ async function copyMaster(){
   try{await navigator.clipboard.writeText(text);flash("Masterprompt kopiert.")}
   catch{flash("Bitte manuell markieren.")}
 }
+
+function pdfNotice(){flash("PDF-Export folgt.")}
 
 function exportPdf(){window.print()}
 </script>
