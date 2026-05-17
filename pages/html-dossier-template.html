@@ -4,344 +4,432 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Prompterator · HTML/CSS Dossier Template</title>
+
   <style>
-    :root{
-      --bg:#05080d;
-      --page:#07111a;
-      --panel:#0b1722;
-      --panel2:#0f2230;
-      --line:#1c4157;
-      --cyan:#2fe7ff;
-      --blue:#4da3ff;
-      --green:#4df58c;
-      --amber:#ffbf4d;
-      --red:#ff5b67;
-      --text:#edf7ff;
-      --muted:#9fb7c8;
-      --soft:#d8e9f5;
-      --font:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      --mono:"SFMono-Regular",Menlo,Monaco,Consolas,monospace;
+    :root {
+      --bg: #05080d;
+      --page: #07111a;
+      --panel: #0b1722;
+      --panel2: #0f2230;
+      --line: #1c4157;
+      --cyan: #2fe7ff;
+      --blue: #4da3ff;
+      --green: #4df58c;
+      --amber: #ffbf4d;
+      --red: #ff5b67;
+      --text: #edf7ff;
+      --muted: #9fb7c8;
+      --soft: #d8e9f5;
+      --font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
     }
 
-    *{box-sizing:border-box}
-    body{
-      margin:0;
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
       background:
-        radial-gradient(circle at 15% 0%,rgba(47,231,255,.20),transparent 28%),
-        linear-gradient(180deg,#010307,#07111a 40%,#010307);
-      color:var(--text);
-      font-family:var(--font);
-      line-height:1.45;
+        radial-gradient(circle at 15% 0%, rgba(47, 231, 255, .20), transparent 28%),
+        linear-gradient(180deg, #010307, #07111a 40%, #010307);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.45;
     }
 
-    .doc{
-      width:min(1180px,100%);
-      margin:0 auto;
-      padding:24px;
+    .doc {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: 24px;
     }
 
-    .page{
-      width:100%;
-      min-height:1120px;
-      margin:0 0 28px;
-      padding:28px;
-      border:1px solid rgba(47,231,255,.20);
-      border-radius:22px;
+    .page {
+      width: 100%;
+      min-height: 1120px;
+      margin: 0 0 28px;
+      padding: 28px;
+      border: 1px solid rgba(47, 231, 255, .20);
+      border-radius: 22px;
       background:
-        linear-gradient(90deg,rgba(47,231,255,.06) 1px,transparent 1px),
-        linear-gradient(rgba(47,231,255,.04) 1px,transparent 1px),
-        radial-gradient(circle at 75% 10%,rgba(77,163,255,.22),transparent 30%),
-        linear-gradient(135deg,#07111a,#091823 55%,#05080d);
-      background-size:34px 34px,34px 34px,auto,auto;
-      box-shadow:0 30px 90px rgba(0,0,0,.55),inset 0 0 90px rgba(47,231,255,.035);
-      position:relative;
-      overflow:hidden;
+        linear-gradient(90deg, rgba(47, 231, 255, .06) 1px, transparent 1px),
+        linear-gradient(rgba(47, 231, 255, .04) 1px, transparent 1px),
+        radial-gradient(circle at 75% 10%, rgba(77, 163, 255, .22), transparent 30%),
+        linear-gradient(135deg, #07111a, #091823 55%, #05080d);
+      background-size: 34px 34px, 34px 34px, auto, auto;
+      box-shadow:
+        0 30px 90px rgba(0, 0, 0, .55),
+        inset 0 0 90px rgba(47, 231, 255, .035);
+      position: relative;
+      overflow: hidden;
     }
 
-    .page:before{
-      content:"";
-      position:absolute;
-      inset:0;
-      pointer-events:none;
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
       background:
-        linear-gradient(120deg,transparent 0 48%,rgba(47,231,255,.10) 49%,transparent 56%),
-        repeating-linear-gradient(180deg,rgba(255,255,255,.025) 0 1px,transparent 1px 6px);
-      opacity:.65;
+        linear-gradient(120deg, transparent 0 48%, rgba(47, 231, 255, .10) 49%, transparent 56%),
+        repeating-linear-gradient(180deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 6px);
+      opacity: .65;
     }
 
-    .content{position:relative;z-index:1}
-    h1,h2,h3,p{margin-top:0}
-
-    h1{
-      font-size:58px;
-      line-height:.95;
-      letter-spacing:.02em;
-      text-transform:uppercase;
-      margin:0 0 16px;
-      text-shadow:0 0 22px rgba(47,231,255,.45);
+    .content {
+      position: relative;
+      z-index: 1;
     }
 
-    h2{
-      font-size:30px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      margin:0 0 18px;
-      color:#fff;
+    h1, h2, h3, p {
+      margin-top: 0;
     }
 
-    h3{
-      font-size:15px;
-      text-transform:uppercase;
-      letter-spacing:.14em;
-      color:var(--cyan);
-      margin:0 0 10px;
+    h1 {
+      font-size: 58px;
+      line-height: .95;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      margin: 0 0 16px;
+      text-shadow: 0 0 22px rgba(47, 231, 255, .45);
     }
 
-    .kicker{
-      font-family:var(--mono);
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      color:var(--cyan);
-      font-size:12px;
-      margin-bottom:12px;
+    h2 {
+      font-size: 30px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin: 0 0 18px;
+      color: #fff;
     }
 
-    .subtitle{
-      max-width:860px;
-      font-size:20px;
-      color:var(--soft);
-      margin-bottom:22px;
+    h3 {
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--cyan);
+      margin: 0 0 10px;
     }
 
-    .hero{
-      display:grid;
-      grid-template-columns:1.25fr .75fr;
-      gap:24px;
-      align-items:stretch;
-      min-height:520px;
+    .kicker {
+      font-family: var(--mono);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      font-size: 12px;
+      margin-bottom: 12px;
     }
 
-    .hero-visual{
-      min-height:440px;
-      border:1px solid rgba(47,231,255,.24);
-      border-radius:20px;
-      padding:24px;
+    .subtitle {
+      max-width: 860px;
+      font-size: 20px;
+      color: var(--soft);
+      margin-bottom: 22px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 24px;
+      align-items: stretch;
+      min-height: 520px;
+    }
+
+    .hero-visual {
+      min-height: 440px;
+      border: 1px solid rgba(47, 231, 255, .24);
+      border-radius: 20px;
+      padding: 24px;
       background:
-        radial-gradient(circle at 50% 35%,rgba(47,231,255,.22),transparent 35%),
-        linear-gradient(135deg,rgba(47,231,255,.10),rgba(77,163,255,.05));
-      position:relative;
-      overflow:hidden;
+        radial-gradient(circle at 50% 35%, rgba(47, 231, 255, .22), transparent 35%),
+        linear-gradient(135deg, rgba(47, 231, 255, .10), rgba(77, 163, 255, .05));
+      position: relative;
+      overflow: hidden;
     }
 
-    .hero-visual .orb{
-      position:absolute;
-      inset:80px 90px;
-      border-radius:50%;
-      border:2px solid rgba(47,231,255,.45);
-      box-shadow:0 0 50px rgba(47,231,255,.32),inset 0 0 40px rgba(47,231,255,.12);
+    .hero-visual .orb {
+      position: absolute;
+      inset: 80px 90px;
+      border-radius: 50%;
+      border: 2px solid rgba(47, 231, 255, .45);
+      box-shadow:
+        0 0 50px rgba(47, 231, 255, .32),
+        inset 0 0 40px rgba(47, 231, 255, .12);
     }
 
-    .hero-visual .chain{
-      position:absolute;
-      left:52px;
-      right:52px;
-      top:270px;
-      height:4px;
-      background:linear-gradient(90deg,var(--cyan),var(--green));
-      box-shadow:0 0 20px rgba(47,231,255,.45);
+    .hero-visual .chain {
+      position: absolute;
+      left: 52px;
+      right: 52px;
+      top: 270px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--cyan), var(--green));
+      box-shadow: 0 0 20px rgba(47, 231, 255, .45);
     }
 
-    .hero-visual .node{
-      position:absolute;
-      width:96px;
-      height:96px;
-      border-radius:18px;
-      border:1px solid rgba(47,231,255,.5);
-      background:rgba(4,10,16,.74);
-      display:grid;
-      place-items:center;
-      font-size:32px;
-      font-weight:900;
-      color:var(--cyan);
-      box-shadow:0 0 28px rgba(47,231,255,.25);
+    .hero-visual .node {
+      position: absolute;
+      width: 96px;
+      height: 96px;
+      border-radius: 18px;
+      border: 1px solid rgba(47, 231, 255, .5);
+      background: rgba(4, 10, 16, .74);
+      display: grid;
+      place-items: center;
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--cyan);
+      box-shadow: 0 0 28px rgba(47, 231, 255, .25);
     }
 
-    .node.n1{left:45px;top:220px}
-    .node.n2{left:calc(50% - 48px);top:220px}
-    .node.n3{right:45px;top:220px}
-
-    .grid{display:grid;gap:14px}
-    .cols-2{grid-template-columns:repeat(2,1fr)}
-    .cols-3{grid-template-columns:repeat(3,1fr)}
-    .cols-4{grid-template-columns:repeat(4,1fr)}
-
-    .card{
-      border:1px solid rgba(47,231,255,.22);
-      border-radius:16px;
-      padding:16px;
-      background:linear-gradient(180deg,rgba(13,32,45,.88),rgba(6,13,20,.92));
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 16px 35px rgba(0,0,0,.18);
+    .node.n1 {
+      left: 45px;
+      top: 220px;
     }
 
-    .card.green{border-color:rgba(77,245,140,.32)}
-    .card.amber{border-color:rgba(255,191,77,.35)}
-    .card.red{border-color:rgba(255,91,103,.35)}
-
-    .big-number{
-      font-family:var(--mono);
-      font-size:40px;
-      color:var(--cyan);
-      font-weight:900;
-      line-height:1;
+    .node.n2 {
+      left: calc(50% - 48px);
+      top: 220px;
     }
 
-    .label{
-      font-family:var(--mono);
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.12em;
-      color:var(--muted);
-      margin-bottom:7px;
+    .node.n3 {
+      right: 45px;
+      top: 220px;
     }
 
-    .value{
-      font-size:17px;
-      font-weight:800;
-      color:#fff;
+    .grid {
+      display: grid;
+      gap: 14px;
     }
 
-    .small{
-      font-size:13px;
-      color:var(--muted);
+    .cols-2 {
+      grid-template-columns: repeat(2, 1fr);
     }
 
-    .dashboard{
-      display:grid;
-      grid-template-columns:.9fr 1.1fr;
-      gap:18px;
+    .cols-3 {
+      grid-template-columns: repeat(3, 1fr);
     }
 
-    .decision{
-      border-left:5px solid var(--green);
-      background:linear-gradient(90deg,rgba(77,245,140,.14),rgba(7,17,26,.9));
+    .cols-4 {
+      grid-template-columns: repeat(4, 1fr);
     }
 
-    .pill{
-      font-family:var(--mono);
-      font-size:11px;
-      padding:5px 9px;
-      border-radius:999px;
-      background:rgba(47,231,255,.12);
-      border:1px solid rgba(47,231,255,.3);
-      color:var(--cyan);
-      text-transform:uppercase;
-      letter-spacing:.08em;
+    .card {
+      border: 1px solid rgba(47, 231, 255, .22);
+      border-radius: 16px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(13, 32, 45, .88), rgba(6, 13, 20, .92));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .04),
+        0 16px 35px rgba(0, 0, 0, .18);
     }
 
-    .pill.amber{color:var(--amber);border-color:rgba(255,191,77,.4);background:rgba(255,191,77,.12)}
-    .pill.green{color:var(--green);border-color:rgba(77,245,140,.35);background:rgba(77,245,140,.12)}
-
-    .steps{
-      display:grid;
-      grid-template-columns:repeat(5,1fr);
-      gap:10px;
-      margin-top:18px;
+    .card.green {
+      border-color: rgba(77, 245, 140, .32);
     }
 
-    .step{
-      position:relative;
-      min-height:160px;
+    .card.amber {
+      border-color: rgba(255, 191, 77, .35);
     }
 
-    .step .num{
-      font-family:var(--mono);
-      font-weight:900;
-      color:var(--cyan);
-      font-size:24px;
+    .card.red {
+      border-color: rgba(255, 91, 103, .35);
     }
 
-    .step:after{
-      content:"→";
-      position:absolute;
-      right:-13px;
-      top:50%;
-      color:var(--cyan);
-      font-size:24px;
+    .big-number {
+      font-family: var(--mono);
+      font-size: 40px;
+      color: var(--cyan);
+      font-weight: 900;
+      line-height: 1;
     }
 
-    .step:last-child:after{display:none}
-
-    .matrix{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0 8px;
+    .label {
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: 7px;
     }
 
-    .matrix th{
-      text-align:left;
-      color:var(--cyan);
-      font-family:var(--mono);
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.1em;
-      padding:8px;
+    .value {
+      font-size: 17px;
+      font-weight: 800;
+      color: #fff;
     }
 
-    .matrix td{
-      padding:11px 10px;
-      background:rgba(255,255,255,.04);
-      border-top:1px solid rgba(47,231,255,.14);
-      border-bottom:1px solid rgba(47,231,255,.14);
-      font-size:13px;
+    .small {
+      font-size: 13px;
+      color: var(--muted);
     }
 
-    .matrix td:first-child{
-      border-left:1px solid rgba(47,231,255,.14);
-      border-radius:10px 0 0 10px;
+    .dashboard {
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 18px;
     }
 
-    .matrix td:last-child{
-      border-right:1px solid rgba(47,231,255,.14);
-      border-radius:0 10px 10px 0;
+    .decision {
+      border-left: 5px solid var(--green);
+      background: linear-gradient(90deg, rgba(77, 245, 140, .14), rgba(7, 17, 26, .9));
     }
 
-    .footer{
-      position:absolute;
-      left:28px;
-      right:28px;
-      bottom:18px;
-      display:flex;
-      justify-content:space-between;
-      font-family:var(--mono);
-      font-size:10px;
-      color:var(--muted);
-      z-index:2;
-      border-top:1px solid rgba(47,231,255,.16);
-      padding-top:10px;
+    .pill {
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(47, 231, 255, .12);
+      border: 1px solid rgba(47, 231, 255, .3);
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: .08em;
     }
 
-    @media print{
-      body{background:#000}
-      .doc{padding:0;width:100%}
-      .page{
-        border-radius:0;
-        margin:0;
-        min-height:297mm;
-        page-break-after:always;
-        box-shadow:none;
+    .pill.amber {
+      color: var(--amber);
+      border-color: rgba(255, 191, 77, .4);
+      background: rgba(255, 191, 77, .12);
+    }
+
+    .pill.green {
+      color: var(--green);
+      border-color: rgba(77, 245, 140, .35);
+      background: rgba(77, 245, 140, .12);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .step {
+      position: relative;
+      min-height: 160px;
+    }
+
+    .step .num {
+      font-family: var(--mono);
+      font-weight: 900;
+      color: var(--cyan);
+      font-size: 24px;
+    }
+
+    .step::after {
+      content: "→";
+      position: absolute;
+      right: -13px;
+      top: 50%;
+      color: var(--cyan);
+      font-size: 24px;
+    }
+
+    .step:last-child::after {
+      display: none;
+    }
+
+    .matrix {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 8px;
+    }
+
+    .matrix th {
+      text-align: left;
+      color: var(--cyan);
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 8px;
+    }
+
+    .matrix td {
+      padding: 11px 10px;
+      background: rgba(255, 255, 255, .04);
+      border-top: 1px solid rgba(47, 231, 255, .14);
+      border-bottom: 1px solid rgba(47, 231, 255, .14);
+      font-size: 13px;
+    }
+
+    .matrix td:first-child {
+      border-left: 1px solid rgba(47, 231, 255, .14);
+      border-radius: 10px 0 0 10px;
+    }
+
+    .matrix td:last-child {
+      border-right: 1px solid rgba(47, 231, 255, .14);
+      border-radius: 0 10px 10px 0;
+    }
+
+    .footer {
+      position: absolute;
+      left: 28px;
+      right: 28px;
+      bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      z-index: 2;
+      border-top: 1px solid rgba(47, 231, 255, .16);
+      padding-top: 10px;
+    }
+
+    @media print {
+      body {
+        background: #000;
       }
-      @page{size:A4 landscape;margin:0}
+
+      .doc {
+        padding: 0;
+        width: 100%;
+      }
+
+      .page {
+        border-radius: 0;
+        margin: 0;
+        min-height: 297mm;
+        page-break-after: always;
+        box-shadow: none;
+      }
+
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
     }
 
-    @media(max-width:900px){
-      .hero,.dashboard,.cols-2,.cols-3,.cols-4{grid-template-columns:1fr}
-      .steps{grid-template-columns:1fr}
-      .step:after{display:none}
-      .page{min-height:auto}
-      h1{font-size:40px}
+    @media(max-width: 900px) {
+      .hero,
+      .dashboard,
+      .cols-2,
+      .cols-3,
+      .cols-4 {
+        grid-template-columns: 1fr;
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .step::after {
+        display: none;
+      }
+
+      .page {
+        min-height: auto;
+      }
+
+      h1 {
+        font-size: 40px;
+      }
     }
   </style>
 </head>
+
 <body>
   <main class="doc">
     <section class="page cover">
@@ -350,11 +438,24 @@
           <div class="kicker">Prompterator · Executive Use-Case Dossier</div>
           <h1>Cold-Chain Wareneingang</h1>
           <p class="subtitle">KI-gestützte Entscheidungslogik für Annahme, Sperrung oder Ablehnung temperaturgeführter Ware.</p>
+
           <div class="grid cols-3">
-            <div class="card"><div class="label">Problemklasse</div><div class="value">Qualitätskritische Logistik</div></div>
-            <div class="card amber"><div class="label">Risiko</div><div class="value">Temperaturabweichung</div></div>
-            <div class="card green"><div class="label">Ziel</div><div class="value">Sichere Entscheidung</div></div>
+            <div class="card">
+              <div class="label">Problemklasse</div>
+              <div class="value">Qualitätskritische Logistik</div>
+            </div>
+
+            <div class="card amber">
+              <div class="label">Risiko</div>
+              <div class="value">Temperaturabweichung</div>
+            </div>
+
+            <div class="card green">
+              <div class="label">Ziel</div>
+              <div class="value">Sichere Entscheidung</div>
+            </div>
           </div>
+
           <div class="card decision" style="margin-top:16px">
             <h3>Executive Decision Box</h3>
             <p><b>Empfehlung:</b> Lieferung nicht blind annehmen. Sperrlogik aktivieren, QS einbinden, Temperatur- und Zeitfenster prüfen, Entscheidung dokumentieren.</p>
@@ -369,58 +470,157 @@
           <div class="node n3">OK</div>
         </div>
       </div>
-      <div class="footer"><span>Prompterator · Operator Fischer · AI Operations</span><span>01 · Cover</span></div>
+
+      <div class="footer">
+        <span>Prompterator · Operator Fischer · AI Operations</span>
+        <span>01 · Cover</span>
+      </div>
     </section>
 
     <section class="page">
       <div class="content">
         <div class="kicker">02 · Executive Dashboard</div>
         <h2>Entscheidungsübersicht</h2>
+
         <div class="dashboard">
           <div class="card decision">
             <h3>Empfohlene Entscheidung</h3>
             <p>Mit Sperrlogik annehmen oder QS-Entscheidung abwarten, wenn Grenzwerte überschritten sind. Keine Freigabe ohne belastbare Datenprüfung.</p>
           </div>
+
           <div class="grid cols-2">
-            <div class="card"><div class="label">Nutzen</div><p>Reduziert Entscheidungszeit und erhöht Nachvollziehbarkeit.</p></div>
-            <div class="card amber"><div class="label">Risiko bei Nicht-Handeln</div><p>Qualitätsrisiko, Reklamation, unsaubere Dokumentation.</p></div>
-            <div class="card green"><div class="label">Owner</div><p>Wareneingang + QS/Fachfreigabe.</p></div>
-            <div class="card"><div class="label">Review</div><p>Nach Pilotphase KPI und Sperrentscheidungen prüfen.</p></div>
+            <div class="card">
+              <div class="label">Nutzen</div>
+              <p>Reduziert Entscheidungszeit und erhöht Nachvollziehbarkeit.</p>
+            </div>
+
+            <div class="card amber">
+              <div class="label">Risiko bei Nicht-Handeln</div>
+              <p>Qualitätsrisiko, Reklamation, unsaubere Dokumentation.</p>
+            </div>
+
+            <div class="card green">
+              <div class="label">Owner</div>
+              <p>Wareneingang + QS/Fachfreigabe.</p>
+            </div>
+
+            <div class="card">
+              <div class="label">Review</div>
+              <p>Nach Pilotphase KPI und Sperrentscheidungen prüfen.</p>
+            </div>
           </div>
         </div>
 
         <div class="grid cols-4" style="margin-top:18px">
-          <div class="card"><div class="big-number">01</div><div class="value">Prüfen</div><p class="small">Datenlogger, Ware, Zeitfenster.</p></div>
-          <div class="card"><div class="big-number">02</div><div class="value">Sperren</div><p class="small">Wenn Daten unklar oder kritisch.</p></div>
-          <div class="card"><div class="big-number">03</div><div class="value">Eskalieren</div><p class="small">QS und Prozessverantwortliche.</p></div>
-          <div class="card"><div class="big-number">04</div><div class="value">Dokumentieren</div><p class="small">Entscheidung und Begründung.</p></div>
+          <div class="card">
+            <div class="big-number">01</div>
+            <div class="value">Prüfen</div>
+            <p class="small">Datenlogger, Ware, Zeitfenster.</p>
+          </div>
+
+          <div class="card">
+            <div class="big-number">02</div>
+            <div class="value">Sperren</div>
+            <p class="small">Wenn Daten unklar oder kritisch.</p>
+          </div>
+
+          <div class="card">
+            <div class="big-number">03</div>
+            <div class="value">Eskalieren</div>
+            <p class="small">QS und Prozessverantwortliche.</p>
+          </div>
+
+          <div class="card">
+            <div class="big-number">04</div>
+            <div class="value">Dokumentieren</div>
+            <p class="small">Entscheidung und Begründung.</p>
+          </div>
         </div>
       </div>
-      <div class="footer"><span>Prompterator · Operator Fischer · AI Operations</span><span>02 · Dashboard</span></div>
+
+      <div class="footer">
+        <span>Prompterator · Operator Fischer · AI Operations</span>
+        <span>02 · Dashboard</span>
+      </div>
     </section>
 
     <section class="page">
       <div class="content">
         <div class="kicker">03 · Prozessmodell</div>
         <h2>Wareneingang Decision Flow</h2>
+
         <div class="steps">
-          <div class="card step"><div class="num">01</div><h3>Lieferung</h3><p>Ware und Dokumente treffen ein.</p></div>
-          <div class="card step"><div class="num">02</div><h3>Temperatur</h3><p>Datenlogger und Ist-Werte prüfen.</p></div>
-          <div class="card step"><div class="num">03</div><h3>Bewertung</h3><p>Abweichung gegen Prozessregel prüfen.</p></div>
-          <div class="card step"><div class="num">04</div><h3>QS</h3><p>Fachfreigabe oder Sperrentscheidung.</p></div>
-          <div class="card step"><div class="num">05</div><h3>Entscheid</h3><p>Annehmen, Sperren oder Ablehnen.</p></div>
+          <div class="card step">
+            <div class="num">01</div>
+            <h3>Lieferung</h3>
+            <p>Ware und Dokumente treffen ein.</p>
+          </div>
+
+          <div class="card step">
+            <div class="num">02</div>
+            <h3>Temperatur</h3>
+            <p>Datenlogger und Ist-Werte prüfen.</p>
+          </div>
+
+          <div class="card step">
+            <div class="num">03</div>
+            <h3>Bewertung</h3>
+            <p>Abweichung gegen Prozessregel prüfen.</p>
+          </div>
+
+          <div class="card step">
+            <div class="num">04</div>
+            <h3>QS</h3>
+            <p>Fachfreigabe oder Sperrentscheidung.</p>
+          </div>
+
+          <div class="card step">
+            <div class="num">05</div>
+            <h3>Entscheid</h3>
+            <p>Annehmen, Sperren oder Ablehnen.</p>
+          </div>
         </div>
 
         <table class="matrix" style="margin-top:22px">
-          <thead><tr><th>Schritt</th><th>Akteur</th><th>Input</th><th>Aktion</th><th>Kontrollpunkt</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Schritt</th>
+              <th>Akteur</th>
+              <th>Input</th>
+              <th>Aktion</th>
+              <th>Kontrollpunkt</th>
+            </tr>
+          </thead>
           <tbody>
-            <tr><td>01</td><td>Wareneingang</td><td>Lieferung</td><td>Prüfen</td><td>Vollständigkeit</td></tr>
-            <tr><td>02</td><td>Wareneingang/QS</td><td>Datenlogger</td><td>Bewerten</td><td>Temperaturfenster</td></tr>
-            <tr><td>03</td><td>QS</td><td>Abweichung</td><td>Freigeben/Sperren</td><td>Dokumentation</td></tr>
+            <tr>
+              <td>01</td>
+              <td>Wareneingang</td>
+              <td>Lieferung</td>
+              <td>Prüfen</td>
+              <td>Vollständigkeit</td>
+            </tr>
+            <tr>
+              <td>02</td>
+              <td>Wareneingang / QS</td>
+              <td>Datenlogger</td>
+              <td>Bewerten</td>
+              <td>Temperaturfenster</td>
+            </tr>
+            <tr>
+              <td>03</td>
+              <td>QS</td>
+              <td>Abweichung</td>
+              <td>Freigeben / Sperren</td>
+              <td>Dokumentation</td>
+            </tr>
           </tbody>
         </table>
       </div>
-      <div class="footer"><span>Prompterator · Operator Fischer · AI Operations</span><span>03 · Prozess</span></div>
+
+      <div class="footer">
+        <span>Prompterator · Operator Fischer · AI Operations</span>
+        <span>03 · Prozess</span>
+      </div>
     </section>
   </main>
 </body>
