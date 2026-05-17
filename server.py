@@ -397,50 +397,140 @@ Innerhalb von "## Direktes Artefakt" nach Möglichkeit mit diesen festen Portfol
     return "Der Dienst hat keine auswertbare Textantwort erhalten. Bitte den Input kürzer oder konkreter formulieren."
 
 
-def split_pdf_sections(content: str) -> list[tuple[str, str]]:
-    sections: list[tuple[str, str]] = []
+def sanitize_pdf_text(text: str) -> str:
+    safe = html.escape(text or "")
+    safe = safe.replace("\n", "<br/>")
+    return safe
+
+
+def parse_markdown_sections(content: str) -> dict[str, str]:
+    sections: dict[str, str] = {}
     current_title: str | None = None
     current_lines: list[str] = []
 
     for raw_line in content.splitlines():
         line = raw_line.rstrip()
-        if line.startswith("## "):
+        if line.startswith("## ") or line.startswith("# "):
             if current_title is not None:
                 body = "\n".join(current_lines).strip()
-                sections.append((current_title, body))
-            current_title = line[3:].strip() or "Abschnitt"
+                sections[current_title] = body
+            current_title = line.split(" ", 1)[1].strip() if " " in line else "Abschnitt"
             current_lines = []
         else:
             current_lines.append(line)
 
     if current_title is not None:
         body = "\n".join(current_lines).strip()
-        sections.append((current_title, body))
+        sections[current_title] = body
 
     if sections:
         return sections
-    return [("Use-Case Inhalt", content.strip())]
+    return {"Use-Case Inhalt": content.strip()}
 
 
-def pdf_text(text: str) -> str:
-    safe = html.escape(text or "")
-    safe = safe.replace("\n", "<br/>")
-    return safe
+def normalize_section_name(name: str) -> str:
+    normalized = name.lower().strip()
+    replacements = {
+        "ä": "ae",
+        "ö": "oe",
+        "ü": "ue",
+        "ß": "ss",
+        "-": " ",
+        "/": " ",
+    }
+    for src, target in replacements.items():
+        normalized = normalized.replace(src, target)
+    return " ".join(normalized.split())
 
 
-def pdf_footer(canvas, doc):
+def get_section(sections: dict[str, str], possible_names: list[str]) -> str:
+    normalized_targets = [normalize_section_name(name) for name in possible_names]
+    for key, value in sections.items():
+        if normalize_section_name(key) in normalized_targets and value.strip():
+            return value.strip()
+    return ""
+
+
+def derive_chapter_text(title: str, purpose: str, sections: dict[str, str], content: str) -> str:
+    if title == "Executive Summary":
+        summary = get_section(sections, ["Portfolio-Zusammenfassung", "Executive Summary", "Direktes Artefakt"])
+        if summary:
+            return summary
+        first_line = next((line.strip() for line in content.splitlines() if line.strip()), "")
+        return first_line or "Noch nicht ausreichend befuellt."
+    if title == "Ausgangslage":
+        return get_section(sections, ["Ausgangslage", "Fakten / Annahmen / Hypothesen", "Artefakt-Blueprint"]) or "Noch nicht ausreichend befuellt."
+    if title == "Zielbild":
+        return get_section(sections, ["Zielbild und Nutzen", "Zielbild", "Erwarteter Output"]) or "Noch nicht ausreichend befuellt."
+    if title == "Problemklasse":
+        return get_section(sections, ["Problemklasse"]) or "Noch nicht ausreichend befuellt."
+    if title == "Use-Case-Kontext":
+        return get_section(sections, ["Use-Case-Titel", "Modus", "Direktes Artefakt"]) or "Noch nicht ausreichend befuellt."
+    if title == "Akteure und Rollen":
+        return get_section(sections, ["Masterprompt", "Direktes Artefakt"]) or "Dieser Punkt muss fachlich ergaenzt werden."
+    if title == "Prozessuebersicht":
+        return get_section(sections, ["Artefakt-Blueprint", "Operativer Ablauf", "Loesungslogik"]) or "Noch nicht ausreichend befuellt."
+    if title == "Hauptablauf":
+        return get_section(sections, ["Operativer Ablauf", "Direktes Artefakt"]) or "Noch nicht ausreichend befuellt."
+    if title == "Alternativablaeufe / Fehlerfaelle":
+        return get_section(sections, ["Risiken und Governance", "Governance", "Qualitaetspruefung"]) or "Dieser Punkt muss fachlich ergaenzt werden."
+    if title == "Daten / Inputs / Outputs":
+        return get_section(sections, ["Datenbasis und Inputs", "Erwarteter Output", "Artefakt-Blueprint"]) or "Noch nicht ausreichend befuellt."
+    if title == "Entscheidungslogik":
+        return get_section(sections, ["Loesungslogik", "Modus", "Masterprompt"]) or "Noch nicht ausreichend befuellt."
+    if title == "Risiken und Annahmen":
+        return get_section(sections, ["Fakten / Annahmen / Hypothesen", "KPI- und Wirkungsannahmen", "Risiken und Governance"]) or "Noch nicht ausreichend befuellt."
+    if title == "Governance":
+        return get_section(sections, ["Governance", "Risiken und Governance"]) or "Noch nicht ausreichend befuellt."
+    if title == "Qualitaetspruefung":
+        return get_section(sections, ["Qualitaetspruefung"]) or "Noch nicht ausreichend befuellt."
+    if title == "KPIs / Erfolgskriterien":
+        return get_section(sections, ["KPI- und Wirkungsannahmen", "Erwarteter Output"]) or "Dieser Punkt muss fachlich ergaenzt werden."
+    if title == "Schulungsmodul":
+        source = get_section(sections, ["Direktes Artefakt", "Artefakt-Blueprint", "Masterprompt"])
+        if source:
+            return f"Lernziel: Inhalt fachlich vermitteln.\nTypische Anwendung: {source}\nCheckfragen: Dieser Punkt muss fachlich ergaenzt werden."
+        return "Lernziel: Dieser Punkt muss fachlich ergaenzt werden.\nTypische Anwendung: Dieser Punkt muss fachlich ergaenzt werden.\nCheckfragen: Dieser Punkt muss fachlich ergaenzt werden."
+    if title == "Checkliste":
+        steps = get_section(sections, ["Naechste Schritte", "Nächste Schritte", "Qualitaetspruefung"])
+        if steps:
+            return f"Pruef- und Umsetzungscheck:\n{steps}"
+        return "Noch nicht ausreichend befuellt."
+    if title == "Umsetzungsplan":
+        return get_section(sections, ["Naechste Schritte", "Nächste Schritte", "Artefakt-Blueprint"]) or "Noch nicht ausreichend befuellt."
+    if title == "Fazit / naechste Schritte":
+        return get_section(sections, ["Naechste Schritte", "Nächste Schritte", "Portfolio-Zusammenfassung"]) or "Noch nicht ausreichend befuellt."
+    if title == "Anhang: Original-Output":
+        return content.strip() or "Kein Output vorhanden."
+    return purpose
+
+
+def add_footer(canvas, doc):
     canvas.saveState()
     canvas.setStrokeColor(colors.HexColor("#1E5F73"))
     canvas.setLineWidth(0.7)
     canvas.line(16 * mm, 12 * mm, A4[0] - 16 * mm, 12 * mm)
     canvas.setFont("Helvetica", 8)
     canvas.setFillColor(colors.HexColor("#4D5D6C"))
-    canvas.drawString(16 * mm, 8 * mm, "Prompterator · Operator Fischer · AI Operations")
-    canvas.drawRightString(A4[0] - 16 * mm, 8 * mm, f"Seite {canvas.getPageNumber()}")
+    footer = f"Prompterator · Operator Fischer · AI Operations · Seite {canvas.getPageNumber()}"
+    canvas.drawString(16 * mm, 8 * mm, footer)
     canvas.restoreState()
 
 
-def build_pdf_document(title: str, content: str, source: str) -> bytes:
+def build_pdf_chapter(story: list, styles, title: str, purpose: str, body: str, force_new_page: bool = True):
+    if force_new_page:
+        story.append(PageBreak())
+    story.append(Paragraph(sanitize_pdf_text(title), styles["SectionTitle"]))
+    story.append(Paragraph(sanitize_pdf_text(purpose), styles["PurposeCopy"]))
+    normalized_body = body.strip() or "Noch nicht ausreichend befuellt."
+    for chunk in normalized_body.split("\n\n"):
+        chunk = chunk.strip()
+        if chunk:
+            story.append(Paragraph(sanitize_pdf_text(chunk), styles["BodyCopy"]))
+    story.append(Spacer(1, 3 * mm))
+
+
+def build_pdf_portfolio(title: str, content: str, source: str) -> bytes:
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -461,7 +551,7 @@ def build_pdf_document(title: str, content: str, source: str) -> bytes:
         fontSize=24,
         leading=28,
         textColor=colors.HexColor("#123847"),
-        spaceAfter=8,
+        spaceAfter=10,
     ))
     styles.add(ParagraphStyle(
         name="DeckSubtitle",
@@ -470,7 +560,7 @@ def build_pdf_document(title: str, content: str, source: str) -> bytes:
         fontSize=12,
         leading=16,
         textColor=colors.HexColor("#445766"),
-        spaceAfter=6,
+        spaceAfter=8,
     ))
     styles.add(ParagraphStyle(
         name="SectionTitle",
@@ -483,32 +573,30 @@ def build_pdf_document(title: str, content: str, source: str) -> bytes:
         spaceAfter=6,
     ))
     styles.add(ParagraphStyle(
+        name="PurposeCopy",
+        parent=styles["BodyText"],
+        fontName="Helvetica-Oblique",
+        fontSize=9,
+        leading=12,
+        textColor=colors.HexColor("#5A6978"),
+        spaceAfter=5,
+    ))
+    styles.add(ParagraphStyle(
         name="BodyCopy",
         parent=styles["BodyText"],
         fontName="Helvetica",
         fontSize=10,
         leading=14,
         textColor=colors.HexColor("#1B2430"),
-        spaceAfter=6,
-    ))
-    styles.add(ParagraphStyle(
-        name="SmallMeta",
-        parent=styles["BodyText"],
-        fontName="Helvetica",
-        fontSize=9,
-        leading=12,
-        textColor=colors.HexColor("#5A6978"),
-        spaceAfter=4,
+        spaceAfter=7,
     ))
 
     now_label = time.strftime("%d.%m.%Y", time.localtime())
-    sections = split_pdf_sections(content)
-    executive_summary = sections[0][1].splitlines()[0].strip() if sections and sections[0][1].strip() else content.strip().splitlines()[0].strip()
-    if not executive_summary:
-        executive_summary = "Kein zusammenfassender Inhalt vorhanden."
+    sections = parse_markdown_sections(content)
+    normalized_title = title or "Prompterator Use-Case Portfolio"
 
     story = [
-        Paragraph(pdf_text(title), styles["DeckTitle"]),
+        Paragraph(sanitize_pdf_text(normalized_title), styles["DeckTitle"]),
         Paragraph("KI-gestuetztes Arbeitsartefakt", styles["DeckSubtitle"]),
         Spacer(1, 6 * mm),
     ]
@@ -517,7 +605,7 @@ def build_pdf_document(title: str, content: str, source: str) -> bytes:
         [
             ["Datum", now_label],
             ["Quelle", source or "prompterator"],
-            ["Hinweis", "Erstellt mit Prompterator / Operator Fischer"],
+            ["Hinweis", "Erstellt mit Prompterator / Operator Fischer / AI Operations"],
         ],
         colWidths=[34 * mm, 130 * mm],
     )
@@ -536,34 +624,33 @@ def build_pdf_document(title: str, content: str, source: str) -> bytes:
     ]))
     story.extend([meta_table, Spacer(1, 10 * mm)])
 
-    summary_sections = [
-        ("Executive Summary", executive_summary),
-        ("Strukturierter Use Case", "Die folgenden Abschnitte wurden aus dem aktuellen Prompterator-Output fuer ein professionelles Use-Case-Portfolio aufbereitet."),
-        ("Problemklasse und Zielbild", "Relevante Problem-, Ziel- und Wirklogik sind im strukturierten Inhalt dokumentiert."),
-        ("Artefakt / Direktes Arbeitsprodukt", "Der Prompterator-Output dient als direkt nutzbare Arbeitsgrundlage und als Portfolio-Baustein."),
-        ("Qualitaetspruefung", "Pruefhinweise, KPI-Annahmen und Belastbarkeit sollten vor produktivem Einsatz validiert werden."),
-        ("Governance", "Mensch bleibt Owner. Kritische Inhalte benoetigen Fachpruefung und Freigabe."),
-        ("Naechste Schritte", "Portfolio-Inhalt pruefen, verdichten und freigeben; danach kann ein finaler Export- oder Bewerbungsfluss folgen."),
+    chapters = [
+        ("Executive Summary", "Verdichtete Einordnung fuer Management, Schulung und schnelle Weitergabe."),
+        ("Ausgangslage", "Beschreibt Ausgangssituation, Beobachtungen und relevante Annahmen."),
+        ("Zielbild", "Formuliert Nutzenbild, gewuenschte Wirkung und Soll-Zustand."),
+        ("Problemklasse", "Ordnet den Fall fachlich und operativ ein."),
+        ("Use-Case-Kontext", "Beschreibt Rahmen, Anlass und Einbettung des Use Cases."),
+        ("Akteure und Rollen", "Zeigt beteiligte Rollen, Verantwortungen und menschliche Entscheidungspunkte."),
+        ("Prozessuebersicht", "Gibt einen kompakten Ueberblick ueber den Gesamtprozess."),
+        ("Hauptablauf", "Beschreibt den regulären Kernablauf schrittweise."),
+        ("Alternativablaeufe / Fehlerfaelle", "Kennzeichnet Sonderfaelle, Eskalationen und Fehlerpfade."),
+        ("Daten / Inputs / Outputs", "Dokumentiert benoetigte Eingaben, Datenquellen und resultierende Ausgaben."),
+        ("Entscheidungslogik", "Beschreibt Regeln, Kriterien und Entscheidungswege."),
+        ("Risiken und Annahmen", "Macht Unsicherheiten, Annahmen und potenzielle Risiken sichtbar."),
+        ("Governance", "Dokumentiert Freigaben, Verantwortung und Kontrollbedarf."),
+        ("Qualitaetspruefung", "Benennt Pruefmechanismen und Validierungspunkte."),
+        ("KPIs / Erfolgskriterien", "Leitet messbare oder zu definierende Erfolgskriterien ab."),
+        ("Schulungsmodul", "Bereitet den Inhalt fuer Schulung, Einweisung und Wissensweitergabe auf."),
+        ("Checkliste", "Bietet eine operative Kurzpruefung fuer Umsetzung und Review."),
+        ("Umsetzungsplan", "Strukturiert die naechsten Schritte in eine umsetzbare Folge."),
+        ("Fazit / naechste Schritte", "Schliesst den Fall mit Zusammenfassung und Handlungsempfehlung ab."),
+        ("Anhang: Original-Output", "Enthaelt den unverkuerzten Prompterator-Ausgangstext fuer Nachvollziehbarkeit."),
     ]
-    for heading, body in summary_sections:
-        story.append(Paragraph(pdf_text(heading), styles["SectionTitle"]))
-        story.append(Paragraph(pdf_text(body), styles["BodyCopy"]))
+    for chapter_title, purpose in chapters:
+        chapter_body = derive_chapter_text(chapter_title, purpose, sections, content)
+        build_pdf_chapter(story, styles, chapter_title, purpose, chapter_body, force_new_page=True)
 
-    story.append(PageBreak())
-
-    for heading, body in sections:
-        story.append(Paragraph(pdf_text(heading), styles["SectionTitle"]))
-        normalized_body = body.strip() or "Kein Inhalt vorhanden."
-        for chunk in normalized_body.split("\n\n"):
-            if chunk.strip():
-                story.append(Paragraph(pdf_text(chunk.strip()), styles["BodyCopy"]))
-        story.append(Spacer(1, 2 * mm))
-
-    story.append(PageBreak())
-    story.append(Paragraph(pdf_text("Anhang: Original-Output"), styles["SectionTitle"]))
-    story.append(Paragraph(pdf_text(content.strip() or "Kein Output vorhanden."), styles["BodyCopy"]))
-
-    doc.build(story, onFirstPage=pdf_footer, onLaterPages=pdf_footer)
+    doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
     return buffer.getvalue()
 
 
@@ -798,7 +885,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(413, {"error": f"content zu lang. Maximum: {MAX_PDF_CONTENT_CHARS} Zeichen."})
                 return
 
-            pdf_bytes = build_pdf_document(title, content, source)
+            pdf_bytes = build_pdf_portfolio(title, content, source)
             self._send_bytes(
                 200,
                 pdf_bytes,

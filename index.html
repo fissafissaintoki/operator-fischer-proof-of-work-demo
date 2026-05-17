@@ -402,7 +402,7 @@
             <div class="pdf-bridge">
               <p class="pdf-bridge-label">Portfolio Bridge</p>
               <button class="btn-pdf" onclick="exportPdfPortfolio()" title="PDF-Usecase-Portfolio exportieren">PDF</button>
-              <p class="pdf-copy">Erstellen Sie hier Ihr perfektes PDF-Usecase-Portfolio.</p>
+              <p class="pdf-copy">Erstellen Sie hier Ihr professionelles PDF-Use-Case-Portfolio.</p>
             </div>
           </div>
 
@@ -508,7 +508,7 @@ async function exportPdfPortfolio(){
       })
     });
     if(!res.ok){
-      let message = "PDF-Erstellung fehlgeschlagen.";
+      let message = "PDF konnte nicht erstellt werden.";
       try{
         const data = await res.json();
         message = data.error || message;
@@ -527,7 +527,7 @@ async function exportPdfPortfolio(){
     URL.revokeObjectURL(url);
     flash("PDF erstellt.");
   }catch(err){
-    flash("PDF-Erstellung fehlgeschlagen.");
+    flash("PDF konnte nicht erstellt werden.");
   }
 }
 </script>
