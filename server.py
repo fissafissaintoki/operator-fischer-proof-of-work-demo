@@ -568,6 +568,13 @@ def shorten_text(text: str, fallback: str = "Fachlich zu konkretisieren.", max_l
     return cleaned[: max_len - 1].rstrip() + "…"
 
 
+def professional_gap(topic: str, guidance: str = "") -> str:
+    base = f"Fachlich zu ergänzen: Für {topic} fehlen im Ausgangsinput belastbare Detailinformationen."
+    if guidance:
+        return base + f" Empfohlen wird {guidance}."
+    return base + " Empfohlen wird eine Ergänzung durch Fachbereich, Prozessverantwortliche oder Qualitätsmanagement."
+
+
 def text_blocks(text: str) -> list[dict]:
     blocks: list[dict] = []
     current: list[str] = []
@@ -707,22 +714,22 @@ def build_case_examples(model: dict) -> dict:
     case_one = {
         "title": "Fallbeispiel 1: Regelfall",
         "Ausgangslage": first_sentence(model["background"] or model["problem_class"], "Fallbeispiel muss fachlich ergänzt werden."),
-        "Entscheidungspunkt": first_sentence(model["decision_logic"] or model["target_state"], "Entscheidungspunkt fachlich ergänzen."),
+        "Entscheidungssituation": first_sentence(model["decision_logic"] or model["target_state"], professional_gap("den Entscheidungspunkt im Regelfall", "eine Konkretisierung der Entscheidungssituation anhand eines Fachfalls")),
         "Vorgehen": " / ".join(steps) if steps else "Vorgehen fachlich ergänzen.",
         "Risiko": first_sentence(model["risks"], "Risiko fachlich ergänzen."),
-        "Prüfung": first_sentence(model["quality"], "Prüfung fachlich ergänzen."),
+        "Prüfung / Governance": first_sentence(model["quality"] or model["governance"], professional_gap("Prüfung und Governance im Regelfall", "die Benennung von Freigabe- und Prüfmechanismen")),
         "Ergebnis": first_sentence(model["target_state"] or model["artifact"], "Ergebnis fachlich ergänzen."),
         "Lernpunkt": first_sentence(model["next_steps"], "Lernpunkt fachlich ergänzen."),
     }
     case_two = {
         "title": "Fallbeispiel 2: Ausnahme- oder Eskalationsfall",
         "Ausgangslage": first_sentence(model["risks"] or model["governance"], "Fallbeispiel muss fachlich ergänzt werden."),
-        "Entscheidungspunkt": first_sentence(model["governance"] or model["quality"], "Entscheidungspunkt fachlich ergänzen."),
-        "Vorgehen": " / ".join(next_steps) if next_steps else "Vorgehen fachlich ergänzen.",
+        "Entscheidungssituation": first_sentence(model["governance"] or model["quality"], professional_gap("den Eskalations- oder Ausnahmefall", "eine Beschreibung des kritischen Entscheidungspunktes")),
+        "Vorgehen": " / ".join(next_steps) if next_steps else professional_gap("das Vorgehen im Ausnahmefall", "einen Eskalations- und Prüfpfad aus dem Fachbereich"),
         "Risiko": first_sentence(model["risks"], "Risiko fachlich ergänzen."),
-        "Prüfung": first_sentence(model["quality"] or model["governance"], "Prüfung fachlich ergänzen."),
+        "Prüfung / Governance": first_sentence(model["quality"] or model["governance"], professional_gap("die Governance im Ausnahmefall", "eine konkrete Eskalations- und Freigabelogik")),
         "Ergebnis": first_sentence(model["summary"] or model["target_state"], "Ergebnis fachlich ergänzen."),
-        "Lernpunkt": "Governance und fachliche Freigabe muessen im Ausnahmefall sichtbar vor dem Rollout verankert werden." if model["governance"] else "Lernpunkt fachlich ergänzen.",
+        "Lernpunkt": "Governance und fachliche Freigabe muessen im Ausnahmefall sichtbar vor dem Rollout verankert werden." if model["governance"] else professional_gap("den Lernpunkt des Ausnahmefalls", "eine retrospektive Auswertung durch Fachbereich und Governance"),
     }
     model["case_examples"] = [case_one, case_two]
     return model
@@ -736,16 +743,20 @@ def build_process_matrix(model: dict) -> dict:
             "Entscheidungslogik und Rollenmodell festlegen.",
             "Artefakt pruefen, freigeben und weiterverwenden.",
         ]
-    checkpoint = first_sentence(model["quality"] or model["governance"], "Prüfpunkt fachlich ergänzen.", 120)
+    checkpoint = first_sentence(model["quality"] or model["governance"], professional_gap("den Kontrollpunkt je Prozessschritt", "eine kurze Prüf- oder Freigabelogik"), 120)
+    actor = shorten_text(model["governance"] or model["usecase_title"] or model["problem_class"], "Akteur fachlich zu konkretisieren.", 90)
+    input_signal = shorten_text(model["inputs_outputs"] or model["background"], professional_gap("die Inputlage des Prozessschritts", "eine Zuordnung der fachlichen Eingangsdaten"), 120)
+    output_signal = shorten_text(model["artifact"] or model["target_state"], professional_gap("den erwarteten Output des Prozessschritts", "eine Benennung des erwarteten Arbeitsergebnisses"), 120)
     rows = []
     for idx, step in enumerate(steps[:6], start=1):
-        if idx == 1:
-            purpose = "Eingangslage strukturieren und Erwartungshaltung klaeren."
-        elif idx == len(steps[:6]):
-            purpose = "Ergebnis absichern, freigeben und in den Betrieb ueberfuehren."
-        else:
-            purpose = "Sachlogik anwenden und operative Entscheidung vorbereiten."
-        rows.append([f"{idx:02d}", step, purpose, checkpoint])
+        rows.append([
+            f"{idx:02d}",
+            actor if idx == 1 else "Fachbereich / Prozessrolle",
+            input_signal if idx == 1 else "Vorheriger Schritt / Fachsignal",
+            step,
+            output_signal if idx == len(steps[:6]) else "Zwischenergebnis / Entscheidungsvorlage",
+            checkpoint,
+        ])
     model["process_matrix_rows"] = rows
     return model
 
@@ -754,13 +765,18 @@ def build_training_module(model: dict) -> dict:
     model["training_rows"] = [
         ["Lernziel", shorten_text(model["target_state"] or model["summary"], "Lernziel fachlich ergänzen.", 150)],
         ["Zielgruppe", shorten_text(model["usecase_title"] or model["problem_class"], "Zielgruppe fachlich ergänzen.", 150)],
+        ["Dauer / Format", "[ANNAHME] Dauer: 30–45 Minuten für eine Kurzschulung. Format: kompaktes Review mit Fallbeispiel und Checkliste."],
+        ["Übung", shorten_text(model["process_overview"] or model["artifact"], professional_gap("die praktische Übung", "eine kurze Simulation oder einen Durchlauf anhand eines echten Falls"), 150)],
         ["Typische Anwendung", shorten_text(model["process_overview"] or model["artifact"], "Typische Anwendung fachlich ergänzen.", 150)],
+        ["Prüffragen", "Welche Entscheidung wird vorbereitet, welche Daten liegen vor, welche Freigabe ist erforderlich?"],
         ["Transfer in den Alltag", shorten_text(model["next_steps"] or model["governance"], "Transferlogik fachlich ergänzen.", 150)],
+        ["Trainerhinweis", "Offene Punkte, Annahmen und Governance-Hinweise explizit markieren; keine nicht geprüften Schlüsse als Freigabe interpretieren."],
     ]
     model["training_questions"] = [
         "Welche Entscheidung wird durch den Use Case vorbereitet oder beschleunigt?",
         "Welche fachliche Freigabe ist vor Nutzung oder Rollout erforderlich?",
         "Welche Daten oder Eingangsinformationen muessen vorab belastbar vorliegen?",
+        "Welche Transferaufgabe ist nach der Kurzschulung im Alltag zu bearbeiten?",
     ]
     return model
 
@@ -783,6 +799,15 @@ def build_management_recommendation(model: dict) -> dict:
     model["management_recommendation"] = {
         "headline": "Empfohlene Management-Entscheidung",
         "decision": first_sentence(model["next_steps"] or model["target_state"], "Naechsten Management-Schritt fachlich definieren.", 170),
+        "rationale": first_sentence(model["summary"] or model["background"], professional_gap("die Begründung der Management-Empfehlung", "eine belastbare Verknüpfung aus Ausgangslage, Wirkung und Entscheidungsbedarf"), 190),
+        "priority": "Hoch" if model["next_steps"] or model["governance"] else "Zu validieren",
+        "first_actions": [
+            shorten_text(model["next_steps"], professional_gap("die erste Maßnahme", "eine Priorisierung der nächsten Schritte"), 110),
+            shorten_text(model["quality"], professional_gap("die zweite Maßnahme", "eine Klärung von Qualitäts- und Prüfanforderungen"), 110),
+            shorten_text(model["governance"], professional_gap("die dritte Maßnahme", "eine Sichtbarmachung von Freigaben und Verantwortungen"), 110),
+        ],
+        "non_action_risk": first_sentence(model["risks"] or model["background"], professional_gap("die Risiken bei Nicht-Handeln", "eine kurze Darstellung der Folgewirkungen bei ausbleibender Entscheidung"), 180),
+        "review_point": first_sentence(model["quality"] or model["next_steps"], professional_gap("den nächsten Review-Punkt", "einen Termin oder Meilenstein für die nächste Managementsicht"), 150),
         "prerequisites": [
             shorten_text(model["governance"], "Governance- und Freigabepfad festlegen.", 120),
             shorten_text(model["quality"], "Qualitaets- und Fachpruefung definieren.", 120),
@@ -877,10 +902,9 @@ def build_pdf_chapters(model: dict) -> list[dict]:
         ["Datenpunkte", shorten_text(model["inputs_outputs"] or model["kpis"], "Datenpunkte fachlich ergänzen.", 180)],
     ]
     risk_rows = [
-        ["Annahmenlage", shorten_text(model["risks"] or model["background"], "Annahmenlage fachlich ergänzen.", 150), "Amber"],
-        ["Governance-Risiko", shorten_text(model["governance"], "Governance-Risiko fachlich ergänzen.", 150), "Red"],
-        ["Qualitätsrisiko", shorten_text(model["quality"], "Qualitätsrisiko fachlich ergänzen.", 150), "Amber"],
-        ["Rollout-Risiko", shorten_text(model["next_steps"], "Rollout-Risiko fachlich ergänzen.", 150), "Blue"],
+        ["Risiko", shorten_text(model["risks"], professional_gap("das Hauptrisiko des Use Cases", "eine fachliche Risikobeschreibung mit Auswirkung"), 150), "Operative Fehlentscheidung oder Umsetzungshemmnis", shorten_text(model["quality"] or model["governance"], professional_gap("die Gegenmaßnahme", "eine Prüf- oder Eskalationslogik"), 150)],
+        ["Annahme", shorten_text(model["kpis"] or model["background"], professional_gap("die zentrale Annahme", "eine Kennzeichnung der unsicheren Wirkungsannahme"), 150), "Wirkung oder Aufwand kann sich verschieben", shorten_text(model["inputs_outputs"], professional_gap("die Validierungsmaßnahme", "eine Daten- oder Reviewlogik"), 150)],
+        ["Offener Punkt", shorten_text(model["next_steps"] or model["governance"], professional_gap("den offenen Punkt", "eine konkrete Klärung im nächsten Review"), 150), "Entscheidung oder Rollout bleibt blockiert", shorten_text(model["next_steps"], professional_gap("den nächsten Bearbeitungsschritt", "eine klare Zuweisung an Owner oder Fachbereich"), 150)],
     ]
     kpi_rows = []
     for item in extract_list_items(model["kpis"])[:5]:
@@ -892,13 +916,23 @@ def build_pdf_chapters(model: dict) -> list[dict]:
             ["Rollout-Reife", "fachlich zu validieren", "Pilot und Freigabe koppeln"],
         ]
     checklist_rows = []
-    for item in extract_list_items(model["next_steps"] or model["quality"])[:6]:
-        checklist_rows.append(["[ ]", item, "Vor Freigabe prüfen"])
+    checklist_categories = [
+        ("Vorbereitung", "Scope, Zielbild und Datenbasis klären"),
+        ("Durchführung", "Ablauf, Rollen und Entscheidungspunkte anwenden"),
+        ("Prüfung", "Qualitäts- und Governance-Check durchführen"),
+        ("Dokumentation", "Ergebnisse, Annahmen und Freigaben festhalten"),
+        ("Eskalation", "Abweichungen, Risiken oder Ausnahmefälle eskalieren"),
+        ("Review", "Nächsten Review- und Verbesserungszyklus festlegen"),
+    ]
+    extracted_items = extract_list_items(model["next_steps"] or model["quality"])
+    for idx, (category, fallback) in enumerate(checklist_categories):
+        item = extracted_items[idx] if idx < len(extracted_items) else fallback
+        checklist_rows.append([category, "[ ]", item, "Vor Freigabe oder Rollout prüfen"])
     if not checklist_rows:
         checklist_rows = [
-            ["[ ]", "Problemklasse und Zielbild fachlich validieren", "Owner-Freigabe"],
-            ["[ ]", "Governance- und Qualitätslogik dokumentieren", "Review"],
-            ["[ ]", "Pilot und Rollout-Reife bewerten", "Management-Entscheidung"],
+            ["Vorbereitung", "[ ]", "Problemklasse und Zielbild fachlich validieren", "Owner-Freigabe"],
+            ["Prüfung", "[ ]", "Governance- und Qualitätslogik dokumentieren", "Review"],
+            ["Review", "[ ]", "Pilot und Rollout-Reife bewerten", "Management-Entscheidung"],
         ]
     implementation_rows = []
     raw_steps = extract_list_items(model["next_steps"] or model["process_overview"])[:5]
@@ -962,7 +996,7 @@ def build_pdf_chapters(model: dict) -> list[dict]:
             "title": "Prozessmodell / Ablaufmatrix",
             "purpose": "Übersetzt den Ablauf in eine prüfbare Schritt-für-Schritt-Matrix.",
             "paragraphs": [chapter_text("Prozessmodell / Ablaufmatrix", "", model)],
-            "table": {"headers": ["Schritt", "Ablauf", "Zweck", "Prüfpunkt"], "rows": model["process_matrix_rows"], "widths": [16 * mm, 54 * mm, 56 * mm, 34 * mm]},
+            "table": {"headers": ["Schritt", "Akteur", "Input", "Aktion", "Output", "Kontrollpunkt"], "rows": model["process_matrix_rows"], "widths": [14 * mm, 24 * mm, 30 * mm, 44 * mm, 30 * mm, 18 * mm]},
             "page_break_before": True,
         },
         {
@@ -1029,7 +1063,7 @@ def build_pdf_chapters(model: dict) -> list[dict]:
             "title": "Checkliste",
             "purpose": "Kurzprüfung fuer Freigabe, Review und operative Einsatzreife.",
             "paragraphs": [chapter_text("Checkliste", "", model)],
-            "table": {"headers": ["Status", "Prüfpunkt", "Hinweis"], "rows": checklist_rows, "widths": [18 * mm, 96 * mm, 46 * mm]},
+            "table": {"headers": ["Bereich", "Status", "Prüfpunkt", "Hinweis"], "rows": checklist_rows, "widths": [26 * mm, 16 * mm, 84 * mm, 34 * mm]},
         },
         {
             "title": "Umsetzungsplan",
@@ -1040,11 +1074,17 @@ def build_pdf_chapters(model: dict) -> list[dict]:
         {
             "title": "Management-Empfehlung",
             "purpose": "Formuliert den empfohlenen Entscheidungspunkt und die dafuer noetigen Voraussetzungen.",
-            "paragraphs": [chapter_text("Management-Empfehlung", "", model)],
+            "paragraphs": [
+                f"Begruendung: {model['management_recommendation']['rationale']}",
+                f"Prioritaet: {model['management_recommendation']['priority']}",
+                f"Risiken bei Nicht-Handeln: {model['management_recommendation']['non_action_risk']}",
+                f"Naechster Review-Punkt: {model['management_recommendation']['review_point']}",
+            ],
             "box": {
                 "label": model["management_recommendation"]["headline"],
-                "text": model["management_recommendation"]["decision"] + "\n\n" + "\n".join(f"- {item}" for item in model["management_recommendation"]["prerequisites"]),
+                "text": model["management_recommendation"]["decision"] + "\n\nErste 3 Maßnahmen:\n" + "\n".join(f"- {item}" for item in model["management_recommendation"]["first_actions"]),
             },
+            "bullets": [f"Voraussetzung: {item}" for item in model["management_recommendation"]["prerequisites"]],
             "page_break_before": True,
         },
         build_appendix(model),
@@ -1105,7 +1145,7 @@ def build_management_box(label: str, text: str, styles):
 
 def build_case_example_table(case_example: dict, styles):
     rows = [["Baustein", "Ausarbeitung"]]
-    for key in ["Ausgangslage", "Entscheidungspunkt", "Vorgehen", "Risiko", "Prüfung", "Ergebnis", "Lernpunkt"]:
+    for key in ["Ausgangslage", "Entscheidungssituation", "Vorgehen", "Risiko", "Prüfung / Governance", "Ergebnis", "Lernpunkt"]:
         rows.append([key, case_example.get(key, "Fachlich zu ergänzen.")])
     return make_table(rows, styles, [40 * mm, 120 * mm], header_fill="#1D4554")
 
@@ -1163,7 +1203,7 @@ def build_pdf_chapter(story: list, styles, chapter: dict):
         story.append(Spacer(1, 3 * mm))
 
     if chapter.get("risk_table"):
-        story.append(make_table([["Risikofeld", "Einordnung", "Signal"], *chapter["risk_table"]], styles, [42 * mm, 94 * mm, 24 * mm], header_fill="#6D4A17", body_fill="#FBF6EE"))
+        story.append(make_table([["Typ", "Beschreibung", "Auswirkung", "Prüfung / Gegenmaßnahme"], *chapter["risk_table"]], styles, [18 * mm, 58 * mm, 38 * mm, 46 * mm], header_fill="#6D4A17", body_fill="#FBF6EE"))
         story.append(Spacer(1, 3 * mm))
 
     if chapter.get("case_example"):
