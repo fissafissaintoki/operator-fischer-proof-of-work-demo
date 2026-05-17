@@ -441,25 +441,36 @@ def sanitize_pdf_text(text: str) -> str:
 
 
 def parse_markdown_sections(content: str) -> dict[str, str]:
-    """Parst Markdown ## und # Header und liefert {Titel: Body}."""
+    """Parst Markdown ##, ###, # Header und liefert {Titel: Body}.
+
+    Wichtig: Wenn ein Block 'Direktes Artefakt' enthaelt und darunter ###-Subsections
+    auftauchen (z.B. ### Zielbild und Nutzen, ### Ausgangslage, ...), werden die
+    Subsections als eigenstaendige Eintraege in das Sections-Dictionary uebernommen.
+    Damit findet das Mapping auf Executive-Kapitel auch dann statt, wenn die KI
+    ihre Antwort in ein Direktes-Artefakt-Block verpackt hat.
+    """
     sections: dict[str, str] = {}
     current_title: str | None = None
     current_lines: list[str] = []
 
+    def flush():
+        if current_title is not None:
+            body = "\n".join(current_lines).strip()
+            # Nur setzen, wenn noch nicht vorhanden oder der neue Body inhaltsreicher ist
+            if current_title not in sections or len(body) > len(sections[current_title]):
+                sections[current_title] = body
+
     for raw_line in content.splitlines():
         line = raw_line.rstrip()
-        if line.startswith("## ") or line.startswith("# "):
-            if current_title is not None:
-                body = "\n".join(current_lines).strip()
-                sections[current_title] = body
-            current_title = line.split(" ", 1)[1].strip() if " " in line else "Abschnitt"
+        # Auch ### erkennen
+        if line.startswith("### ") or line.startswith("## ") or line.startswith("# "):
+            flush()
+            current_title = line.lstrip("#").strip()
             current_lines = []
         else:
             current_lines.append(line)
 
-    if current_title is not None:
-        body = "\n".join(current_lines).strip()
-        sections[current_title] = body
+    flush()
 
     if sections:
         return sections

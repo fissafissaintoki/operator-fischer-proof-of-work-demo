@@ -898,7 +898,8 @@ function stopWorkingAnimation(){
 }
 
 /* ── Section-Parser ──
-   Liest den Output und extrahiert einzelne ## Abschnitte. */
+   Liest den Output und extrahiert einzelne ##/### Abschnitte.
+   Erkennt auch Sub-Sections die unterhalb von "Direktes Artefakt" liegen. */
 function extractSection(text, sectionNames){
   if(!text) return "";
   const lines = text.split("\n");
@@ -908,13 +909,15 @@ function extractSection(text, sectionNames){
   const result = [];
   for(const raw of lines){
     const line = raw.replace(/\s+$/,"");
-    if(/^#{1,3}\s/.test(line)){
-      const title = line.replace(/^#{1,3}\s+/,"").trim();
+    // Erkenne ##, ###, oder # Header
+    const headerMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    if(headerMatch){
+      const title = headerMatch[2].trim();
       if(targets.includes(norm(title))){
         capture = true;
         continue;
       }
-      // anderer Header → capture beenden
+      // anderer Header -> capture beenden
       if(capture) break;
       capture = false;
       continue;
@@ -928,11 +931,25 @@ function renderResult(text){
   const safeText = text?.trim() || "(Output leer)";
   document.getElementById("out").textContent = safeText;
 
-  // Masterprompt + Artefakt automatisch befuellen, wenn Sections vorhanden
+  // Masterprompt aus Output extrahieren
   const masterprompt = extractSection(safeText, ["Masterprompt"]);
-  const artefakt = extractSection(safeText, ["Direktes Artefakt","Artefakt","Direct Artefact"]);
-
   document.getElementById("outPrompt").textContent = masterprompt || "Kein Masterprompt-Abschnitt im Output gefunden.";
+
+  // Artefakt: zuerst "Direktes Artefakt" direkt versuchen
+  let artefakt = extractSection(safeText, ["Direktes Artefakt","Artefakt","Direct Artefact"]);
+
+  // Wenn leer (weil die Sub-Sections direkt darunter stehen),
+  // dann den gesamten Block ab "## Direktes Artefakt" bis vor dem naechsten ##-Header nehmen.
+  if(!artefakt){
+    const startMatch = safeText.match(/^##\s+(Direktes Artefakt|Artefakt|Direct Artefact)\s*$/im);
+    if(startMatch){
+      const startIdx = startMatch.index + startMatch[0].length;
+      const rest = safeText.slice(startIdx);
+      // suche naechsten ##-Header (nicht ###)
+      const endMatch = rest.match(/^##\s+(?!#)/m);
+      artefakt = (endMatch ? rest.slice(0, endMatch.index) : rest).trim();
+    }
+  }
   document.getElementById("outArtefact").textContent = artefakt || "Kein Artefakt-Abschnitt im Output gefunden.";
 }
 
