@@ -27,7 +27,7 @@ MODEL = os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
 
 MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", "7000"))
-MAX_INPUT_CHARS = int(os.environ.get("MAX_INPUT_CHARS", "2500"))
+MAX_INPUT_CHARS = int(os.environ.get("MAX_INPUT_CHARS", "4000"))
 MAX_PDF_BODY_BYTES = int(os.environ.get("MAX_PDF_BODY_BYTES", "120000"))
 MAX_PDF_CONTENT_CHARS = int(os.environ.get("MAX_PDF_CONTENT_CHARS", "50000"))
 MAX_OUTPUT_TOKENS = int(os.environ.get("MAX_OUTPUT_TOKENS", "1200"))

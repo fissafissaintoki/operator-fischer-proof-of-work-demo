@@ -136,6 +136,10 @@
     .gi{display:flex;align-items:center;gap:5px;color:var(--dim)}
     .gi.ok{color:var(--green)}.gi.fail{color:var(--red)}
     .gd{width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor;flex-shrink:0}
+    .agentstatus{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+    .aschip{border:1px solid var(--sl2);border-radius:2px;background:rgba(4,8,12,.72);
+      padding:6px 8px;font:700 8px/1.25 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+    .aschip b{display:block;margin-top:3px;color:var(--cymid);font-size:9px;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .errbar{display:none;padding:9px 12px;border:1px solid rgba(255,77,90,.35);border-radius:2px;
       background:rgba(30,4,8,.9);font:700 10px/1.4 var(--mono);letter-spacing:.10em;color:var(--red)}
     .errbar.v{display:block}
@@ -242,6 +246,7 @@
       .bp{font-size:26px}.content{padding:11px 10px 10px;gap:11px}
       .dtgrid{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
       .actionrow{grid-template-columns:1fr}
+      .agentstatus{grid-template-columns:1fr 1fr}
       .btngen,.btndl,.btncopy{font-size:10.5px;padding:11px 14px}}
   </style>
 </head>
@@ -417,6 +422,12 @@
         <span class="gi" id="g-style"><span class="gd"></span>Style</span>
         <span class="gi" id="g-structure"><span class="gd"></span>Struktur</span>
       </div>
+      <div class="agentstatus" aria-label="Memory Agent Status">
+        <span class="aschip">Language <b id="asLang">pending</b></span>
+        <span class="aschip">Intent <b id="asIntent">pending</b></span>
+        <span class="aschip">Skills <b id="asSkills">pending</b></span>
+        <span class="aschip">Governance <b id="asGov">pending</b></span>
+      </div>
 
       <!-- ERROR -->
       <div class="errbar" id="errBar" role="alert"></div>
@@ -511,15 +522,161 @@ const PDF_STYLES=[
   {id:"minimal-clean",label:"Minimal Clean"},{id:"ultra-boardroom",label:"Ultra Boardroom"},
 ];
 
-const S={inputText:"",documentType:"use-case-pdf",selectedPdfStyle:"of-medneon",
+const TERMINOLOGY_MAP=[
+  {pattern:/\bspecification\b/ig,term:"Spezifikation"},
+  {pattern:/\bdecomposition\b/ig,term:"Systemzerlegung"},
+  {pattern:/\bskill registry\b/ig,term:"Skill-Registry"},
+  {pattern:/\brouting layer\b/ig,term:"Routing-Layer"},
+  {pattern:/\bmemory agent\b/ig,term:"Memory Agent"},
+  {pattern:/\bvoice intent parser\b/ig,term:"Voice Intent Parser"},
+  {pattern:/\btranslation guard\b/ig,term:"Translation Guard"},
+  {pattern:/\bcontext expander\b/ig,term:"Context Expander"},
+  {pattern:/\bgovernance checker\b/ig,term:"Governance Checker"},
+];
+const FILLERS=["äh","ähm","hm","also","sozusagen","quasi","halt","irgendwie","you know","like","um","uh","erm"];
+const SKILL_REGISTRY=[
+  {id:"language-detector",triggers:["sprache","language","mehrsprachig","mixed"],intents:["instruction","artifact_creation","correction","save_to_memory","handoff"],required:true},
+  {id:"speech-normalizer",triggers:["gesprochen","voice","diktat","nein","anders"],intents:["instruction","correction","save_to_memory","handoff"],required:true},
+  {id:"terminology-mapper",triggers:["specification","decomposition","skill registry","routing layer","fachbegriff"],intents:["instruction","artifact_creation","handoff"],required:true},
+  {id:"translation-guard",triggers:["übersetz","translate","english","deutsch","misch"],intents:["instruction","artifact_creation","handoff"],required:true},
+  {id:"voice-intent-parser",triggers:["mach","erstelle","speichern","bewerte","handoff","pdf"],intents:["idea","instruction","correction","evaluation","save_to_memory","handoff","artifact_creation"],required:true},
+  {id:"context-expander",triggers:["kontext","prompterator","operator fischer"],intents:["instruction","artifact_creation","correction","save_to_memory","handoff"],required:true},
+  {id:"governance-checker",triggers:["public","private","black book","governance"],intents:["instruction","artifact_creation","save_to_memory","handoff"],required:true},
+  {id:"pdf-structure-builder",triggers:["pdf","dokument","export"],intents:["artifact_creation"],required:false},
+  {id:"prompt-builder",triggers:["prompt","auftrag","handoff"],intents:["instruction","handoff"],required:false},
+  {id:"memory-writer",triggers:["black book","speichern","übernehmen","memory"],intents:["save_to_memory"],required:false},
+  {id:"codex-handoff-builder",triggers:["codex","repo","code","implement"],intents:["handoff"],required:false},
+];
+const PRIVATE_TERMS=["GMC4EVER","Raschelwald","Mini-Striezel","GhostOS","GhostOS Blackhole","GosseOS Blackcore"];
+
+const S={inputText:"",rawInput:"",cleanedInput:"",documentType:"use-case-pdf",selectedPdfStyle:"of-medneon",
+  languageContext:null,speechNormalization:null,voiceIntent:null,executionPlan:null,
   structuredOutput:"",pdfStructure:null,isGenerating:false,isAnalysing:false,isRendering:false,downloadUrl:null};
+
+function wordsFor(text,items){const l=text.toLowerCase();return items.filter(x=>l.includes(x.toLowerCase()));}
+function detectLanguage(rawInput){
+  const text=rawInput.toLowerCase();
+  const de=(text.match(/\b(der|die|das|und|oder|nicht|bitte|mach|erstelle|speichern|übernehmen|wieder|optional|anders|bewertung|auftrag)\b/g)||[]).length;
+  const en=(text.match(/\b(the|and|or|not|please|make|create|save|routing|layer|skill|registry|decomposition|specification)\b/g)||[]).length;
+  const domains=[];
+  if(/\b(pdf|dokument|report|sop|kurs|artefakt|prompt)\b/i.test(rawInput))domains.push("artifact");
+  if(/\b(code|repo|codex|typescript|software|routing layer|skill registry|api)\b/i.test(rawInput))domains.push("software");
+  if(/\bgovernance|black book|memory|operator fischer\b/i.test(rawInput))domains.push("governance");
+  const detectedLanguage=de&&en?"de-en":en>de?"en":"de";
+  return {detectedLanguage,confidence:Math.min(.98,.55+Math.max(de,en)*.08),isMixedLanguage:de>0&&en>0,detectedDomains:domains,terminologyWarnings:[]};
+}
+function normalizeSpeech(rawInput){
+  let cleaned=` ${rawInput.replace(/\s+/g," ").trim()} `;
+  const removedFillers=[];
+  FILLERS.forEach(f=>{
+    const re=new RegExp(`(^|\\s)${f.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}([,.!?;:]*)(?=\\s|$)`,"ig");
+    if(re.test(cleaned)){removedFillers.push(f);cleaned=cleaned.replace(re," ");}
+  });
+  const detectedCorrections=[];
+  const correctionRe=/\b(nein[, ]+so nicht|nein[, ]+anders|no[, ]+not like that|scratch that|rather|stattdessen)\b/ig;
+  cleaned=cleaned.replace(correctionRe,(m)=>{detectedCorrections.push(m.trim());return " KORREKTUR: ";});
+  cleaned=cleaned.replace(/\s+([,.!?;:])/g,"$1").replace(/\s+/g," ").trim();
+  return {rawInput,cleanedInput:cleaned,removedFillers,detectedCorrections,confidence:cleaned?0.86:0};
+}
+function mapTerminology(cleanedInput,languageContext){
+  let mapped=cleanedInput;
+  const terminologyWarnings=[];
+  TERMINOLOGY_MAP.forEach(({pattern,term})=>{
+    if(pattern.test(mapped)){
+      mapped=mapped.replace(pattern,term);
+      terminologyWarnings.push(`Fachbegriff erhalten: ${term}`);
+    }
+  });
+  if(languageContext.isMixedLanguage)terminologyWarnings.push("Mischsprache erkannt: Fachbegriffe werden nicht blind übersetzt.");
+  languageContext.terminologyWarnings=terminologyWarnings;
+  return mapped;
+}
+function parseVoiceIntent(cleanedInput){
+  const t=cleanedInput.toLowerCase();
+  let commandType="unknown",intent="unknown",urgency="normal",confidence=.55;
+  if(/\b(nein|korrektur|anders|so nicht|wieder optional|not like that)\b/.test(t)){commandType="correction";intent="correction";confidence=.9;}
+  else if(/\b(black book|speichern|übernehmen|save to memory|merken)\b/.test(t)){commandType="save_to_memory";intent="save_to_memory";confidence=.88;}
+  else if(/\b(codex|claude|handoff|übergabe|prompt für)\b/.test(t)){commandType="handoff";intent="handoff";confidence=.86;}
+  else if(/\b(pdf|dokument|report|sop|kurs|artefakt|erstelle|create|generate)\b/.test(t)){commandType="artifact_creation";intent="artifact_creation";confidence=.82;}
+  else if(/\b(bewerte|prüfe|review|evaluate|diagnose)\b/.test(t)){commandType="evaluation";intent="evaluation";confidence=.78;}
+  else if(/\b(idee|konzept|vorschlag|idea)\b/.test(t)){commandType="idea";intent="idea";confidence=.76;}
+  else if(/\b(mach|baue|setze|implementiere|build)\b/.test(t)){commandType="instruction";intent="instruction";confidence=.74;}
+  if(/\b(kritisch|sofort|hotfix|urgent|jetzt)\b/.test(t))urgency="high";
+  if(/\b(später|optional|irgendwann)\b/.test(t))urgency="low";
+  return {intent,commandType,urgency,confidence};
+}
+function detectProblemClass(cleanedInput,voiceIntent){
+  const t=cleanedInput.toLowerCase();
+  if(voiceIntent.commandType==="correction")return "correction";
+  if(voiceIntent.commandType==="save_to_memory")return "memory_capture";
+  if(/\b(pdf|dokument|report|sop|kurs|portfolio)\b/.test(t))return "artifact_document";
+  if(/\b(code|repo|codex|typescript|implementiere|api)\b/.test(t))return "technical_implementation";
+  if(/\b(bewerte|prüfe|analyse|review)\b/.test(t))return "analysis_review";
+  return "general_converter";
+}
+function routeSkills(cleanedInput,voiceIntent,problemClass){
+  const hits=SKILL_REGISTRY.map(skill=>{
+    const triggerHits=wordsFor(cleanedInput,skill.triggers).length;
+    const intentHit=skill.intents.includes(voiceIntent.commandType)||skill.intents.includes(voiceIntent.intent);
+    let score=(triggerHits?0.44:0)+(intentHit?0.36:0)+(skill.required?0.20:0);
+    if(["language-detector","speech-normalizer","terminology-mapper","translation-guard","voice-intent-parser"].includes(skill.id))score+=0.35;
+    if(["context-expander","governance-checker"].includes(skill.id))score+=0.35;
+    if(skill.id==="pdf-structure-builder"&&problemClass==="artifact_document")score+=0.30;
+    if(skill.id==="codex-handoff-builder"&&/\b(codex|repo|code|implement)\b/i.test(cleanedInput))score+=0.35;
+    return {...skill,score:Math.min(1,score)};
+  });
+  return hits.filter(s=>s.score>=.55).sort((a,b)=>b.score-a.score);
+}
+function buildExecutionPlan(rawInput){
+  const languageContext=detectLanguage(rawInput);
+  const speechNormalization=normalizeSpeech(rawInput);
+  speechNormalization.cleanedInput=mapTerminology(speechNormalization.cleanedInput,languageContext);
+  const voiceIntent=parseVoiceIntent(speechNormalization.cleanedInput);
+  const problemClass=detectProblemClass(speechNormalization.cleanedInput,voiceIntent);
+  const selectedSkills=routeSkills(`${speechNormalization.cleanedInput} ${rawInput}`,voiceIntent,problemClass)
+    .map(s=>({skillId:s.id,reason:`${voiceIntent.commandType} / ${problemClass}`,score:Number(s.score.toFixed(2)),required:s.required||s.score>=.75}));
+  const governanceWarnings=PRIVATE_TERMS.filter(term=>speechNormalization.cleanedInput.toLowerCase().includes(term.toLowerCase()))
+    .map(term=>`Private term blocked for public output: ${term}`);
+  const contextPackage={
+    detectedLanguage:languageContext.detectedLanguage,
+    userPreferences:["deutsch bevorzugt","strukturierte Artefakte","PDF optional"],
+    projectContext:["Prompterator","Universal Converter","PDF Export","Memory Agent"],
+    styleContext:PDF_STYLES.map(s=>s.label),
+    domainContext:languageContext.detectedDomains,
+    governanceContext:["private Begriffe nicht im Public UI","Voice ist Input-Kanal, nicht zentraler Agent"],
+  };
+  return {
+    requestId:`req-${Date.now()}`,rawInput,cleanedInput:speechNormalization.cleanedInput,
+    problemClass,domain:languageContext.detectedDomains[0]||"general",intent:voiceIntent.intent,
+    languageContext,speechNormalization,voiceIntent,contextPackage,
+    selectedSkills,optionalSkills:[],blockedSkills:governanceWarnings.length?[{skillId:"public-style-exposure",reason:governanceWarnings[0]}]:[],
+    executionOrder:selectedSkills.map(s=>s.skillId),missingInputs:[],governanceWarnings,
+    confidenceScore:Number(Math.min(languageContext.confidence,voiceIntent.confidence,speechNormalization.confidence).toFixed(2)),
+    nextAction:voiceIntent.commandType==="save_to_memory"?"Prepare Black Book entry":"Build structured artifact",
+  };
+}
+function updateAgentStatus(plan){
+  document.getElementById("asLang").textContent=plan?.languageContext?.detectedLanguage||"pending";
+  document.getElementById("asIntent").textContent=plan?.voiceIntent?.commandType||"pending";
+  document.getElementById("asSkills").textContent=plan?.selectedSkills?.length?`${plan.selectedSkills.length} selected`:"pending";
+  document.getElementById("asGov").textContent=plan?.governanceWarnings?.length?"warning":"checked";
+}
+function memoryAgentPlan(rawInput){
+  const plan=buildExecutionPlan(rawInput);
+  S.rawInput=rawInput;S.cleanedInput=plan.cleanedInput;S.languageContext=plan.languageContext;
+  S.speechNormalization=plan.speechNormalization;S.voiceIntent=plan.voiceIntent;S.executionPlan=plan;
+  updateAgentStatus(plan);
+  return plan;
+}
+window.PrompteratorMemoryAgent={detectLanguage,normalizeSpeech,parseVoiceIntent,buildExecutionPlan};
 
 document.getElementById("inputText").addEventListener("input",function(){
   S.inputText=this.value;
   document.getElementById("charCount").textContent=`${this.value.length} / 2500`;
+  S.rawInput=this.value;S.cleanedInput="";S.languageContext=null;S.speechNormalization=null;S.voiceIntent=null;S.executionPlan=null;
   S.structuredOutput="";S.pdfStructure=null;S.downloadUrl=null;
   document.getElementById("btnDownload").classList.remove("v");
-  updateOutput("");updatePreview(null);updateGate();clearErr();
+  updateOutput("");updatePreview(null);updateAgentStatus(null);updateGate();clearErr();
 });
 function selectDocType(btn){
   document.querySelectorAll(".dtbtn").forEach(b=>b.classList.remove("active"));
@@ -568,17 +725,25 @@ function updateOutput(text){
   status.textContent="Output aktiv";
 }
 
-function converterPrompt(text){
+function converterPrompt(plan){
   const docType=DOCTYPE_LABELS[S.documentType]||S.documentType;
   return [
     "[MODUS: UNIVERSAL CONVERTER]",
     `[OUTPUT-TYP: ${docType}]`,
+    `[DETECTED-LANGUAGE: ${plan.languageContext.detectedLanguage}]`,
+    `[VOICE-INTENT: ${plan.voiceIntent.commandType}]`,
+    `[PROBLEM-CLASS: ${plan.problemClass}]`,
+    `[SELECTED-SKILLS: ${plan.executionOrder.join(", ")}]`,
     "",
+    "Nutze cleanedInput als Hauptinput. rawInput bleibt nur Audit-Kontext.",
+    "Erhalte Fachbegriffe semantisch. Nicht blind übersetzen. Unsichere Übersetzungen markieren.",
     "Erzeuge zuerst einen strukturierten Arbeitsoutput im Prompterator.",
     "PDF ist nur ein optionaler Exportmodus. Liefere verwertbare Abschnitte, klare Problemklasse, Zielbild, Ablauf, Risiken und nächste Schritte.",
+    plan.governanceWarnings.length?`Governance-Warnungen: ${plan.governanceWarnings.join(" | ")}`:"",
     "",
-    text
-  ].join("\n");
+    "cleanedInput:",
+    plan.cleanedInput
+  ].filter(Boolean).join("\n");
 }
 
 async function handleGenerateArtifact(){
@@ -586,9 +751,13 @@ async function handleGenerateArtifact(){
   if(text.length<3||S.isGenerating)return;
   S.isGenerating=true;startLoader("artifact");clearErr();
   try{
+    const plan=memoryAgentPlan(text);
+    if(plan.governanceWarnings.length){
+      showErr("Governance-Hinweis: Private Begriffe werden nicht als öffentliche Styles/Labels ausgegeben.");
+    }
     const res=await fetch("/api/generate",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({raw_input:converterPrompt(text)})
+      body:JSON.stringify({raw_input:converterPrompt(plan).slice(0,3400)})
     });
     const data=await res.json();
     stopLoader();
@@ -611,6 +780,7 @@ async function handleCreatePdf(){
     await handleGenerateArtifact();
   }
   if(!gatePassed())return;
+  if(!S.executionPlan&&S.inputText.trim()){memoryAgentPlan(S.inputText.trim());}
   clearErr();S.isRendering=true;S.downloadUrl=null;
   document.getElementById("btnDownload").classList.remove("v");
   startLoader("pdf");
