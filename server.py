@@ -55,6 +55,15 @@ PUBLIC_PDF_STYLES = {
     "minimal-clean",
     "ultra-boardroom",
 }
+PDF_STYLE_LABELS = {
+    "of-medneon": "OF-MEDNEON",
+    "corporate-executive": "Corporate Executive",
+    "industrial-ops": "Industrial OPS",
+    "academic-research": "Academic Research",
+    "dark-tactical-operator": "Dark Tactical Operator",
+    "minimal-clean": "Minimal Clean",
+    "ultra-boardroom": "Ultra Boardroom",
+}
 
 BASE_URL = "https://www.prompterator.de"
 SEO_ROUTES = {
@@ -461,6 +470,65 @@ EX_RED_BG     = colors.HexColor("#F7E8E8")
 EX_YELLOW_BG  = colors.HexColor("#FFF4D6")
 
 EX_MAX_BODY_CHARS = 4200  # pro Kapitel-Hauptteil
+PDF_STYLE_RENDER_LOCK = threading.Lock()
+
+PDF_STYLE_THEMES = {
+    "of-medneon": {
+        "EX_INK": "#07131C", "EX_INK_SOFT": "#102A38", "EX_INK_MUTED": "#3E6D7D", "EX_INK_LIGHT": "#6E9CAD",
+        "EX_ACCENT": "#00CFF3", "EX_ACCENT_DK": "#008AA8", "EX_ACCENT_BG": "#E8FBFF",
+        "EX_RULE": "#A9DDE8", "EX_RULE_LIGHT": "#D8F3F7", "EX_BOX_BG": "#F0FAFC", "EX_BOX_ALT": "#FAFEFF", "EX_BOX_BORDER": "#9BD8E5",
+        "EX_AMBER": "#B06418", "EX_AMBER_BG": "#FFF4E7", "EX_GREEN": "#159A72", "EX_GREEN_BG": "#E5F7F0", "EX_RED": "#B23B3B", "EX_RED_BG": "#F8E8E8", "EX_YELLOW_BG": "#FFF7D8",
+    },
+    "corporate-executive": {
+        "EX_INK": "#0F172A", "EX_INK_SOFT": "#1E293B", "EX_INK_MUTED": "#475569", "EX_INK_LIGHT": "#64748B",
+        "EX_ACCENT": "#2563EB", "EX_ACCENT_DK": "#1D4ED8", "EX_ACCENT_BG": "#EFF6FF",
+        "EX_RULE": "#CBD5E1", "EX_RULE_LIGHT": "#E2E8F0", "EX_BOX_BG": "#F8FAFC", "EX_BOX_ALT": "#FFFFFF", "EX_BOX_BORDER": "#CBD5E1",
+        "EX_AMBER": "#B45309", "EX_AMBER_BG": "#FFFBEB", "EX_GREEN": "#15803D", "EX_GREEN_BG": "#F0FDF4", "EX_RED": "#B91C1C", "EX_RED_BG": "#FEF2F2", "EX_YELLOW_BG": "#FEFCE8",
+    },
+    "industrial-ops": {
+        "EX_INK": "#1C1917", "EX_INK_SOFT": "#292524", "EX_INK_MUTED": "#57534E", "EX_INK_LIGHT": "#78716C",
+        "EX_ACCENT": "#D97706", "EX_ACCENT_DK": "#92400E", "EX_ACCENT_BG": "#FFF7ED",
+        "EX_RULE": "#D6D3D1", "EX_RULE_LIGHT": "#E7E5E4", "EX_BOX_BG": "#FAFAF9", "EX_BOX_ALT": "#FFFDF8", "EX_BOX_BORDER": "#D6D3D1",
+        "EX_AMBER": "#C2410C", "EX_AMBER_BG": "#FFEDD5", "EX_GREEN": "#4D7C0F", "EX_GREEN_BG": "#F7FEE7", "EX_RED": "#B91C1C", "EX_RED_BG": "#FEF2F2", "EX_YELLOW_BG": "#FEF3C7",
+    },
+    "academic-research": {
+        "EX_INK": "#111827", "EX_INK_SOFT": "#374151", "EX_INK_MUTED": "#4B5563", "EX_INK_LIGHT": "#6B7280",
+        "EX_ACCENT": "#64748B", "EX_ACCENT_DK": "#334155", "EX_ACCENT_BG": "#F1F5F9",
+        "EX_RULE": "#CBD5E1", "EX_RULE_LIGHT": "#E5E7EB", "EX_BOX_BG": "#F9FAFB", "EX_BOX_ALT": "#FFFFFF", "EX_BOX_BORDER": "#D1D5DB",
+        "EX_AMBER": "#A16207", "EX_AMBER_BG": "#FEFCE8", "EX_GREEN": "#166534", "EX_GREEN_BG": "#F0FDF4", "EX_RED": "#991B1B", "EX_RED_BG": "#FEF2F2", "EX_YELLOW_BG": "#FEFCE8",
+    },
+    "dark-tactical-operator": {
+        "EX_INK": "#07110C", "EX_INK_SOFT": "#13251B", "EX_INK_MUTED": "#315A42", "EX_INK_LIGHT": "#5B7F68",
+        "EX_ACCENT": "#16A34A", "EX_ACCENT_DK": "#166534", "EX_ACCENT_BG": "#ECFDF3",
+        "EX_RULE": "#B7D8C3", "EX_RULE_LIGHT": "#DFF3E6", "EX_BOX_BG": "#F3FBF5", "EX_BOX_ALT": "#FBFFFC", "EX_BOX_BORDER": "#A7D8B7",
+        "EX_AMBER": "#A16207", "EX_AMBER_BG": "#FEFCE8", "EX_GREEN": "#15803D", "EX_GREEN_BG": "#DCFCE7", "EX_RED": "#991B1B", "EX_RED_BG": "#FEF2F2", "EX_YELLOW_BG": "#F7FEE7",
+    },
+    "minimal-clean": {
+        "EX_INK": "#111111", "EX_INK_SOFT": "#2B2B2B", "EX_INK_MUTED": "#5F6368", "EX_INK_LIGHT": "#8A8F98",
+        "EX_ACCENT": "#6B7280", "EX_ACCENT_DK": "#374151", "EX_ACCENT_BG": "#F7F7F8",
+        "EX_RULE": "#D9DDE3", "EX_RULE_LIGHT": "#ECEFF3", "EX_BOX_BG": "#FAFAFA", "EX_BOX_ALT": "#FFFFFF", "EX_BOX_BORDER": "#E5E7EB",
+        "EX_AMBER": "#9A6700", "EX_AMBER_BG": "#FFF8E5", "EX_GREEN": "#2F7D55", "EX_GREEN_BG": "#F1F8F4", "EX_RED": "#A33A3A", "EX_RED_BG": "#FBEEEE", "EX_YELLOW_BG": "#FFFBEA",
+    },
+    "ultra-boardroom": {
+        "EX_INK": "#181124", "EX_INK_SOFT": "#2E2142", "EX_INK_MUTED": "#5D4B75", "EX_INK_LIGHT": "#8A7AA3",
+        "EX_ACCENT": "#7C3AED", "EX_ACCENT_DK": "#5B21B6", "EX_ACCENT_BG": "#F5F3FF",
+        "EX_RULE": "#D8B4FE", "EX_RULE_LIGHT": "#EDE9FE", "EX_BOX_BG": "#FAF7FF", "EX_BOX_ALT": "#FFFFFF", "EX_BOX_BORDER": "#DDD6FE",
+        "EX_AMBER": "#B45309", "EX_AMBER_BG": "#FFFBEB", "EX_GREEN": "#047857", "EX_GREEN_BG": "#ECFDF5", "EX_RED": "#BE123C", "EX_RED_BG": "#FFF1F2", "EX_YELLOW_BG": "#FEFCE8",
+    },
+}
+
+
+def _apply_pdf_style_theme(style_id: str) -> dict[str, object]:
+    theme = PDF_STYLE_THEMES.get(style_id, PDF_STYLE_THEMES["of-medneon"])
+    previous = {name: globals()[name] for name in theme}
+    for name, value in theme.items():
+        globals()[name] = colors.HexColor(value)
+    return previous
+
+
+def _restore_pdf_style_theme(previous: dict[str, object]) -> None:
+    for name, value in previous.items():
+        globals()[name] = value
 
 
 # ----------------------------------------------------------------------------
@@ -875,6 +943,7 @@ def _ex_build_cover(story: list, styles, model: dict):
         [Paragraph("HERAUSGEBER", styles["ExCoverMetaBold"]), Paragraph("Operator Fischer · AI Operations", styles["ExCoverMeta"])],
         [Paragraph("QUELLE", styles["ExCoverMetaBold"]), Paragraph(sanitize_pdf_text(model["source"]), styles["ExCoverMeta"])],
         [Paragraph("FORMAT", styles["ExCoverMetaBold"]), Paragraph("Executive Use-Case Dossier", styles["ExCoverMeta"])],
+        [Paragraph("PDF-STYLE", styles["ExCoverMetaBold"]), Paragraph(sanitize_pdf_text(model.get("pdf_style_label", "OF-MEDNEON")), styles["ExCoverMeta"])],
         [Paragraph("UMFANG", styles["ExCoverMetaBold"]), Paragraph("Management · Schulung · AI Operations", styles["ExCoverMeta"])],
     ]
     meta_tbl = Table(meta_rows, colWidths=[34 * mm, 136 * mm])
@@ -1447,7 +1516,7 @@ def _ch_anhang(story, styles, model):
 # Main builder
 # ----------------------------------------------------------------------------
 
-def build_pdf_portfolio(title: str, content: str, source: str) -> bytes:
+def build_pdf_portfolio(title: str, content: str, source: str, selected_pdf_style: str = "of-medneon") -> bytes:
     """Executive Use-Case Dossier.
 
     Erzeugt ein ausgearbeitetes PDF mit Cover, Executive Summary,
@@ -1456,57 +1525,66 @@ def build_pdf_portfolio(title: str, content: str, source: str) -> bytes:
     KPI-Scorecard, Schulungsmodul, Checkliste, Umsetzungsplan,
     Management-Empfehlung und Anhang.
     """
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=20 * mm,
-        rightMargin=20 * mm,
-        topMargin=22 * mm,
-        bottomMargin=22 * mm,
-        title=title or "Prompterator Executive Dossier",
-        author="Prompterator / Operator Fischer",
-        subject="Executive Use-Case Dossier",
-    )
+    style_id = selected_pdf_style if selected_pdf_style in PUBLIC_PDF_STYLES else "of-medneon"
+    style_label = PDF_STYLE_LABELS.get(style_id, "OF-MEDNEON")
 
-    styles = _ex_build_styles()
-    normalized_title = (title or "Prompterator Use-Case Dossier").strip()
-    sections = parse_markdown_sections(content)
-    model = build_usecase_dossier_model(normalized_title, sections, source, content)
+    with PDF_STYLE_RENDER_LOCK:
+        previous_theme = _apply_pdf_style_theme(style_id)
+        try:
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(
+                buffer,
+                pagesize=A4,
+                leftMargin=20 * mm,
+                rightMargin=20 * mm,
+                topMargin=22 * mm,
+                bottomMargin=22 * mm,
+                title=title or "Prompterator Executive Dossier",
+                author="Prompterator / Operator Fischer",
+                subject=f"Executive Use-Case Dossier · {style_label}",
+            )
 
-    story: list = []
+            styles = _ex_build_styles()
+            normalized_title = (title or "Prompterator Use-Case Dossier").strip()
+            sections = parse_markdown_sections(content)
+            model = build_usecase_dossier_model(normalized_title, sections, source, content)
+            model["pdf_style_label"] = style_label
 
-    # Cover
-    _ex_build_cover(story, styles, model)
+            story: list = []
 
-    # Hauptteil (Reihenfolge entspricht Dossier-Logik)
-    _ch_executive_summary(story, styles, model)
-    _ch_management_context(story, styles, model)
-    _ch_ausgangslage(story, styles, model)
-    _ch_problemklasse(story, styles, model)
-    _ch_zielbild(story, styles, model)
-    _ch_steckbrief(story, styles, model)
-    _ch_fachlicher_hintergrund(story, styles, model)
-    _ch_prozess(story, styles, model)
-    _ch_prozessmatrix(story, styles, model)
-    _ch_akteure(story, styles, model)
-    _ch_io_daten(story, styles, model)
-    _ch_entscheidungslogik(story, styles, model)
-    _ch_fallbeispiele(story, styles, model)
-    _ch_risiken(story, styles, model)
-    _ch_governance(story, styles, model)
-    _ch_qualitaet(story, styles, model)
-    _ch_kpi(story, styles, model)
-    _ch_schulungsmodul(story, styles, model)
-    _ch_checkliste(story, styles, model)
-    _ch_umsetzung(story, styles, model)
-    _ch_empfehlung(story, styles, model)
+            # Cover
+            _ex_build_cover(story, styles, model)
 
-    # Anhang
-    _ch_anhang(story, styles, model)
+            # Hauptteil (Reihenfolge entspricht Dossier-Logik)
+            _ch_executive_summary(story, styles, model)
+            _ch_management_context(story, styles, model)
+            _ch_ausgangslage(story, styles, model)
+            _ch_problemklasse(story, styles, model)
+            _ch_zielbild(story, styles, model)
+            _ch_steckbrief(story, styles, model)
+            _ch_fachlicher_hintergrund(story, styles, model)
+            _ch_prozess(story, styles, model)
+            _ch_prozessmatrix(story, styles, model)
+            _ch_akteure(story, styles, model)
+            _ch_io_daten(story, styles, model)
+            _ch_entscheidungslogik(story, styles, model)
+            _ch_fallbeispiele(story, styles, model)
+            _ch_risiken(story, styles, model)
+            _ch_governance(story, styles, model)
+            _ch_qualitaet(story, styles, model)
+            _ch_kpi(story, styles, model)
+            _ch_schulungsmodul(story, styles, model)
+            _ch_checkliste(story, styles, model)
+            _ch_umsetzung(story, styles, model)
+            _ch_empfehlung(story, styles, model)
 
-    doc.build(story, onFirstPage=_ex_page_chrome, onLaterPages=_ex_page_chrome)
-    return buffer.getvalue()
+            # Anhang
+            _ch_anhang(story, styles, model)
+
+            doc.build(story, onFirstPage=_ex_page_chrome, onLaterPages=_ex_page_chrome)
+            return buffer.getvalue()
+        finally:
+            _restore_pdf_style_theme(previous_theme)
 
 
 # ============================================================================
@@ -1998,7 +2076,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(400, {"error": "Ungültiger PDF-Style"})
                 return
 
-            pdf_bytes = build_pdf_portfolio(title, content, source)
+            pdf_bytes = build_pdf_portfolio(title, content, source, selected_pdf_style)
             self._send_bytes(
                 200,
                 pdf_bytes,
