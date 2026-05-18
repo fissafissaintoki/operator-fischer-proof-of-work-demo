@@ -2,13 +2,13 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <title>Prompterator – PDF Creator</title>
+  <title>Prompterator – Universal Converter + PDF Export</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Prompterator: Rohinput rein. Professionelle PDF raus.">
+  <meta name="description" content="Prompterator: Rohinput rein. Strukturierter Output raus. Optional als professionelle PDF exportieren.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://www.prompterator.de/">
-  <meta property="og:title" content="Prompterator – PDF Creator">
-  <meta property="og:description" content="Rohinput rein. Professionelle PDF raus.">
+  <meta property="og:title" content="Prompterator – Universal Converter + PDF Export">
+  <meta property="og:description" content="Rohinput rein. Strukturierter Output raus. Optional als PDF exportieren.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.prompterator.de/">
   <meta property="og:image" content="https://www.prompterator.de/assets/ffooc-banner.jpg">
@@ -139,6 +139,21 @@
     .errbar{display:none;padding:9px 12px;border:1px solid rgba(255,77,90,.35);border-radius:2px;
       background:rgba(30,4,8,.9);font:700 10px/1.4 var(--mono);letter-spacing:.10em;color:var(--red)}
     .errbar.v{display:block}
+    .actionrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .modehint{margin-top:8px;color:var(--dim);font:600 10px/1.55 var(--mono);letter-spacing:.06em}
+    .outbox{width:100%;min-height:180px;border:1px solid var(--sl2);border-radius:2px;
+      padding:11px 13px;color:var(--text);background:linear-gradient(180deg,rgba(2,5,8,.95),rgba(4,9,14,.98));
+      outline:none;font:13px/1.62 var(--mono);white-space:pre-wrap;word-break:break-word;
+      box-shadow:inset 0 0 24px rgba(0,0,0,.55);margin:0}
+    .outempty{color:var(--dim);font-style:italic}
+    .btncopy{width:100%;padding:10px 14px;border:0;border-radius:3px;cursor:pointer;
+      font:800 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+      color:#001820;background:linear-gradient(180deg,#8adff2,#45d8ff 55%,#0b89a7);
+      box-shadow:0 0 14px rgba(69,216,255,.16),0 2px 0 rgba(0,0,0,.7);
+      transition:filter 90ms,transform 70ms}
+    .btncopy:hover{filter:brightness(1.10)}.btncopy:active{transform:translateY(1px)}
+    .btncopy:disabled{opacity:.35;cursor:not-allowed;filter:grayscale(.5)}
+    .btncopy:focus-visible{outline:2px solid rgba(69,216,255,.8);outline-offset:3px}
     .btngen{width:100%;padding:13px 18px;border:0;border-radius:3px;cursor:pointer;
       font:800 11.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;
       color:#001820;background:linear-gradient(180deg,#80e8ff,#3dcef5 55%,#0888b0);
@@ -226,7 +241,8 @@
       .ptag,.prev{position:static;display:block;text-align:center;margin:0 0 2px}
       .bp{font-size:26px}.content{padding:11px 10px 10px;gap:11px}
       .dtgrid{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
-      .btngen,.btndl{font-size:10.5px;padding:11px 14px}}
+      .actionrow{grid-template-columns:1fr}
+      .btngen,.btndl,.btncopy{font-size:10.5px;padding:11px 14px}}
   </style>
 </head>
 <body>
@@ -284,10 +300,10 @@
 
     <div class="plate">
       <span class="ptag">SN-2026-05-PR0M-T3R</span>
-      <span class="prev">REV 1.0 · PDF CREATOR</span>
+      <span class="prev">REV 1.1 · CONVERTER + PDF</span>
       <h1 class="bp">PROMPTERATOR</h1>
       <p class="bk">FISSAFISSA OUT OF CONTROL</p>
-      <p class="bs">PDF Creator Interface</p>
+      <p class="bs">Universal Converter · PDF Export</p>
       <div class="lscan" aria-hidden="true"></div>
     </div>
 
@@ -302,19 +318,19 @@
           <span class="right">max <b>2500</b> chars</span>
         </header>
         <textarea id="inputText" maxlength="2500" aria-label="Rohinput"
-          placeholder="Beschreibe dein Thema, Problem oder Ziel. Der Prompterator erzeugt daraus eine strukturierte PDF."></textarea>
+          placeholder="Beschreibe dein Thema, Problem oder Ziel. Der Prompterator erzeugt daraus zuerst einen strukturierten Output. Danach kannst du optional eine PDF erstellen."></textarea>
         <div style="display:flex;justify-content:flex-end;margin-top:5px">
           <span id="charCount" style="font:9.5px/1 var(--mono);color:var(--dim);letter-spacing:.08em">0 / 2500</span>
         </div>
       </section>
 
-      <!-- DOKUMENTTYP -->
+      <!-- MODUS / DOKUMENTTYP -->
       <section class="panel" aria-labelledby="lbType">
         <span class="ptr" aria-hidden="true"></span>
         <span class="pbl" aria-hidden="true"></span>
         <header class="ph">
-          <span id="lbType"><span class="led a"></span>Dokumenttyp</span>
-          <span class="right">automatisch oder manuell</span>
+          <span id="lbType"><span class="led a"></span>Modus / Output-Typ</span>
+          <span class="right">Converter + PDF</span>
         </header>
         <div class="dtgrid" role="group" aria-label="Dokumenttyp wählen">
           <button class="dtbtn active" data-type="use-case-pdf" onclick="selectDocType(this)">Use-Case-PDF</button>
@@ -324,6 +340,35 @@
           <button class="dtbtn" data-type="analyse-pdf" onclick="selectDocType(this)">Analyse-PDF</button>
           <button class="dtbtn" data-type="checklisten-pdf" onclick="selectDocType(this)">Checklisten-PDF</button>
           <button class="dtbtn" data-type="portfolio-pdf" onclick="selectDocType(this)">Portfolio-PDF</button>
+        </div>
+      </section>
+
+      <!-- UNIVERSAL CONVERTER -->
+      <section class="panel" aria-labelledby="lbConvert">
+        <span class="ptr" aria-hidden="true"></span>
+        <span class="pbl" aria-hidden="true"></span>
+        <header class="ph">
+          <span id="lbConvert"><span class="led g"></span>Prompterator Umwandler</span>
+          <span class="right">Rohinput → Arbeitsoutput</span>
+        </header>
+        <button class="btngen" id="btnArtifact" onclick="handleGenerateArtifact()" disabled aria-label="Generate Artifact">
+          Generate Artifact
+        </button>
+        <p class="modehint">Erzeugt zuerst einen strukturierten Output im UI. PDF ist danach ein Export-Modus, nicht der einzige Produktmodus.</p>
+      </section>
+
+      <!-- OUTPUT CONSOLE -->
+      <section class="panel" aria-labelledby="lbOutput">
+        <span class="ptr" aria-hidden="true"></span>
+        <span class="pbl" aria-hidden="true"></span>
+        <header class="ph">
+          <span id="lbOutput"><span class="led g"></span>Output Console</span>
+          <span class="right" id="outputStatus">bereit</span>
+        </header>
+        <pre class="outbox" id="outputText"><span class="outempty">Noch kein Output. Rohinput eingeben und Generate Artifact klicken.</span></pre>
+        <div class="actionrow" style="margin-top:9px">
+          <button class="btncopy" id="btnCopyOutput" onclick="copyOutput()" disabled aria-label="Output kopieren">Copy Output</button>
+          <button class="btncopy" onclick="clearOutput()" aria-label="Output leeren">Clear Output</button>
         </div>
       </section>
 
@@ -347,12 +392,12 @@
         </select>
       </section>
 
-      <!-- PREVIEW -->
+      <!-- PDF PREVIEW -->
       <section class="panel" aria-labelledby="lbPreview">
         <span class="ptr" aria-hidden="true"></span>
         <span class="pbl" aria-hidden="true"></span>
         <header class="ph">
-          <span id="lbPreview"><span class="led g"></span>PDF Preview</span>
+          <span id="lbPreview"><span class="led"></span>PDF Preview</span>
           <span class="right" id="pvStatus">–</span>
         </header>
         <div class="pvmeta" id="pvMeta" style="display:none">
@@ -376,9 +421,9 @@
       <!-- ERROR -->
       <div class="errbar" id="errBar" role="alert"></div>
 
-      <!-- GENERATE -->
-      <button class="btngen" id="btnGenerate" onclick="generatePdf()" disabled aria-label="PDF erstellen">
-        PDF erstellen
+      <!-- PDF EXPORT -->
+      <button class="btngen" id="btnPdfGenerate" onclick="handleCreatePdf()" disabled aria-label="Als PDF erstellen">
+        Als PDF erstellen
       </button>
 
       <!-- DOWNLOAD -->
@@ -420,6 +465,7 @@ document.addEventListener("keydown",(e)=>{
 document.addEventListener("DOMContentLoaded",initPrivacy);
 
 const MSGS={
+  artifact:["Routing Input…","Detecting Problem Class…","Building Artifact…","Verifying Structure…","Finalizing Output…"],
   structure:["Routing Input…","Detecting Document Type…","Building PDF Structure…","Preparing Preview…"],
   pdf:["Loading PDF Style…","Rendering Document…","Applying Layout…","Building Download…","PDF Ready…"],
   error:["PDF creation interrupted.","Check input or retry."],
@@ -428,7 +474,7 @@ let loaderIv=null,loaderStep=0;
 function startLoader(type){
   const o=document.getElementById("loadOverlay"),m=document.getElementById("lmsg"),t=document.getElementById("ltype");
   const msgs=MSGS[type]||MSGS.structure;
-  const labels={structure:"ANALYSING",pdf:"GENERATING PDF",error:"ERROR"};
+  const labels={artifact:"GENERATING ARTIFACT",structure:"ANALYSING",pdf:"GENERATING PDF",error:"ERROR"};
   t.textContent=labels[type]||"PROCESSING";
   m.textContent=msgs[0];loaderStep=0;
   o.classList.add("on");
@@ -466,31 +512,38 @@ const PDF_STYLES=[
 ];
 
 const S={inputText:"",documentType:"use-case-pdf",selectedPdfStyle:"of-medneon",
-  pdfStructure:null,isAnalysing:false,isRendering:false,downloadUrl:null};
+  structuredOutput:"",pdfStructure:null,isGenerating:false,isAnalysing:false,isRendering:false,downloadUrl:null};
 
 document.getElementById("inputText").addEventListener("input",function(){
   S.inputText=this.value;
   document.getElementById("charCount").textContent=`${this.value.length} / 2500`;
-  S.pdfStructure=null;S.downloadUrl=null;
+  S.structuredOutput="";S.pdfStructure=null;S.downloadUrl=null;
   document.getElementById("btnDownload").classList.remove("v");
-  updatePreview(null);updateGate();clearErr();
+  updateOutput("");updatePreview(null);updateGate();clearErr();
 });
 function selectDocType(btn){
   document.querySelectorAll(".dtbtn").forEach(b=>b.classList.remove("active"));
-  btn.classList.add("active");S.documentType=btn.dataset.type;updateGate();
+  btn.classList.add("active");S.documentType=btn.dataset.type;
+  if(S.structuredOutput){S.pdfStructure=S.structuredOutput;updatePreview(S.pdfStructure);}
+  updateGate();
 }
-document.getElementById("pdfStyleSelect").addEventListener("change",function(){S.selectedPdfStyle=this.value;updateGate();});
+document.getElementById("pdfStyleSelect").addEventListener("change",function(){S.selectedPdfStyle=this.value;if(S.structuredOutput){updatePreview(S.structuredOutput);}updateGate();});
 
 function setGI(id,ok){
   const el=document.getElementById("g-"+id);if(!el)return;
   el.classList.toggle("ok",ok);el.classList.toggle("fail",!ok);
 }
 function gatePassed(){
-  const inp=S.inputText.trim().length>=20,typ=!!S.documentType,sty=!!S.selectedPdfStyle,str=!!S.pdfStructure;
+  const inp=S.inputText.trim().length>=3,typ=!!S.documentType,sty=!!S.selectedPdfStyle,str=!!S.pdfStructure;
   setGI("input",inp);setGI("type",typ);setGI("style",sty);setGI("structure",str);
   return inp&&typ&&sty&&str;
 }
-function updateGate(){document.getElementById("btnGenerate").disabled=!gatePassed();}
+function updateGate(){
+  const hasInput=S.inputText.trim().length>=3;
+  document.getElementById("btnArtifact").disabled=!hasInput||S.isGenerating;
+  document.getElementById("btnPdfGenerate").disabled=!gatePassed()||S.isRendering;
+  document.getElementById("btnCopyOutput").disabled=!S.structuredOutput;
+}
 
 function updatePreview(structure){
   const pc=document.getElementById("pvContent"),pm=document.getElementById("pvMeta"),ps=document.getElementById("pvStatus");
@@ -503,33 +556,69 @@ function updatePreview(structure){
   pc.textContent=structure.slice(0,900)+(structure.length>900?"…":"");
 }
 
-async function analyseInput(){
+function updateOutput(text){
+  const out=document.getElementById("outputText");
+  const status=document.getElementById("outputStatus");
+  if(!text){
+    out.innerHTML='<span class="outempty">Noch kein Output. Rohinput eingeben und Generate Artifact klicken.</span>';
+    status.textContent="bereit";
+    return;
+  }
+  out.textContent=text;
+  status.textContent="Output aktiv";
+}
+
+function converterPrompt(text){
+  const docType=DOCTYPE_LABELS[S.documentType]||S.documentType;
+  return [
+    "[MODUS: UNIVERSAL CONVERTER]",
+    `[OUTPUT-TYP: ${docType}]`,
+    "",
+    "Erzeuge zuerst einen strukturierten Arbeitsoutput im Prompterator.",
+    "PDF ist nur ein optionaler Exportmodus. Liefere verwertbare Abschnitte, klare Problemklasse, Zielbild, Ablauf, Risiken und nächste Schritte.",
+    "",
+    text
+  ].join("\n");
+}
+
+async function handleGenerateArtifact(){
   const text=S.inputText.trim();
-  if(text.length<20||S.isAnalysing)return;
-  S.isAnalysing=true;startLoader("structure");clearErr();
+  if(text.length<3||S.isGenerating)return;
+  S.isGenerating=true;startLoader("artifact");clearErr();
   try{
     const res=await fetch("/api/generate",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({raw_input:`[DOKUMENTTYP: ${DOCTYPE_LABELS[S.documentType]||S.documentType}]\n\n${text}`})
+      body:JSON.stringify({raw_input:converterPrompt(text)})
     });
     const data=await res.json();
     stopLoader();
     if(data.error){showErr(data.error);return;}
-    S.pdfStructure=data.result||"";
+    S.structuredOutput=data.result||"";
+    S.pdfStructure=S.structuredOutput;
+    updateOutput(S.structuredOutput);
     updatePreview(S.pdfStructure);updateGate();
-  }catch(err){stopLoaderErr("Analyse fehlgeschlagen: "+err.message);}
-  finally{S.isAnalysing=false;}
+  }catch(err){stopLoaderErr("Umwandlung fehlgeschlagen: "+err.message);}
+  finally{S.isGenerating=false;updateGate();}
 }
 
-async function generatePdf(){
+async function analyseInput(){
+  if(S.structuredOutput){return;}
+  await handleGenerateArtifact();
+}
+
+async function handleCreatePdf(){
+  if(!S.pdfStructure&&S.inputText.trim().length>=3){
+    await handleGenerateArtifact();
+  }
   if(!gatePassed())return;
   clearErr();S.isRendering=true;S.downloadUrl=null;
   document.getElementById("btnDownload").classList.remove("v");
   startLoader("pdf");
   try{
+    const content=S.structuredOutput||S.pdfStructure||S.inputText.trim();
     const res=await fetch("/api/pdf",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({title:"Prompterator PDF",content:S.pdfStructure,source:"prompterator",selectedPdfStyle:S.selectedPdfStyle})
+      body:JSON.stringify({title:"Prompterator PDF",content,source:"prompterator",selectedPdfStyle:S.selectedPdfStyle})
     });
     if(!res.ok){
       let msg="PDF-Export fehlgeschlagen.";
@@ -542,7 +631,7 @@ async function generatePdf(){
     document.getElementById("btnDownload").classList.add("v");
     document.getElementById("btnDownload").focus();
   }catch(err){stopLoaderErr(err.message||"PDF konnte nicht erstellt werden.");}
-  finally{S.isRendering=false;}
+  finally{S.isRendering=false;updateGate();}
 }
 
 function downloadPdf(){
@@ -551,16 +640,33 @@ function downloadPdf(){
   a.download="prompterator-output.pdf";document.body.appendChild(a);a.click();a.remove();
 }
 
+async function copyOutput(){
+  if(!S.structuredOutput){showErr("Noch kein Output vorhanden.");return;}
+  try{
+    await navigator.clipboard.writeText(S.structuredOutput);
+    document.getElementById("outputStatus").textContent="kopiert";
+    setTimeout(()=>{document.getElementById("outputStatus").textContent="Output aktiv";},1400);
+  }catch(_){
+    showErr("Copy nicht verfügbar. Bitte Output manuell markieren.");
+  }
+}
+
+function clearOutput(){
+  S.structuredOutput="";S.pdfStructure=null;S.downloadUrl=null;
+  document.getElementById("btnDownload").classList.remove("v");
+  updateOutput("");updatePreview(null);updateGate();clearErr();
+}
+
 let aTimer=null;
 document.getElementById("inputText").addEventListener("blur",function(){
-  if(S.inputText.trim().length>=20&&!S.pdfStructure&&!S.isAnalysing){
+  if(S.inputText.trim().length>=20&&!S.pdfStructure&&!S.isGenerating){
     clearTimeout(aTimer);aTimer=setTimeout(analyseInput,300);
   }
 });
 document.getElementById("inputText").addEventListener("keydown",function(e){
   if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
     e.preventDefault();
-    if(S.inputText.trim().length>=20&&!S.isAnalysing){clearTimeout(aTimer);analyseInput();}
+    if(S.inputText.trim().length>=3&&!S.isGenerating){clearTimeout(aTimer);handleGenerateArtifact();}
   }
 });
 

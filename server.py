@@ -46,6 +46,16 @@ ADMIN_TOKEN_MIN_LENGTH = int(os.environ.get("ADMIN_TOKEN_MIN_LENGTH", "32"))
 GENERATE_ENABLED = os.environ.get("GENERATE_ENABLED", "true").lower() == "true"
 REQUIRE_ORIGIN_FOR_GENERATE = os.environ.get("REQUIRE_ORIGIN_FOR_GENERATE", "true").lower() == "true"
 
+PUBLIC_PDF_STYLES = {
+    "of-medneon",
+    "corporate-executive",
+    "industrial-ops",
+    "academic-research",
+    "dark-tactical-operator",
+    "minimal-clean",
+    "ultra-boardroom",
+}
+
 BASE_URL = "https://www.prompterator.de"
 SEO_ROUTES = {
     "/ki-prompt-generator": "pages/ki-prompt-generator.html",
@@ -1969,19 +1979,23 @@ class Handler(BaseHTTPRequestHandler):
             if length > MAX_PDF_BODY_BYTES:
                 self._send_json(413, {"error": f"PDF-Request zu groß. Maximum: {MAX_PDF_BODY_BYTES} Bytes."})
                 return
-            if set(payload.keys()) - {"title", "content", "source"}:
+            if set(payload.keys()) - {"title", "content", "source", "selectedPdfStyle"}:
                 self._send_json(400, {"error": "Unerwartete Felder im PDF-Request"})
                 return
 
             title = str(payload.get("title", "Prompterator Use-Case Portfolio")).strip() or "Prompterator Use-Case Portfolio"
             content = str(payload.get("content", "")).strip()
             source = str(payload.get("source", "prompterator")).strip()
+            selected_pdf_style = str(payload.get("selectedPdfStyle", "of-medneon")).strip() or "of-medneon"
 
             if not content:
                 self._send_json(400, {"error": "content darf nicht leer sein"})
                 return
             if len(content) > MAX_PDF_CONTENT_CHARS:
                 self._send_json(413, {"error": f"content zu lang. Maximum: {MAX_PDF_CONTENT_CHARS} Zeichen."})
+                return
+            if selected_pdf_style not in PUBLIC_PDF_STYLES:
+                self._send_json(400, {"error": "Ungültiger PDF-Style"})
                 return
 
             pdf_bytes = build_pdf_portfolio(title, content, source)
