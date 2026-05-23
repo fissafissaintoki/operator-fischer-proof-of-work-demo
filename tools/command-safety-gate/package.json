@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "test": "node test-runner.js",
-    "check": "node check-command.js"
+    "check": "node check-command.js",
+    "coverage": "node coverage-report.js"
   },
   "keywords": [
     "ops-core",
