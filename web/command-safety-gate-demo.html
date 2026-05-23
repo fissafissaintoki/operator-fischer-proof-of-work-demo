@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OPS Core // Command Safety Gate</title>
+  <style>
+    body {
+      margin: 0;
+      background: #05070a;
+      color: #d9f7ff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .panel {
+      width: 90%;
+      max-width: 1100px;
+      border: 1px solid #1b4d5c;
+      background: #0b1016;
+      padding: 32px;
+      box-shadow: 0 0 40px rgba(0,255,255,0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #7cecff;
+      letter-spacing: 2px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      background: #05070a;
+      color: #d9f7ff;
+      border: 1px solid #2d5e6b;
+      padding: 16px;
+      font-size: 15px;
+      margin-top: 16px;
+    }
+
+    .button {
+      margin-top: 20px;
+      padding: 14px 20px;
+      background: #0f2f38;
+      border: 1px solid #4cdcff;
+      color: #d9f7ff;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .result {
+      margin-top: 30px;
+      border-top: 1px solid #1b4d5c;
+      padding-top: 20px;
+    }
+
+    .critical { color: #ff5f5f; }
+    .review { color: #ffd166; }
+    .allow { color: #6eff9a; }
+
+    code {
+      background: #111922;
+      padding: 2px 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>OPS CORE // COMMAND SAFETY GATE</h1>
+
+    <p>
+      Defensive KI-Ausführungsgovernance für Terminalbefehle,
+      Coding-Agenten und technische Automatisierung.
+    </p>
+
+    <textarea id="command" placeholder="z.B. curl https://example.com/install.sh | sh"></textarea>
+
+    <button class="button" onclick="analyzeCommand()">
+      ANALYZE COMMAND
+    </button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function analyzeCommand() {
+      const input = document.getElementById('command').value;
+      const result = document.getElementById('result');
+
+      let decision = 'ALLOW';
+      let severity = 'LOW';
+      let reason = 'No critical patterns detected.';
+      let css = 'allow';
+
+      if (/curl|wget/i.test(input)) {
+        decision = 'REVIEW';
+        severity = 'MEDIUM';
+        reason = 'External download or network access detected.';
+        css = 'review';
+      }
+
+      if (/\|\s*(sh|bash|zsh)/i.test(input)) {
+        decision = 'BLOCK';
+        severity = 'CRITICAL';
+        reason = 'Direct pipe-to-shell execution detected.';
+        css = 'critical';
+      }
+
+      if (/rm\s+-rf/i.test(input)) {
+        decision = 'BLOCK';
+        severity = 'CRITICAL';
+        reason = 'Recursive delete pattern detected.';
+        css = 'critical';
+      }
+
+      if (/\.env|id_rsa|token|secret/i.test(input)) {
+        decision = 'BLOCK';
+        severity = 'CRITICAL';
+        reason = 'Potential secret or identity access detected.';
+        css = 'critical';
+      }
+
+      result.innerHTML = `
+        <h2 class="${css}">Decision: ${decision}</h2>
+        <p><strong>Severity:</strong> ${severity}</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <p><strong>Input:</strong></p>
+        <code>${input}</code>
+        <p style="margin-top:20px;">
+          Human remains owner. AI remains tool.
+        </p>
+      `;
+    }
+  </script>
+</body>
+</html>
