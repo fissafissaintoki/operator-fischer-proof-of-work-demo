@@ -1,0 +1,20 @@
+{
+  "name": "command-safety-gate",
+  "version": "1.0.0",
+  "description": "OPS Core defensive command risk classification tool",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node test-runner.js",
+    "check": "node check-command.js"
+  },
+  "keywords": [
+    "ops-core",
+    "command-safety",
+    "ai-governance",
+    "coding-agent",
+    "human-in-the-loop"
+  ],
+  "author": "Operator Fischer",
+  "license": "UNLICENSED"
+}
