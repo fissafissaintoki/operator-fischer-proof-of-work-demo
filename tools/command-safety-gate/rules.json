@@ -1,0 +1,41 @@
+{
+  "name": "Command Safety Gate Ruleset",
+  "version": "1.0.0",
+  "owner": "Operator Fischer",
+  "layer": "OPS Core / KnowledgeOS",
+  "principle": "Mensch bleibt Owner. KI bleibt Werkzeug.",
+  "decisions": ["ALLOW", "REVIEW", "SANDBOX", "REPLACE", "BLOCK"],
+  "riskClasses": {
+    "C0": "Lesend / harmlos",
+    "C1": "Lokal analysierend",
+    "C2": "Lokal verändernd",
+    "C3": "Systemnah / Rechteänderung",
+    "C4": "Netzwerk / Supply Chain",
+    "C5": "Destruktiv / obfuskiert / exfiltrativ"
+  },
+  "patterns": [
+    {"id":"read_only_pwd","regex":"^\\s*pwd\\s*$","riskClass":"C0","score":0,"decision":"ALLOW","reason":"Lesender Arbeitsverzeichnis-Check"},
+    {"id":"read_only_ls","regex":"^\\s*ls(\\s|$)","riskClass":"C0","score":0,"decision":"ALLOW","reason":"Lesender Verzeichnis-Check"},
+    {"id":"git_status","regex":"^\\s*git\\s+status\\s*$","riskClass":"C0","score":0,"decision":"ALLOW","reason":"Lesender Git-Status"},
+    {"id":"version_check","regex":"\\b(--version|-v|version)\\b","riskClass":"C1","score":1,"decision":"ALLOW","reason":"Versions- oder Diagnosecheck"},
+    {"id":"test_command","regex":"^\\s*(npm|pnpm|yarn)\\s+test\\b|^\\s*python\\s+-m\\s+pytest\\b","riskClass":"C1","score":1,"decision":"ALLOW","reason":"Lokaler Testlauf"},
+    {"id":"package_install","regex":"\\b(npm|pnpm|yarn|pip|brew)\\s+(install|add)\\b","riskClass":"C4","score":4,"decision":"REVIEW","reason":"Paketinstallation / Supply-Chain-Risiko"},
+    {"id":"external_download","regex":"\\b(curl|wget)\\b","riskClass":"C4","score":4,"decision":"REVIEW","reason":"Externer Download oder Netzwerkzugriff"},
+    {"id":"pipe_to_shell","regex":"\\b(curl|wget)\\b.*\\|\\s*(sh|bash|zsh)","riskClass":"C5","score":10,"decision":"BLOCK","reason":"Fremdcode wird direkt in eine Shell gepiped"},
+    {"id":"sudo","regex":"(^|\\s)sudo(\\s|$)","riskClass":"C3","score":3,"decision":"REVIEW","reason":"Adminrechte erforderlich"},
+    {"id":"recursive_delete","regex":"rm\\s+(-[a-zA-Z]*r[a-zA-Z]*f|-rf|-fr)\\b","riskClass":"C5","score":9,"decision":"BLOCK","reason":"Rekursive Löschung mit hohem Datenverlust-Risiko"},
+    {"id":"wide_chmod","regex":"chmod\\s+(-R\\s+)?777\\b","riskClass":"C5","score":8,"decision":"BLOCK","reason":"Breite Rechtevergabe schwächt Sicherheitsmodell"},
+    {"id":"base64_exec","regex":"base64\\s+(-d|--decode).*\\|\\s*(sh|bash|zsh|python|node)","riskClass":"C5","score":10,"decision":"BLOCK","reason":"Obfuskierte Payload wird direkt ausgeführt"},
+    {"id":"eval","regex":"(^|\\s)eval(\\s|$)","riskClass":"C5","score":8,"decision":"BLOCK","reason":"Dynamische schwer prüfbare Ausführung"},
+    {"id":"launch_persistence","regex":"(launchctl|LaunchAgents|LaunchDaemons|crontab)","riskClass":"C5","score":8,"decision":"BLOCK","reason":"Persistenz- oder Autostart-Risiko"},
+    {"id":"secret_access","regex":"(\\.env|~/.ssh|id_rsa|id_ed25519|Keychain|security\\s+find-generic-password|API_KEY|TOKEN|SECRET)","riskClass":"C5","score":9,"decision":"BLOCK","reason":"Secret-, Token- oder Identitätsrisiko"},
+    {"id":"network_upload","regex":"\\b(scp|rsync|ftp|sftp)\\b.*(\\.env|~/.ssh|id_rsa|id_ed25519|token|secret)","riskClass":"C5","score":10,"decision":"BLOCK","reason":"Potenzielle Exfiltration sensibler Daten"},
+    {"id":"gatekeeper_bypass","regex":"xattr\\s+.*com\\.apple\\.quarantine|spctl\\s+--master-disable","riskClass":"C5","score":8,"decision":"BLOCK","reason":"macOS-Sicherheitsmechanismus wird geschwächt"}
+  ],
+  "scoreBands": [
+    {"min":0,"max":2,"decision":"ALLOW","label":"niedrig"},
+    {"min":3,"max":5,"decision":"REVIEW","label":"mittel"},
+    {"min":6,"max":8,"decision":"SANDBOX","label":"hoch"},
+    {"min":9,"max":999,"decision":"BLOCK","label":"kritisch"}
+  ]
+}
