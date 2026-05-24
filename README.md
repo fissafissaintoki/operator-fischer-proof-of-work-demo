@@ -89,6 +89,24 @@ Siehe:
 
 ---
 
+## OPS Core / KnowledgeOS Architecture Layer
+
+Prompterator ist nicht nur eine App, sondern ein dokumentiertes Arbeits-,
+Governance- und Artefaktsystem. OPS Core beschreibt den operativen Runtime-,
+Routing- und Governance-Layer. KnowledgeOS beschreibt den kuratierten Skill-,
+Artefakt-, Notiz- und Wiederverwendungslayer.
+
+Siehe:
+
+- `docs/OPS-CORE-KNOWLEDGEOS-GITHUB-BUILD.md` —
+  Architekturrahmen fuer OPS Core, KnowledgeOS und Prompterator als Proof of Work.
+- `knowledgeos/SKILL-REGISTRY.md` —
+  wiederverwendbare Skill-Cluster, Artefaktmuster und Operator-Faehigkeiten.
+- `docs/CODING-AGENT-HANDOFF.md` —
+  sichere Uebergabevorlage fuer Codex, Claude, GitHub-Agenten und andere Coding-Assistenten.
+
+---
+
 ## Technische Hinweise
 
 - Backend: Python `http.server`, OpenAI-API, ReportLab (PDF).
