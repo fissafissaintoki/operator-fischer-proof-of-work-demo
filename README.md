@@ -49,6 +49,7 @@ Ausgaben:
 - **Masterprompt** (wiederverwendbare Arbeitsanweisung, separat anzeigbar)
 - **Executive PDF-Dossier** (ReportLab, Download)
 - **HTML-Dossier** (High-End-Layout, Browser-Preview unter `/dossier-preview`)
+- **Virtual Warehouse Playground** (spielbare HTML-Demo unter `pages/virtual-warehouse.html`)
 
 ---
 
@@ -86,6 +87,8 @@ Siehe:
   Schichtenmodell und Agentenlogik.
 - `docs/PDF-HTML-CSS-DOSSIER-TEMPLATE-BRIEF.md` —
   Beziehung zwischen PDF- und HTML-Pfad.
+- `pages/virtual-warehouse.html` —
+  spielbare Virtual-Warehouse-Demo fuer Prozesslogik, Lagerstatus, Governance und Decision Gates.
 
 ---
 
@@ -106,6 +109,8 @@ Siehe:
   public-safe Use-Case-Katalog fuer Prozess-KI, Logistik, Governance und Beratungs-Intake.
 - `docs/KIBERATUNG-STYLE-USE-CASE-ONEPAGER.md` —
   kiberatung.de-orientierter Onepager mit GitHub-Link, Skill-Match und Beratungsnutzen.
+- `docs/CLAUDE-CODEX-ORCHESTRATION.md` —
+  Handoff fuer Claude/Codex-Orchestrierung unter OPS Core.
 - `knowledgeos/SKILL-REGISTRY.md` —
   wiederverwendbare Skill-Cluster, Artefaktmuster und Operator-Faehigkeiten.
 - `docs/CODING-AGENT-HANDOFF.md` —
