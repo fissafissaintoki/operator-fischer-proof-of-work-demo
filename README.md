@@ -102,6 +102,8 @@ Siehe:
   Architekturrahmen fuer OPS Core, KnowledgeOS und Prompterator als Proof of Work.
 - `docs/GOVERNANCE-GATE.md` —
   Pruef- und Freigabelayer mit Risiko-Klassen, Public-Safe-Pruefung und Command Safety Gate.
+- `docs/PROCESS-AI-USE-CASE-CATALOG.md` —
+  public-safe Use-Case-Katalog fuer Prozess-KI, Logistik, Governance und Beratungs-Intake.
 - `knowledgeos/SKILL-REGISTRY.md` —
   wiederverwendbare Skill-Cluster, Artefaktmuster und Operator-Faehigkeiten.
 - `docs/CODING-AGENT-HANDOFF.md` —
