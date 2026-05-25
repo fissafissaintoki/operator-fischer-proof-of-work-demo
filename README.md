@@ -50,6 +50,7 @@ Ausgaben:
 - **Executive PDF-Dossier** (ReportLab, Download)
 - **HTML-Dossier** (High-End-Layout, Browser-Preview unter `/dossier-preview`)
 - **Virtual Warehouse Playground** (spielbare HTML-Demo unter `pages/virtual-warehouse.html`)
+- **GlowGlove Virtual Test Lab** (Wearable-Picking-Demo unter `pages/glowglove-testlab.html`)
 
 ---
 
@@ -89,6 +90,8 @@ Siehe:
   Beziehung zwischen PDF- und HTML-Pfad.
 - `pages/virtual-warehouse.html` —
   spielbare Virtual-Warehouse-Demo fuer Prozesslogik, Lagerstatus, Governance und Decision Gates.
+- `pages/glowglove-testlab.html` —
+  spielbare Wearable-Picking-Demo fuer GlowGlove-Logik, LED-Feedback, Pickbestaetigung und Trainingsdaten.
 
 ---
 
