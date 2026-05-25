@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>GlowGlove Virtual Test Lab · OPS Core</title>
+  <style>
+    :root{
+      --bg:#060b10;
+      --panel:#0c1721;
+      --panel2:#111f2c;
+      --line:#293c4e;
+      --text:#edf7fb;
+      --muted:#91aebe;
+      --gold:#d6a927;
+      --green:#39ff88;
+      --red:#ff3c4e;
+      --blue:#2bd3ff;
+      --amber:#ffb23c;
+      --black:#05080c;
+      --rubber:#11171f;
+      --glove:#a41420;
+      --glove2:#e32636;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 15% 8%,rgba(43,211,255,.16),transparent 35%),
+        radial-gradient(circle at 88% 14%,rgba(255,60,78,.18),transparent 30%),
+        radial-gradient(circle at 60% 78%,rgba(57,255,136,.09),transparent 38%),
+        linear-gradient(135deg,#03070b,#071018 48%,#0c1118);
+    }
+    header{
+      padding:24px 28px 16px;
+      border-bottom:1px solid rgba(145,174,190,.16);
+      background:rgba(6,11,16,.82);
+      backdrop-filter:blur(12px);
+      position:sticky;
+      top:0;
+      z-index:10;
+    }
+    .headrow{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
+    .eyebrow{font:900 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+    h1{font-size:30px;line-height:1.03;margin:0;letter-spacing:-.04em}
+    .sub{margin:9px 0 0;color:var(--muted);font-size:14px;line-height:1.5;max-width:960px}
+    .badge{font:900 10px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green);border:1px solid rgba(57,255,136,.35);border-radius:999px;padding:9px 12px;background:rgba(57,255,136,.08);box-shadow:0 0 22px rgba(57,255,136,.12)}
+    main{max-width:1560px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1.15fr .85fr;gap:18px}
+    .panel{border:1px solid rgba(145,174,190,.17);background:rgba(12,23,33,.9);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden}
+    .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 17px;border-bottom:1px solid rgba(145,174,190,.14);background:rgba(17,31,44,.62)}
+    .title{font:900 12px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#eafaff}.note{font-size:12px;color:var(--muted)}
+    .lab{
+      position:relative;
+      min-height:720px;
+      overflow:hidden;
+      background:
+        linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px),
+        linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+        radial-gradient(circle at 50% 20%,rgba(43,211,255,.08),transparent 45%),
+        #071019;
+      background-size:44px 44px,44px 44px,auto,auto;
+    }
+    .warehouse-perspective{position:absolute;inset:0;opacity:.78;background:linear-gradient(90deg,rgba(214,169,39,.08),transparent 18%,transparent 82%,rgba(214,169,39,.08)),linear-gradient(180deg,transparent 0%,rgba(0,0,0,.3) 100%)}
+    .aisle{position:absolute;left:10%;right:10%;top:9%;height:72%;border-left:2px solid rgba(214,169,39,.18);border-right:2px solid rgba(214,169,39,.18);transform:perspective(760px) rotateX(58deg);transform-origin:top center;box-shadow:inset 0 0 80px rgba(43,211,255,.08)}
+    .shelf{position:absolute;top:40px;width:120px;height:520px;background:repeating-linear-gradient(180deg,#142435 0 38px,#20384d 38px 44px);border:1px solid rgba(145,174,190,.24);box-shadow:inset 0 0 35px rgba(0,0,0,.4)}
+    .shelf.left{left:38px}.shelf.right{right:38px}.shelf::before{content:"RACK";position:absolute;top:10px;left:18px;font:900 10px ui-monospace,monospace;color:rgba(214,169,39,.75);letter-spacing:.18em}.pick-arrow{position:absolute;left:36%;top:47%;width:28%;height:32px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.7),transparent);filter:drop-shadow(0 0 14px rgba(255,255,255,.3));animation:pulseArrow 1.4s infinite}.pick-arrow::after{content:"";position:absolute;right:0;top:-9px;border-left:24px solid rgba(255,255,255,.72);border-top:25px solid transparent;border-bottom:25px solid transparent}@keyframes pulseArrow{0%,100%{opacity:.35;transform:translateX(-8px)}50%{opacity:.95;transform:translateX(10px)}}
+    .glove-stage{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:min(780px,92%);height:445px;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:end;z-index:2}
+    .glove-card{position:relative;height:420px;border:1px solid rgba(145,174,190,.18);border-radius:24px;background:linear-gradient(180deg,rgba(17,31,44,.82),rgba(6,12,18,.88));box-shadow:0 24px 70px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07);overflow:hidden}
+    .glove-card::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,rgba(255,60,78,.16),transparent 44%),radial-gradient(circle at 50% 20%,rgba(57,255,136,.12),transparent 28%);pointer-events:none}.glove-label{position:absolute;top:16px;left:18px;font:900 10px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+    .hand{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);width:250px;height:325px}.palm{position:absolute;left:50%;bottom:32px;transform:translateX(-50%);width:150px;height:190px;background:linear-gradient(135deg,var(--glove),#691018 55%,#28070c);border:4px solid #05080c;border-radius:54px 54px 36px 36px;box-shadow:inset 14px 0 28px rgba(255,255,255,.09),inset -16px -18px 35px rgba(0,0,0,.5),0 0 26px rgba(255,60,78,.22)}.palm::after{content:"";position:absolute;left:23px;right:23px;top:72px;height:50px;border-radius:18px;background:linear-gradient(180deg,#0c141c,#05080c);border:1px solid rgba(43,211,255,.35)}
+    .finger{position:absolute;bottom:199px;width:40px;background:linear-gradient(90deg,#06090d 0 19%,var(--glove2) 20% 70%,#500a12 100%);border:3px solid #05080c;border-radius:22px 22px 16px 16px;box-shadow:inset 5px 0 12px rgba(255,255,255,.1),0 0 18px rgba(255,60,78,.16)}
+    .f1{left:42px;height:128px;transform:rotate(-9deg)}.f2{left:84px;height:158px;transform:rotate(-3deg)}.f3{left:127px;height:152px;transform:rotate(4deg)}.f4{left:170px;height:118px;transform:rotate(10deg)}.thumb{position:absolute;left:18px;bottom:113px;width:52px;height:112px;background:linear-gradient(90deg,#070b10,var(--glove2),#5d0d14);border:3px solid #05080c;border-radius:28px 24px 20px 28px;transform:rotate(-42deg);box-shadow:0 0 18px rgba(255,60,78,.18)}
+    .wrist{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:178px;height:72px;background:linear-gradient(180deg,#121b25,#060a0f);border:3px solid #05080c;border-radius:20px;box-shadow:0 0 22px rgba(43,211,255,.18)}.display{position:absolute;left:26px;right:26px;top:14px;height:38px;border-radius:8px;background:#041018;border:1px solid rgba(43,211,255,.5);box-shadow:inset 0 0 15px rgba(43,211,255,.16),0 0 18px rgba(43,211,255,.15);font:900 10px/1.2 ui-monospace,monospace;color:var(--green);display:flex;align-items:center;justify-content:center;text-align:center;white-space:pre-line}
+    .led{position:absolute;width:15px;height:15px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green),0 0 28px rgba(57,255,136,.45);border:2px solid rgba(255,255,255,.38)}.led.l1{left:72px;bottom:148px}.led.l2{left:117px;bottom:178px}.led.l3{left:158px;bottom:147px}.led.l4{left:128px;bottom:103px}.led.red{background:var(--red);box-shadow:0 0 12px var(--red),0 0 28px rgba(255,60,78,.45)}.led.amber{background:var(--amber);box-shadow:0 0 12px var(--amber),0 0 28px rgba(255,178,60,.45)}.led.blue{background:var(--blue);box-shadow:0 0 12px var(--blue),0 0 28px rgba(43,211,255,.45)}
+    .sensor-ring{position:absolute;left:50%;top:38%;width:118px;height:118px;transform:translate(-50%,-50%);border:1px solid rgba(57,255,136,.24);border-radius:50%;animation:ring 2.2s infinite}.sensor-ring:nth-child(2){animation-delay:.6s}.sensor-ring:nth-child(3){animation-delay:1.2s}@keyframes ring{0%{opacity:.8;transform:translate(-50%,-50%) scale(.52)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.55)}}
+    .overlay-hud{position:absolute;left:24px;top:20px;width:250px;z-index:3}.hud-card{background:rgba(4,10,15,.78);border:1px solid rgba(43,211,255,.24);border-radius:14px;padding:13px;margin-bottom:10px;box-shadow:0 0 28px rgba(43,211,255,.08)}.hud-label{font:900 9px ui-monospace,monospace;color:var(--gold);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}.hud-value{font-size:15px;font-weight:900}.hud-small{font-size:12px;color:var(--muted);line-height:1.4;margin-top:4px}
+    .controls{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px;border-bottom:1px solid rgba(145,174,190,.14)}button{appearance:none;border:1px solid rgba(145,174,190,.22);border-radius:13px;padding:12px;background:linear-gradient(180deg,#172a3a,#0d1d2a);color:var(--text);font-weight:900;text-align:left;cursor:pointer;transition:.15s transform,.15s border-color}button small{display:block;color:var(--muted);margin-top:4px;font-weight:650;line-height:1.35}button:hover{transform:translateY(-1px);border-color:var(--blue)}
+    .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:14px}.metric{background:rgba(255,255,255,.035);border:1px solid rgba(145,174,190,.15);border-radius:15px;padding:13px}.metric-label{font:900 10px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.metric-value{font-size:28px;font-weight:950;margin-top:6px;letter-spacing:-.04em}.good{color:var(--green)}.warn{color:var(--amber)}.risk{color:var(--red)}.blue{color:var(--blue)}
+    .console{padding:14px;border-top:1px solid rgba(145,174,190,.14)}.scanbox{min-height:176px;background:#050b10;border:1px solid rgba(57,255,136,.23);border-radius:15px;padding:14px;white-space:pre-wrap;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:#c6ffe0;box-shadow:inset 0 0 24px rgba(57,255,136,.06)}.events{padding:14px;border-top:1px solid rgba(145,174,190,.14);max-height:248px;overflow:auto}.event{display:grid;grid-template-columns:74px 1fr auto;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid rgba(145,174,190,.1);font-size:12px}.event:last-child{border-bottom:0}.tag{font:900 9px ui-monospace,monospace;border-radius:999px;padding:5px 7px;text-align:center}.tag.release{color:var(--green);background:rgba(57,255,136,.12)}.tag.review{color:var(--amber);background:rgba(255,178,60,.13)}.tag.block{color:var(--red);background:rgba(255,60,78,.12)}.time{color:var(--muted);font-family:ui-monospace,monospace}.footer-note{padding:13px 15px;border-top:1px solid rgba(145,174,190,.14);background:rgba(6,11,16,.45);font-size:12px;line-height:1.45;color:var(--muted)}
+    @media(max-width:1080px){main{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(4,1fr)}.lab{min-height:650px}.glove-stage{height:410px}.glove-card{height:390px}.hand{transform:translateX(-50%) scale(.9);transform-origin:bottom center}.overlay-hud{position:relative;width:auto;margin:14px;left:auto;top:auto}}
+    @media(max-width:740px){header{padding:18px}.controls,.metrics{grid-template-columns:1fr}.glove-stage{grid-template-columns:1fr;position:relative;left:auto;bottom:auto;transform:none;width:auto;height:auto;padding:18px}.glove-card{height:380px}.lab{min-height:auto}.shelf,.aisle,.pick-arrow{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="headrow">
+      <div>
+        <div class="eyebrow">Operational AI / Wearable Picking</div>
+        <h1>GlowGlove Virtual Test Lab</h1>
+        <p class="sub">Interaktive Portfolio-Demo fuer Wearable Picking: LED-Feedback, Wrist-Display, Pickbestaetigung, Fehlpickwarnung, Trainingsdaten-Labeling und OPS-Core-Governance.</p>
+      </div>
+      <div class="badge">Demo Mode</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-head"><div class="title">Virtueller Handschuh-Test</div><div class="note">Optik: rot/schwarz, LED-Status, Lagergang, Display</div></div>
+      <div class="lab">
+        <div class="warehouse-perspective"></div>
+        <div class="shelf left"></div><div class="shelf right"></div><div class="aisle"></div><div class="pick-arrow"></div>
+        <div class="overlay-hud">
+          <div class="hud-card"><div class="hud-label">Aktiver Auftrag</div><div class="hud-value" id="hudOrder">AZ-630 · Slot B-14</div><div class="hud-small">Menge 4 · MHD/FIFO pruefen · Pick bestaetigen</div></div>
+          <div class="hud-card"><div class="hud-label">OPS Core Gate</div><div class="hud-value" id="hudGate">REVIEW READY</div><div class="hud-small">Menschliche Freigabe bleibt erforderlich.</div></div>
+        </div>
+        <div class="glove-stage">
+          <div class="glove-card">
+            <div class="glove-label">Left Glove · Navigation</div>
+            <div class="sensor-ring"></div><div class="sensor-ring"></div><div class="sensor-ring"></div>
+            <div class="hand" id="leftHand">
+              <div class="finger f1"></div><div class="finger f2"></div><div class="finger f3"></div><div class="finger f4"></div><div class="thumb"></div><div class="palm"></div><div class="wrist"><div class="display" id="leftDisplay">GO\nB-14</div></div><span class="led l1"></span><span class="led l2 blue"></span><span class="led l3"></span><span class="led l4"></span>
+            </div>
+          </div>
+          <div class="glove-card">
+            <div class="glove-label">Right Glove · Pick Confirm</div>
+            <div class="sensor-ring"></div><div class="sensor-ring"></div><div class="sensor-ring"></div>
+            <div class="hand" id="rightHand">
+              <div class="finger f1"></div><div class="finger f2"></div><div class="finger f3"></div><div class="finger f4"></div><div class="thumb"></div><div class="palm"></div><div class="wrist"><div class="display" id="rightDisplay">PICK\n4 PCS</div></div><span class="led l1"></span><span class="led l2"></span><span class="led l3 amber"></span><span class="led l4"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-head"><div class="title">Test Controls</div><div class="note">Wearable Picking simulieren</div></div>
+      <div class="controls">
+        <button onclick="navTest()">Navigation testen<small>Gang / Fach / Slot anzeigen</small></button>
+        <button onclick="pickConfirm()">Pick bestaetigen<small>LED gruen, Display OK, Event speichern</small></button>
+        <button onclick="misPick()">Fehlpick ausloesen<small>LED rot, Vibration, Review Gate</small></button>
+        <button onclick="coldAlert()">Cold-Chain Hinweis<small>Temperaturzone / QS-Hinweis</small></button>
+        <button onclick="trainingLabel()">Trainingsdaten labeln<small>Eventklasse fuer KI-Dataset</small></button>
+        <button onclick="resetLab()">Reset<small>Neuer Auftrag / neutraler Status</small></button>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">Picks</div><div class="metric-value good" id="mPicks">0</div></div>
+        <div class="metric"><div class="metric-label">Accuracy</div><div class="metric-value blue" id="mAcc">100%</div></div>
+        <div class="metric"><div class="metric-label">Reviews</div><div class="metric-value warn" id="mRev">0</div></div>
+        <div class="metric"><div class="metric-label">Labels</div><div class="metric-value good" id="mLab">0</div></div>
+      </div>
+      <div class="console"><div class="title" style="margin-bottom:10px">Scanner / Wearable Output</div><div class="scanbox" id="console">READY\nDEVICE: GlowGlove Virtual Pair\nORDER: AZ-630 / Slot B-14 / Qty 4\nGATE: Owner Freigabe bleibt erforderlich.</div></div>
+      <div class="events" id="events"></div>
+      <div class="footer-note">Public-safe Demo. Kein echter Herstellerbetrieb, keine echten Lagerdaten, keine personenbezogene Leistungskontrolle. Zweck: Prozesslogik, UX-Idee und Governance sichtbar machen.</div>
+    </aside>
+  </main>
+
+<script>
+  const consoleBox=document.getElementById('console');
+  const events=document.getElementById('events');
+  const leftDisplay=document.getElementById('leftDisplay');
+  const rightDisplay=document.getElementById('rightDisplay');
+  const hudOrder=document.getElementById('hudOrder');
+  const hudGate=document.getElementById('hudGate');
+  const orders=['AZ-630 · Slot B-14','VK-219 · Slot A-07','FD-442 · Slot C-22','TK-118 · Slot K-03'];
+  let picks=0,reviews=0,labels=0,errors=0;
+  function now(){return new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+  function add(tag,text){const cls=tag==='BLOCK'?'block':tag==='REVIEW'?'review':'release';events.insertAdjacentHTML('afterbegin',`<div class="event"><span class="tag ${cls}">${tag}</span><span>${text}</span><span class="time">${now()}</span></div>`)}
+  function setLED(mode){document.querySelectorAll('.led').forEach((el,i)=>{el.classList.remove('red','amber','blue'); if(mode==='ok'){} if(mode==='warn'&&i%3===0)el.classList.add('amber'); if(mode==='risk'&&i%2===0)el.classList.add('red'); if(mode==='nav'&&i%2===1)el.classList.add('blue');});}
+  function update(){document.getElementById('mPicks').textContent=picks;document.getElementById('mRev').textContent=reviews;document.getElementById('mLab').textContent=labels;const total=picks+errors;const acc=total?Math.max(0,Math.round((picks/total)*100)):100;document.getElementById('mAcc').textContent=acc+'%'}
+  function navTest(){setLED('nav');const order=orders[Math.floor(Math.random()*orders.length)];hudOrder.textContent=order;leftDisplay.textContent='GO\n'+order.split('Slot ')[1];rightDisplay.textContent='WAIT\nSCAN';hudGate.textContent='NAVIGATION';consoleBox.textContent='NAVIGATION TEST\nORDER: '+order+'\nOUTPUT: Richtung, Slot und Pickmenge anzeigen.\nSTATUS: Nutzer zum richtigen Fach fuehren.';add('RELEASE','Navigation angezeigt · Slotfuehrung aktiv');update()}
+  function pickConfirm(){setLED('ok');picks++;leftDisplay.textContent='OK\nSLOT';rightDisplay.textContent='PICK\nDONE';hudGate.textContent='RELEASE';consoleBox.textContent='PICK CONFIRMATION\nSCAN: Slot plausibel.\nMENGE: bestaetigt.\nLED: gruen.\nOUTPUT: Pick abgeschlossen, Event gespeichert.';add('RELEASE','Pick bestaetigt · Event als OK gespeichert');update()}
+  function misPick(){setLED('risk');errors++;reviews++;leftDisplay.textContent='STOP\nWRONG';rightDisplay.textContent='ERR\nCHECK';hudGate.textContent='REVIEW';consoleBox.textContent='FEHLPICKWARNUNG\nSCAN: Artikel/Slot passt nicht zum Auftrag.\nLED: rot.\nHAPTIK: Warnsignal.\nGATE: REVIEW durch menschlichen Owner.';add('REVIEW','Fehlpick erkannt · Review Gate aktiv');update()}
+  function coldAlert(){setLED('warn');reviews++;leftDisplay.textContent='TEMP\nZONE';rightDisplay.textContent='QS\nCHECK';hudGate.textContent='QS REVIEW';consoleBox.textContent='COLD-CHAIN HINWEIS\nZONE: temperaturgefuehrte Ware.\nCHECK: Zeitfenster / Temperatur / MHD.\nGATE: QS-Pruefung vor Freigabe.';add('REVIEW','Cold-Chain Hinweis · QS-Pruefung erforderlich');update()}
+  function trainingLabel(){labels++;setLED('ok');leftDisplay.textContent='LABEL\nOK';rightDisplay.textContent='DATA\nSAFE';hudGate.textContent='DATASET';consoleBox.textContent='TRAININGSDATEN LABELING\nEVENT: anonymisierter Prozessfall.\nLABEL: ok / warn / risk / review.\nPUBLIC-SAFE: keine Personen, keine Kundendaten, keine echten Barcodes.\nOUTPUT: Beispiel fuer spaeteres KI-Dataset.';add('RELEASE','Trainingsdatenfall anonym gelabelt');update()}
+  function resetLab(){picks=0;reviews=0;labels=0;errors=0;setLED('nav');leftDisplay.textContent='GO\nB-14';rightDisplay.textContent='PICK\n4 PCS';hudOrder.textContent='AZ-630 · Slot B-14';hudGate.textContent='REVIEW READY';events.innerHTML='';consoleBox.textContent='READY\nDEVICE: GlowGlove Virtual Pair\nORDER: AZ-630 / Slot B-14 / Qty 4\nGATE: Owner Freigabe bleibt erforderlich.';add('RELEASE','GlowGlove Test Lab initialisiert');update()}
+  resetLab();
+</script>
+</body>
+</html>
