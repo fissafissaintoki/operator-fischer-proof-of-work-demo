@@ -51,6 +51,7 @@ Ausgaben:
 - **HTML-Dossier** (High-End-Layout, Browser-Preview unter `/dossier-preview`)
 - **Virtual Warehouse Playground** (spielbare HTML-Demo unter `pages/virtual-warehouse.html`)
 - **GlowGlove Virtual Test Lab** (Wearable-Picking-Demo unter `pages/glowglove-testlab.html`)
+- **ARC2 Cognitive Lab** (lokales JSON-/Grid-Labor unter `pages/arc2-cognitive-lab.html`)
 
 ---
 
@@ -92,6 +93,8 @@ Siehe:
   spielbare Virtual-Warehouse-Demo fuer Prozesslogik, Lagerstatus, Governance und Decision Gates.
 - `pages/glowglove-testlab.html` —
   spielbare Wearable-Picking-Demo fuer GlowGlove-Logik, LED-Feedback, Pickbestaetigung und Trainingsdaten.
+- `pages/arc2-cognitive-lab.html` —
+  lokales ARC2-/Grid-Labor fuer JSON-Tasks, Visualisierung, Hypothesen und Primitive Checks.
 
 ---
 
@@ -114,6 +117,8 @@ Siehe:
   kiberatung.de-orientierter Onepager mit GitHub-Link, Skill-Match und Beratungsnutzen.
 - `docs/CLAUDE-CODEX-ORCHESTRATION.md` —
   Handoff fuer Claude/Codex-Orchestrierung unter OPS Core.
+- `docs/CODEX-HANDOFF-WAREHOUSE-DRIVE-SIMULATOR.md` —
+  Handoff fuer einen spielbaren Warehouse Drive Simulator auf Basis abstrahierter Lager-Video-Merkmale.
 - `knowledgeos/SKILL-REGISTRY.md` —
   wiederverwendbare Skill-Cluster, Artefaktmuster und Operator-Faehigkeiten.
 - `docs/CODING-AGENT-HANDOFF.md` —
