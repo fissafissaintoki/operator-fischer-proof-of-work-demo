@@ -100,6 +100,8 @@ Siehe:
 
 - `docs/OPS-CORE-KNOWLEDGEOS-GITHUB-BUILD.md` —
   Architekturrahmen fuer OPS Core, KnowledgeOS und Prompterator als Proof of Work.
+- `docs/GOVERNANCE-GATE.md` —
+  Pruef- und Freigabelayer mit Risiko-Klassen, Public-Safe-Pruefung und Command Safety Gate.
 - `knowledgeos/SKILL-REGISTRY.md` —
   wiederverwendbare Skill-Cluster, Artefaktmuster und Operator-Faehigkeiten.
 - `docs/CODING-AGENT-HANDOFF.md` —
