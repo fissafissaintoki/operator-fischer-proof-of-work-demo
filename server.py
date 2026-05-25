@@ -72,6 +72,8 @@ SEO_ROUTES = {
     "/operator-fischer-method": "pages/operator-fischer-method.html",
     "/impressum": "pages/impressum.html",
     "/datenschutz": "pages/datenschutz.html",
+    "/glowglove-testlab": "pages/glowglove-testlab.html",
+    "/virtual-warehouse": "pages/virtual-warehouse.html",
 }
 
 # Statische Assets, ausschliesslich ueber Allowlist. Kein freier File-Server,
