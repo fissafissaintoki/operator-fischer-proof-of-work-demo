@@ -104,6 +104,8 @@ Siehe:
   Pruef- und Freigabelayer mit Risiko-Klassen, Public-Safe-Pruefung und Command Safety Gate.
 - `docs/PROCESS-AI-USE-CASE-CATALOG.md` —
   public-safe Use-Case-Katalog fuer Prozess-KI, Logistik, Governance und Beratungs-Intake.
+- `docs/KIBERATUNG-STYLE-USE-CASE-ONEPAGER.md` —
+  kiberatung.de-orientierter Onepager mit GitHub-Link, Skill-Match und Beratungsnutzen.
 - `knowledgeos/SKILL-REGISTRY.md` —
   wiederverwendbare Skill-Cluster, Artefaktmuster und Operator-Faehigkeiten.
 - `docs/CODING-AGENT-HANDOFF.md` —
