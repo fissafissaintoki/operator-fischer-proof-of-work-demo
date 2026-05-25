@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>ARC2 Cognitive Lab · OPS Core</title>
+  <style>
+    :root{
+      --bg:#050910;--panel:#0d1722;--panel2:#111f2d;--line:#2a4157;--text:#edf7fb;--muted:#91a9ba;
+      --cyan:#26d4ff;--green:#36f28a;--amber:#ffb63f;--red:#ff5265;--violet:#9c7cff;--gold:#d6a927;
+      --cell:28px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:radial-gradient(circle at 18% 8%,rgba(38,212,255,.15),transparent 34%),radial-gradient(circle at 86% 18%,rgba(156,124,255,.13),transparent 30%),linear-gradient(135deg,#03070c,#07111b 52%,#0b1018)}
+    header{padding:24px 28px 16px;border-bottom:1px solid rgba(145,169,186,.16);background:rgba(5,9,16,.84);backdrop-filter:blur(12px);position:sticky;top:0;z-index:10}
+    .headrow{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}.eyebrow{font:900 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}h1{margin:0;font-size:30px;line-height:1.04;letter-spacing:-.04em}.sub{margin:9px 0 0;color:var(--muted);font-size:14px;line-height:1.5;max-width:980px}.badge{font:900 10px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--green);border:1px solid rgba(54,242,138,.35);border-radius:999px;padding:9px 12px;background:rgba(54,242,138,.08)}
+    main{max-width:1600px;margin:0 auto;padding:18px;display:grid;grid-template-columns:.95fr 1.05fr;gap:18px}.panel{border:1px solid rgba(145,169,186,.17);background:rgba(13,23,34,.92);border-radius:20px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 17px;border-bottom:1px solid rgba(145,169,186,.14);background:rgba(17,31,45,.64)}.title{font:900 12px/1 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:#eafaff}.note{font-size:12px;color:var(--muted)}
+    .input-area{padding:14px;display:grid;gap:12px}textarea{width:100%;min-height:260px;resize:vertical;border-radius:14px;border:1px solid rgba(145,169,186,.2);background:#050b12;color:#dff8ff;padding:14px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;outline:none}textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(38,212,255,.08)}
+    .buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}button{appearance:none;border:1px solid rgba(145,169,186,.22);border-radius:13px;padding:12px;background:linear-gradient(180deg,#172a3d,#0d1d2a);color:var(--text);font-weight:900;text-align:left;cursor:pointer;transition:.15s transform,.15s border-color}button small{display:block;color:var(--muted);margin-top:4px;font-weight:650;line-height:1.35}button:hover{transform:translateY(-1px);border-color:var(--cyan)}.wide{grid-column:span 3}
+    .status{padding:14px;border-top:1px solid rgba(145,169,186,.14);display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.metric{background:rgba(255,255,255,.035);border:1px solid rgba(145,169,186,.15);border-radius:14px;padding:12px}.metric-label{font:900 9px ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}.metric-value{font-size:24px;font-weight:950;margin-top:6px;letter-spacing:-.04em}.good{color:var(--green)}.warn{color:var(--amber)}.blue{color:var(--cyan)}.risk{color:var(--red)}
+    .workspace{padding:14px;display:grid;gap:14px}.case{border:1px solid rgba(145,169,186,.16);border-radius:16px;background:rgba(255,255,255,.026);overflow:hidden}.case-head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 13px;border-bottom:1px solid rgba(145,169,186,.12);background:rgba(5,12,19,.42)}.case-title{font:900 11px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:#eafaff}.case-body{padding:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}.gridblock{display:grid;gap:8px}.grid-title{font:900 10px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.grid{display:grid;gap:2px;width:max-content;max-width:100%;padding:8px;border-radius:12px;background:#050a10;border:1px solid rgba(145,169,186,.16);overflow:auto}.cell{width:var(--cell);height:var(--cell);border-radius:4px;border:1px solid rgba(255,255,255,.08)}
+    .analysis{padding:14px;border-top:1px solid rgba(145,169,186,.14);display:grid;gap:10px}.hypo{border:1px solid rgba(145,169,186,.15);background:rgba(255,255,255,.03);border-radius:14px;padding:12px}.hypo h3{margin:0 0 7px;font-size:13px}.hypo p{margin:0;color:#d7eaf2;font-size:13px;line-height:1.45}.tag{display:inline-block;font:900 9px ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;border-radius:999px;padding:5px 8px;margin-right:6px}.tag.release{color:var(--green);background:rgba(54,242,138,.12)}.tag.review{color:var(--amber);background:rgba(255,182,63,.12)}.tag.block{color:var(--red);background:rgba(255,82,101,.12)}
+    .ops{padding:14px;border-top:1px solid rgba(145,169,186,.14)}.log{background:#050b12;border:1px solid rgba(38,212,255,.2);border-radius:14px;min-height:160px;padding:13px;font:12px/1.55 ui-monospace,monospace;color:#d5f8ff;white-space:pre-wrap}.footer-note{padding:13px 15px;border-top:1px solid rgba(145,169,186,.14);background:rgba(6,11,16,.45);font-size:12px;line-height:1.45;color:var(--muted)}
+    @media(max-width:1100px){main{grid-template-columns:1fr}.status{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){header{padding:18px}.buttons,.status{grid-template-columns:1fr}.wide{grid-column:auto}:root{--cell:20px}.case-body{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="headrow">
+    <div>
+      <div class="eyebrow">OPS Core / Cognitive Pattern Lab</div>
+      <h1>ARC2 Cognitive Lab</h1>
+      <p class="sub">Lokales Labor fuer ARC-/ARC2-artige JSON-Aufgaben: Grids laden, Beispiele visualisieren, Transformationen testen, Hypothesen dokumentieren. Kein Solver-Versprechen, sondern strukturierte kognitive Pruefung.</p>
+    </div>
+    <div class="badge">Local JSON Mode</div>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <div class="panel-head"><div class="title">Aufgabe laden</div><div class="note">JSON lokal einfuegen oder Demo nutzen</div></div>
+    <div class="input-area">
+      <textarea id="jsonInput" spellcheck="false"></textarea>
+      <div class="buttons">
+        <button onclick="loadDemo()">Demo laden<small>ARC-artiges Beispiel</small></button>
+        <button onclick="parseTask()">JSON analysieren<small>Train/Test rendern</small></button>
+        <button onclick="clearAll()">Reset<small>Workspace leeren</small></button>
+        <button class="wide" onclick="runPrimitiveSweep()">Primitive Sweep starten<small>Identity, Rotate, Flip, Crop, Palette, Size und Symmetrie pruefen</small></button>
+      </div>
+    </div>
+    <div class="status">
+      <div class="metric"><div class="metric-label">Train</div><div class="metric-value blue" id="mTrain">0</div></div>
+      <div class="metric"><div class="metric-label">Test</div><div class="metric-value good" id="mTest">0</div></div>
+      <div class="metric"><div class="metric-label">Hypothesen</div><div class="metric-value warn" id="mHypo">0</div></div>
+      <div class="metric"><div class="metric-label">Gate</div><div class="metric-value good" id="mGate">READY</div></div>
+    </div>
+    <div class="ops"><div class="title" style="margin-bottom:10px">OPS Core Log</div><div class="log" id="log">READY\nJSON einfuegen oder Demo laden.\nMensch bleibt Owner. KI bleibt Werkzeug.</div></div>
+    <div class="footer-note">Public-safe: Es werden keine Daten hochgeladen. Verarbeitung laeuft im Browser. Keine Garantie, dass ARC2 geloest wird. Ziel ist Musteranalyse, Hypothesenbildung und Artefaktlogik.</div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div class="title">Grid Workspace</div><div class="note">Beispiele, Testinput und Kandidaten</div></div>
+    <div class="workspace" id="workspace"></div>
+    <div class="analysis" id="analysis"></div>
+  </section>
+</main>
+<script>
+const colors=['#111111','#0074D9','#FF4136','#2ECC40','#FFDC00','#AAAAAA','#F012BE','#FF851B','#7FDBFF','#870C25'];
+let task=null,hypotheses=[];
+const logEl=document.getElementById('log');
+function log(t){logEl.textContent += '\n'+new Date().toLocaleTimeString('de-DE')+' · '+t;logEl.scrollTop=logEl.scrollHeight}
+function loadDemo(){document.getElementById('jsonInput').value=JSON.stringify({train:[{input:[[0,0,0,0,0],[0,2,2,0,0],[0,2,0,0,0],[0,0,0,0,0]],output:[[2,2],[2,0]]},{input:[[0,0,0,0],[0,3,3,0],[0,3,0,0],[0,0,0,0]],output:[[3,3],[3,0]]}],test:[{input:[[0,0,0,0,0,0],[0,4,4,0,0,0],[0,4,0,0,0,0],[0,0,0,0,0,0]]}]},null,2);log('Demo-Aufgabe geladen: Crop non-zero object.');parseTask()}
+function clearAll(){task=null;hypotheses=[];document.getElementById('jsonInput').value='';document.getElementById('workspace').innerHTML='';document.getElementById('analysis').innerHTML='';setMetrics(0,0,0,'READY');logEl.textContent='READY\nWorkspace geleert.'}
+function parseTask(){try{task=JSON.parse(document.getElementById('jsonInput').value);if(!task.train||!Array.isArray(task.train))throw new Error('train[] fehlt');if(!task.test||!Array.isArray(task.test))task.test=[];renderTask();hypotheses=[];basicAnalyze();setMetrics(task.train.length,task.test.length,hypotheses.length,'REVIEW');log('JSON geparst und gerendert.');}catch(e){setMetrics(0,0,0,'BLOCK');log('BLOCK · JSON Fehler: '+e.message)}}
+function setMetrics(a,b,c,g){document.getElementById('mTrain').textContent=a;document.getElementById('mTest').textContent=b;document.getElementById('mHypo').textContent=c;document.getElementById('mGate').textContent=g}
+function gridHtml(grid){const rows=grid.length, cols=grid[0]?.length||0;let h=`<div class="grid" style="grid-template-columns:repeat(${cols},var(--cell))">`;for(const r of grid){for(const v of r){h+=`<div class="cell" title="${v}" style="background:${colors[v]||'#ffffff'}"></div>`}}return h+'</div>'}
+function dims(g){return (g?.length||0)+'x'+(g?.[0]?.length||0)}
+function palette(g){return [...new Set(g.flat())].sort((a,b)=>a-b)}
+function renderTask(){const w=document.getElementById('workspace');w.innerHTML='';task.train.forEach((ex,i)=>{w.insertAdjacentHTML('beforeend',`<div class="case"><div class="case-head"><div class="case-title">Train ${i+1}</div><div class="note">${dims(ex.input)} -> ${dims(ex.output)}</div></div><div class="case-body"><div class="gridblock"><div class="grid-title">Input</div>${gridHtml(ex.input)}</div><div class="gridblock"><div class="grid-title">Output</div>${gridHtml(ex.output)}</div></div></div>`)});task.test.forEach((ex,i)=>{w.insertAdjacentHTML('beforeend',`<div class="case"><div class="case-head"><div class="case-title">Test ${i+1}</div><div class="note">${dims(ex.input)}</div></div><div class="case-body"><div class="gridblock"><div class="grid-title">Input</div>${gridHtml(ex.input)}</div><div class="gridblock" id="candidate-${i}"><div class="grid-title">Candidate</div><div class="note">Primitive Sweep starten.</div></div></div></div>`)})}
+function addHypo(kind,text,score='REVIEW'){hypotheses.push({kind,text,score});renderHypotheses()}
+function renderHypotheses(){const a=document.getElementById('analysis');a.innerHTML='<div class="title">Hypothesen / Pattern Notes</div>';for(const h of hypotheses){const cls=h.score==='RELEASE'?'release':h.score==='BLOCK'?'block':'review';a.insertAdjacentHTML('beforeend',`<div class="hypo"><h3><span class="tag ${cls}">${h.score}</span>${h.kind}</h3><p>${h.text}</p></div>`)}setMetrics(task?.train?.length||0,task?.test?.length||0,hypotheses.length,hypotheses.some(x=>x.score==='RELEASE')?'RELEASE':'REVIEW')}
+function basicAnalyze(){const sameSize=task.train.every(e=>dims(e.input)===dims(e.output));addHypo('Dimensionen',sameSize?'Input und Output haben gleiche Groesse. Operation koennte Recolor, Mirror, Fill oder Verschiebung sein.':'Input und Output haben andere Groesse. Operation koennte Crop, Extract, Scale oder Objektisolierung sein.');const pal=task.train.map(e=>({in:palette(e.input),out:palette(e.output)}));const noZeroOut=pal.every(p=>!p.out.includes(0) || p.out.length<=p.in.length);addHypo('Palette',noZeroOut?'Output-Palette ist kompakt. Moeglich: Objekt extrahieren oder Hintergrund entfernen.':'Palette veraendert sich deutlich. Moeglich: Recoloring oder neue Markerfarbe.');const crops=task.train.every(e=>JSON.stringify(cropNonZero(e.input))===JSON.stringify(e.output));if(crops)addHypo('Crop Non-Zero Object','Alle Trainingsoutputs entsprechen dem kleinsten Rahmen um Nicht-Null-Zellen. Kandidat: Crop object bounding box.','RELEASE')}
+function cropNonZero(g){let minR=Infinity,minC=Infinity,maxR=-1,maxC=-1;for(let r=0;r<g.length;r++)for(let c=0;c<g[r].length;c++)if(g[r][c]!==0){minR=Math.min(minR,r);minC=Math.min(minC,c);maxR=Math.max(maxR,r);maxC=Math.max(maxC,c)}if(maxR<0)return [[0]];return g.slice(minR,maxR+1).map(row=>row.slice(minC,maxC+1))}
+function rotate90(g){return g[0].map((_,c)=>g.map(r=>r[c]).reverse())}function rotate180(g){return rotate90(rotate90(g))}function flipH(g){return g.map(r=>[...r].reverse())}function flipV(g){return [...g].reverse()}
+function eq(a,b){return JSON.stringify(a)===JSON.stringify(b)}
+function runPrimitiveSweep(){if(!task){log('BLOCK · Keine Aufgabe geladen.');return}let ops=[['Identity',x=>x],['Rotate90',rotate90],['Rotate180',rotate180],['FlipH',flipH],['FlipV',flipV],['CropNonZero',cropNonZero]];for(const [name,fn] of ops){try{if(task.train.every(e=>eq(fn(e.input),e.output))){addHypo('Primitive Match: '+name,'Diese Operation passt auf alle Trainingsbeispiele. Test-Kandidat wurde erzeugt.','RELEASE');task.test.forEach((ex,i)=>{const cand=fn(ex.input);document.getElementById('candidate-'+i).innerHTML='<div class="grid-title">Candidate · '+name+'</div>'+gridHtml(cand)});log('RELEASE · Primitive Match gefunden: '+name);return}}catch(e){}}
+addHypo('Kein Primitive-Match','Keine einfache Standardoperation passt auf alle Trainingsbeispiele. Naechster Schritt: Objektsegmentierung, Regelkomposition oder relationales Muster pruefen.','REVIEW');log('REVIEW · Kein einfacher Primitive-Match.');}
+loadDemo();
+</script>
+</body>
+</html>
