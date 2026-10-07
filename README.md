@@ -118,6 +118,147 @@ Die Tests sind nicht gegen die echten Anbieter-APIs gelaufen.
 
 ---
 
+## Bezahlschranke (Shopify)
+
+Optional und **standardmaessig aus**. Ohne `PAYMENT_REQUIRED=true` verhaelt sich
+alles wie bisher: kein Zugangscode, kein Shopify-Aufruf, `/api/credits`
+antwortet 404. Der Schalter versteht nur `true` oder `false`; bei einem anderen
+Wert (Tippfehler) warnt der Server beim Start und die Schranke bleibt aus.
+
+```
+Kaeufer bezahlt im Shopify-Shop ein Produkt (SKU steht in SHOPIFY_RUN_SKUS)
+   ↓
+Bestaetigungsnummer der Bestellung = Zugangscode (z. B. XPAV284CT, nicht "#1001")
+   ↓
+Prompterator: Code eingeben, "Pruefen" zeigt die Restlaeufe
+   ↓
+Server fragt die Bestellung per Shopify Admin API: bezahlt? nicht storniert? wie viele Laeufe?
+   ↓
+Der Lauf wird VOR den Modellaufrufen abgebucht und bei Misserfolg zurueckgebucht
+```
+
+Regeln im Code (jeweils durch Tests belegt, siehe unten):
+
+- **Bezahlt** heisst `PAID` oder `PARTIALLY_REFUNDED`. Nicht: ausstehend, autorisiert,
+  teilbezahlt, storniert, erstattet, ungueltig, abgelaufen. Testbestellungen nur mit
+  `SHOPIFY_ACCEPT_TEST_ORDERS=true` (nur fuer einen Probe-Deploy).
+- **Laeufe je Bestellung:** Summe aus der verbleibenden Menge (`currentQuantity`, nach
+  Erstattungen) mal Laeufe je SKU.
+- **Zaehler:** Metafeld `prompterator.runs_used` an der Bestellung in Shopify. Es gibt
+  keine eigene Datenbank; der Stand ueberlebt Neustarts und Deploys. Geschrieben wird nur
+  mit `compareDigest` (Compare-and-Set): gleichzeitige Anfragen koennen keinen Lauf doppelt
+  nutzen oder ueberbuchen. Bei einem Konflikt wird bis zu 4-mal neu gelesen, danach 503
+  mit "nichts abgebucht".
+- **Eindeutigkeit:** Ein Treffer zaehlt nur, wenn die Bestaetigungsnummer der gefundenen
+  Bestellung exakt dem Code entspricht und genau eine Bestellung passt. Codes bestehen aus
+  Buchstaben und Ziffern (6 bis 16 Zeichen; Leerzeichen, Bindestriche und ein fuehrendes `#`
+  werden ignoriert), damit keine Suchsyntax in die Shopify-Abfrage gelangt.
+- **Keine geratene Laufzahl:** Es werden bis zu 25 Positionen je Bestellung gelesen. Hat eine
+  Bestellung mehr (`hasNextPage`), wird sie abgelehnt (`bestellung_zu_gross`) statt
+  zu wenige Laeufe zu zaehlen; der Kaeufer wird an den Betreiber verwiesen.
+- **Fail closed:** Shopify nicht erreichbar, Zaehler unlesbar oder Konfiguration
+  unvollstaendig fuehren zu 503, ohne Modellaufruf und ohne Abbuchung.
+- **Unklare Buchung:** Kommt auf das Hochzaehlen keine verwertbare Antwort
+  (Zeitueberschreitung, Serverfehler), liest der Server den Zaehler nach. Nur wenn er
+  unveraendert ist, steht "nichts abgebucht"; ist er gestiegen, gilt der Lauf als gebucht.
+  Laesst sich auch das nicht klaeren, sagt die Antwort es offen (`buchung_unklar`, 503, kein
+  Modellaufruf), und die Oberflaeche raet, zuerst mit "Pruefen" den Stand anzusehen.
+  Abgelehnte Schreibzugriffe (4xx, Drosselung) werden nicht nachgelesen: sie wurden nicht
+  ausgefuehrt.
+- **Rueckbuchung:** Scheitert die Erzeugung (auch durch einen Absturz), wird der Lauf
+  zurueckgebucht ("Es wurde nichts abgebucht."). Die Gutschrift wird einmal wiederholt, nie
+  blind: Ist unklar, ob sie schon angekommen ist, wird nicht noch einmal geschrieben, weil
+  sonst doppelt gutgeschrieben wuerde. Misslingt die Gutschrift endgueltig, steht das offen in
+  der Antwort und im Zaehler `release_failed`; dann muss der Betreiber den Zaehler in Shopify
+  von Hand korrigieren (Metafeld `prompterator.runs_used` an der Bestellung).
+- **Token bleibt bei Shopify:** Weiterleitungen werden nicht befolgt; das Zugriffstoken geht
+  nie an einen anderen Host.
+- **Teilergebnisse:** Sind beide Anbieter konfiguriert, aber es kommt keine vollstaendige
+  Synthese zustande, wird der Lauf nicht abgerechnet. Ist nur ein Anbieter konfiguriert,
+  wird dessen Ergebnis abgerechnet.
+- **Geheimnisse:** Codes, Tokens und Secrets werden nie geloggt, nie an den Browser
+  gegeben und nie im Browser gespeichert. Geloggt werden nur Statuscodes und Fehlercodes.
+
+Schnittstellen bei eingeschalteter Schranke:
+
+| Pfad | Verhalten |
+|------|-----------|
+| `POST /api/generate` | zusaetzliches Feld `access_code`. Ohne gueltigen Code `402` mit `{error, reason}` (`zugangscode_fehlt`, `zugangscode_ungueltig`, `zugangscode_nicht_eindeutig`, `nicht_bezahlt`, `storniert`, `testbestellung`, `keine_laeufe`, `bestellung_zu_gross`); bei Shopify-Problemen `503` (`bezahlung_nicht_erreichbar`, `bezahlung_nicht_eingerichtet`, `buchung_unklar`). Erfolg enthaelt `credits: {granted, used, remaining, charged}` (bei misslungener Gutschrift eines Teilergebnisses zusaetzlich `giveback_failed: true`) |
+| `POST /api/credits` | nur Lesen: `{access_code}` → `{valid, granted, used, remaining}`. Eigenes Rate-Limit (`CREDITS_RATE_LIMIT_MAX_REQUESTS`), Origin-Pflicht wie bei `/api/generate`. Bei ausgeschalteter Schranke ein unbekannter Pfad (404, ohne dass Body oder Origin geprueft werden) |
+| `GET /api/status` | zusaetzlich `payment_required`, `payment_ready`, `buy_url`. `generate_enabled` ist `false`, solange die Schranke an, aber nicht startklar ist |
+| `GET /api/usage` (Admin) | zusaetzlich `payment_required`, `payment_ready` und je Monat `credits\|charged`, `credits\|released`, `credits\|release_failed`, `credits\|degraded` (Laeufe mit Teilausfall, nicht abgerechnet) |
+
+Umgebungsvariablen (Secrets nur im Render-Environment, nie im Repo und nie im Chat):
+
+| Variable | Standard | Bedeutung |
+|----------|----------|-----------|
+| `PAYMENT_REQUIRED` | `false` | `true` schaltet die Schranke ein |
+| `SHOPIFY_SHOP_DOMAIN` | – | `<shop>.myshopify.com`; andere Hosts werden verworfen, damit das Token nirgends sonst hingeht |
+| `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET` | – | Dev-Dashboard-App: Token ueber den Client-Credentials-Grant (gilt 24 Stunden, wird vor Ablauf erneuert) |
+| `SHOPIFY_ADMIN_TOKEN` | – | Alternative: festes Admin-Token einer aelteren Custom App (hat Vorrang) |
+| `SHOPIFY_API_VERSION` | `2026-07` | Admin-API-Version |
+| `SHOPIFY_RUN_SKUS` | – | `SKU=Laeufe,SKU2=Laeufe2`, z. B. `PT-LAUF=1,PT-10ER=10`; ein Tippfehler macht die ganze Angabe ungueltig |
+| `SHOPIFY_BUY_URL` | – | https-Link zum Produkt (Kauflink in der Oberflaeche) |
+| `SHOPIFY_ACCEPT_TEST_ORDERS` | `false` | nur fuer einen Probe-Deploy |
+| `SHOPIFY_TIMEOUT_SECONDS` | `15` | Zeitlimit je Shopify-Aufruf |
+| `CREDITS_RATE_LIMIT_MAX_REQUESTS` | `6` | Pruefungen je Minute und IP |
+
+Einrichtung:
+
+1. **Shopify-Tarif.** Der Shop laeuft derzeit im Testzeitraum (`trial`); fuer echte
+   Verkaeufe ist laut Shopify ein bezahlter Tarif noetig. Das sind Fixkosten, die der
+   Betreiber bewusst entscheidet.
+2. **App im Dev Dashboard** anlegen (neue Custom Apps im Shop-Admin gibt es nicht mehr).
+   Laut Shopify-Doku muessen App und Shop zur selben Organisation gehoeren, sonst lehnt
+   Shopify die Token-Anfrage ab (`shop_not_permitted`). Scopes: `read_orders` und
+   `write_orders` (das Schreiben des Metafelds verlangt das Zugriffsniveau der Bestellung).
+   App im Shop installieren.
+3. **Produkt** mit der SKU anlegen (digital, ohne Versand). Im Produkttext nennen:
+   "Zugangscode = Bestaetigungsnummer deiner Bestellung".
+4. **Render-Environment** setzen (Tabelle oben) und die Ring-2-Grenzen fuer den Verkauf
+   anheben (`RATE_LIMIT_MAX_REQUESTS`, `DAILY_REQUEST_LIMIT`, `MONTHLY_REQUEST_LIMIT`; sie
+   gelten auch fuer Zahlende).
+5. **Probelauf** mit einer Testbestellung auf einem Probe-Deploy
+   (`SHOPIFY_ACCEPT_TEST_ORDERS=true`): kaufen, Code pruefen, Lauf erzeugen, den Zaehler in
+   Shopify ansehen, die Rueckbuchung bei einem erzwungenen Fehler pruefen. Danach
+   `SHOPIFY_ACCEPT_TEST_ORDERS` wieder entfernen.
+6. **Rueckweg:** `PAYMENT_REQUIRED=false` (oder Variable loeschen) und neu starten.
+
+Bekannte Grenzen (bewusst nicht schoengeredet):
+
+- Ohne den Scope `read_all_orders` (Freigabe durch Shopify noetig) liefert Shopify nur
+  Bestellungen der letzten 60 Tage. Zugangscodes laufen deshalb praktisch 60 Tage nach dem
+  Kauf ab; das muss im Produkttext und in den AGB stehen.
+- Ob die Bestaetigungsnummer auf der Danke-Seite und in der Bestellbestaetigung steht, muss
+  an einer Testbestellung geprueft werden; sonst die Benachrichtigungsvorlage anpassen.
+- Wer einen Code weitergibt, teilt die Laeufe. Erstattungen und Chargebacks werden nur
+  erkannt, solange Shopify die Bestellung als erstattet fuehrt; bereits verbrauchte Laeufe
+  werden nicht ausgeglichen.
+- Die Abbuchung ist so zuverlaessig wie die Shopify-Admin-API. Faellt Shopify aus, steht
+  der Verkauf still (bewusst).
+- Eine Buchung, die erst nach dem Nachlesen bei Shopify ankommt (sehr langsame Antwort nach
+  Zeitueberschreitung), kostet den Kaeufer einen Lauf, ohne dass der Server es merkt. Das ist
+  selten; der Betreiber kann den Zaehler in Shopify korrigieren. Dafuer braucht der Betreiber
+  eine Support-Adresse, an die sich Kaeufer mit ihrem Zugangscode wenden koennen.
+- Bricht die Verbindung des Kaeufers waehrend eines Laufs ab (oder dauert er laenger als vier
+  Minuten), bleibt der Lauf abgebucht. Die Oberflaeche weist darauf hin und raet, den Stand zu
+  pruefen.
+- Laeufe mit Teilausfall werden nicht abgerechnet (`credits|degraded` zaehlt sie). Faellt ein
+  Anbieter dauerhaft aus, ist der Dienst faktisch kostenlos und kostet den Betreiber die
+  Modellaufrufe.
+- Eine Bestellung mit 100-%-Rabatt zaehlt als bezahlt, sobald Shopify sie so fuehrt.
+- Kosten: Ein Lauf sind drei Modellaufrufe. Ein Preis ist nicht festgelegt; er soll aus
+  einem gemessenen Probelauf kommen (`/api/usage`: Tokenzaehler je Anbieter und
+  `credits|charged`). Ist die Schranke aus, zahlt der Betreiber jeden Lauf selbst.
+- Rechtliches (Impressum, Datenschutz inkl. Shopify, AGB, Widerruf bei digitalen
+  Leistungen, Preisangaben) ist nicht geprueft.
+
+Tests: `tests/test_credits.py` (ohne Netzwerk, gegen eine Nachbildung von Shopify). Sie
+belegen die Logik, ersetzen aber keinen Probelauf mit einer echten Testbestellung. Echte
+Zahlungen sowie OpenAI, Anthropic und Shopify wurden dabei nicht angesprochen.
+
+---
+
 ## Governance-Grundsatz
 
 > Mensch bleibt Owner. KI bleibt Werkzeug.
@@ -136,7 +277,8 @@ ersetzt werden.
 | GET     | `/dossier-preview`     | Statische HTML-Dossier-Vorschau           |
 | GET     | `/health`              | Health-Check                              |
 | GET     | `/api/status`          | Oeffentlicher Status (welche Anbieter aktiv sind), ohne Geheimnisse |
-| POST    | `/api/generate`        | ChatGPT- und Claude-Entwurf, Zusammenfuehrung durch Claude (siehe Synthese) |
+| POST    | `/api/generate`        | ChatGPT- und Claude-Entwurf, Zusammenfuehrung durch Claude (siehe Synthese); mit eingeschalteter Bezahlschranke zusaetzlich `access_code` |
+| POST    | `/api/credits`         | Zugangscode pruefen und Restlaeufe lesen (nur mit eingeschalteter Bezahlschranke, sonst 404) |
 | POST    | `/api/pdf`             | Executive PDF-Dossier (ReportLab)         |
 | POST    | `/api/dossier-html`    | Dynamisches HTML-Dossier (parallel zu PDF)|
 
@@ -192,7 +334,8 @@ Siehe:
 
 ## Technische Hinweise
 
-- Backend: Python `http.server`, OpenAI-API und Anthropic-API (Synthese), ReportLab (PDF).
+- Backend: Python `http.server`, OpenAI-API und Anthropic-API (Synthese), ReportLab (PDF),
+  optional Shopify Admin API (Bezahlschranke, `shopify_credits.py`).
 - Frontend: Single-File `index.html`, kein Framework, kein Build-Step.
 - Deploy: Render (Procfile vorhanden).
 - Keine externen Agenten- oder Orchestrierungs-Bibliotheken

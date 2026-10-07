@@ -20,6 +20,8 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import KeepTogether, PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+import shopify_credits
+
 BASE_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORT", "8787"))
 HOST = os.environ.get("HOST", "0.0.0.0")
@@ -44,6 +46,7 @@ OPENAI_TEMPERATURE = float(os.environ.get("OPENAI_TEMPERATURE", "0.3"))
 RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
 RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("RATE_LIMIT_MAX_REQUESTS", "3"))
 PDF_RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("PDF_RATE_LIMIT_MAX_REQUESTS", "5"))
+CREDITS_RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("CREDITS_RATE_LIMIT_MAX_REQUESTS", "6"))
 DAILY_REQUEST_LIMIT = int(os.environ.get("DAILY_REQUEST_LIMIT", "20"))
 MONTHLY_REQUEST_LIMIT = int(os.environ.get("MONTHLY_REQUEST_LIMIT", "100"))
 MONTHLY_BUDGET_EUR = float(os.environ.get("MONTHLY_BUDGET_EUR", "5.00"))
@@ -144,6 +147,7 @@ ALLOWED_ORIGINS = DEFAULT_ALLOWED_ORIGINS | extra_origins
 
 request_log = defaultdict(deque)
 pdf_request_log = defaultdict(deque)
+credits_request_log = defaultdict(deque)
 daily_usage = defaultdict(int)
 monthly_usage = defaultdict(int)
 blocked_usage = defaultdict(int)
@@ -310,6 +314,8 @@ def usage_snapshot() -> dict:
             "chatgpt_configured": bool(OPENAI_API_KEY),
             "claude_configured": bool(ANTHROPIC_API_KEY),
             "synthesis_enabled": SYNTHESIS_ENABLED,
+            "payment_required": shopify_credits.PAYMENT_REQUIRED,
+            "payment_ready": shopify_credits.is_ready(),
             "token_usage": dict(sorted(token_usage.items())),
             "note": "App-seitige Kostenbremse, gezaehlt werden Laeufe (ein Lauf kann bis zu drei Modellaufrufe enthalten). Das harte Abrechnungslimit muss zusaetzlich in den Projektbudgets bei OpenAI und Anthropic gesetzt werden."
         }
@@ -456,6 +462,32 @@ def record_truncation(provider: str) -> None:
     """Zaehlt Antworten, die am Ausgabelimit abgeschnitten wurden (nur eine Zahl, kein Inhalt)."""
     with usage_lock:
         token_usage[f"{month_key()}|{provider}|truncated"] += 1
+
+
+def record_credit_event(kind: str) -> None:
+    """Zaehlt Buchungen der Bezahlschranke je Monat (nur Zahlen): charged, released, release_failed,
+    degraded (Lauf mit Teilausfall, nicht abgerechnet). Zusammen mit den Token-Zaehlern ergibt das die
+    Kosten je abgerechnetem Lauf."""
+    with usage_lock:
+        token_usage[f"{month_key()}|credits|{kind}"] += 1
+
+
+def post_paths() -> tuple:
+    """POST-Pfade. /api/credits gibt es nur bei eingeschalteter Bezahlschranke; ausgeschaltet verhaelt sich
+    der Pfad wie jeder unbekannte (404, ohne Pruefung von Body oder Origin)."""
+    paths = ("/api/generate", "/api/pdf", "/api/dossier-html")
+    return paths + ("/api/credits",) if shopify_credits.PAYMENT_REQUIRED else paths
+
+
+def run_is_chargeable(outcome: dict) -> bool:
+    """Abgerechnet wird nur, was dem verkauften Leistungsumfang entspricht. Sind beide Anbieter
+    konfiguriert, ist das die vollstaendige Synthese. Ein Lauf mit Teilausfall (nur ein Entwurf,
+    Zusammenfuehrung ausgefallen) kostet den Kaeufer keinen Lauf. Ist nur ein Anbieter
+    konfiguriert (bewusste Entscheidung des Betreibers), zaehlt dessen Ergebnis."""
+    chatgpt_on, claude_on = providers_active()
+    if chatgpt_on and claude_on:
+        return outcome.get("mode") == "synthese"
+    return True
 
 
 def build_user_prompt(raw_input: str, artifact_type: str | None = None) -> str:
@@ -723,13 +755,19 @@ def generate_artifact(raw_input: str, artifact_type: str | None = None) -> dict:
 def public_status() -> dict:
     """Oeffentlicher Status ohne Geheimnisse: nur, welche Teile aktiv sind."""
     chatgpt_on, claude_on = providers_active()
+    payment = shopify_credits.public_info()
+    # Ist die Bezahlschranke EIN, aber nicht startklar, bleibt der Generator gesperrt (kein Gratis-Lauf).
+    payment_ok = not payment["payment_required"] or payment["payment_ready"]
     return {
-        "generate_enabled": GENERATE_ENABLED and (chatgpt_on or claude_on),
+        "generate_enabled": GENERATE_ENABLED and (chatgpt_on or claude_on) and payment_ok,
         "chatgpt": chatgpt_on,
         "claude": claude_on,
         "synthese": chatgpt_on and claude_on,
         "max_input_chars": MAX_INPUT_CHARS,
         "artifact_types": {key: value[0] for key, value in ARTIFACT_TYPES.items()},
+        "payment_required": payment["payment_required"],
+        "payment_ready": payment["payment_ready"],
+        "buy_url": payment["buy_url"],
     }
 
 
@@ -2199,6 +2237,47 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
         return True
 
+    def _refund(self, reservation) -> str:
+        """Bucht einen reservierten Lauf zurueck (Erzeugung fehlgeschlagen). Liefert den Hinweistext fuer
+        die Oberflaeche: ohne Reservierung (Schranke aus) nichts, bei geglueckter Rueckbuchung "nichts
+        abgebucht", bei misslungener Gutschrift die offene Meldung an den Kaeufer."""
+        if reservation is None:
+            return ""
+        if shopify_credits.release_run(reservation.order_id) is None:
+            record_credit_event("release_failed")
+            return " Die Gutschrift des Laufs ist fehlgeschlagen. Bitte melde dich beim Betreiber und nenne deinen Zugangscode."
+        record_credit_event("released")
+        return " Es wurde nichts abgebucht."
+
+    def _settle(self, reservation, outcome: dict) -> dict:
+        """Entscheidet nach erfolgreicher Erzeugung, ob der Lauf abgerechnet bleibt, und liefert den
+        Stand fuer die Oberflaeche. Ein Teilausfall (keine volle Synthese) wird zurueckgebucht."""
+        used = reservation.used
+        charged = True
+        giveback_failed = False
+        if not run_is_chargeable(outcome):
+            record_credit_event("degraded")  # Teilausfall: dauerhaft viele davon heisst Gratis-Betrieb
+            new_used = shopify_credits.release_run(reservation.order_id)
+            if new_used is None:
+                record_credit_event("release_failed")
+                giveback_failed = True
+            else:
+                record_credit_event("released")
+                used = new_used
+                charged = False
+        if charged:
+            record_credit_event("charged")
+        result = {
+            "granted": reservation.granted,
+            "used": used,
+            "remaining": max(0, reservation.granted - used),
+            "charged": charged,
+        }
+        if giveback_failed:
+            # Teilergebnis, aber die Gutschrift misslang: der Kaeufer erfuehrt es offen.
+            result["giveback_failed"] = True
+        return result
+
     def _firewall_blocked(self) -> bool:
         if headers_too_large(self) or firewall_blocks_path(self.path):
             record_blocked_request()
@@ -2280,7 +2359,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self._firewall_blocked():
             return
-        if self.path not in ("/api/generate", "/api/pdf", "/api/dossier-html"):
+        if self.path not in post_paths():
             self._send_json(404, {"error": "Nicht gefunden"})
             return
         if not origin_allowed(self.headers.get("Origin")):
@@ -2306,6 +2385,34 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(400, {"error": "Ungültiges JSON"})
                 return
 
+            # /api/credits: Zugangscode pruefen und Restguthaben anzeigen (nur wenn die Bezahlschranke EIN ist)
+            if self.path == "/api/credits":
+                if REQUIRE_ORIGIN_FOR_GENERATE and not normalize_origin(self.headers.get("Origin")):
+                    record_blocked_request()
+                    self._send_json(403, {"error": "Origin erforderlich"})
+                    return
+                if is_rate_limited_for_bucket(credits_request_log, ip, CREDITS_RATE_LIMIT_MAX_REQUESTS):
+                    self._send_json(429, {"error": "Zu viele Prüfungen. Bitte kurz warten."})
+                    return
+                if length > MAX_BODY_BYTES:
+                    self._send_json(413, {"error": "Input zu groß"})
+                    return
+                if set(payload.keys()) - {"access_code"}:
+                    self._send_json(400, {"error": "Unerwartete Felder im Request"})
+                    return
+                try:
+                    balance = shopify_credits.check_balance(payload.get("access_code"))
+                except shopify_credits.CreditsError as exc:
+                    self._send_json(exc.http_status, {"error": exc.message, "reason": exc.reason})
+                    return
+                self._send_json(200, {
+                    "valid": True,
+                    "granted": balance.granted,
+                    "used": balance.used,
+                    "remaining": balance.remaining,
+                })
+                return
+
             if self.path == "/api/generate":
                 if not GENERATE_ENABLED:
                     self._send_json(503, {"error": "Generator vorübergehend deaktiviert."})
@@ -2326,7 +2433,7 @@ class Handler(BaseHTTPRequestHandler):
                 if length > MAX_BODY_BYTES:
                     self._send_json(413, {"error": "Input zu groß"})
                     return
-                if set(payload.keys()) - {"raw_input", "artifact_type"}:
+                if set(payload.keys()) - {"raw_input", "artifact_type", "access_code"}:
                     self._send_json(400, {"error": "Unerwartete Felder im Request"})
                     return
                 raw_input = str(payload.get("raw_input", "")).strip()
@@ -2342,15 +2449,39 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(413, {"error": f"Input zu lang. Maximum: {MAX_INPUT_CHARS} Zeichen."})
                     return
 
+                # Bezahlschranke (nur wenn EIN): erst bezahlen, dann erzeugen. Der Lauf wird vor dem
+                # KI-Aufruf abgebucht und bei Misserfolg zurueckgebucht. Ohne gueltigen Code gibt es
+                # keinen Modellaufruf und damit keine Kosten.
+                reservation = None
+                if shopify_credits.PAYMENT_REQUIRED:
+                    if not any(providers_active()):
+                        self._send_json(503, {"error": "Generator ist nicht konfiguriert."})
+                        return
+                    try:
+                        reservation = shopify_credits.reserve_run(payload.get("access_code"))
+                    except shopify_credits.CreditsError as exc:
+                        self._send_json(exc.http_status, {"error": exc.message, "reason": exc.reason})
+                        return
+
                 try:
                     outcome = generate_artifact(raw_input, artifact_type)
-                except GenerationUnavailable:
-                    self._send_json(503, {"error": "Generator ist nicht konfiguriert."})
+                except (GenerationUnavailable, GenerationFailed) as exc:
+                    note = self._refund(reservation)
+                    if isinstance(exc, GenerationUnavailable):
+                        self._send_json(503, {"error": "Generator ist nicht konfiguriert." + note})
+                    else:
+                        self._send_json(502, {"error": "KI-Dienst aktuell nicht erreichbar oder ohne verwertbare Antwort. Bitte später erneut versuchen." + note})
                     return
-                except GenerationFailed:
-                    self._send_json(502, {"error": "KI-Dienst aktuell nicht erreichbar oder ohne verwertbare Antwort. Bitte später erneut versuchen."})
+                except Exception as exc:
+                    if reservation is None:
+                        raise  # Schranke aus: unveraendertes Verhalten, der aeussere Handler antwortet
+                    note = self._refund(reservation)
+                    print(f"Unhandled server error: {type(exc).__name__}")
+                    self._send_json(500, {"error": "Interner Serverfehler. Bitte später erneut versuchen." + note})
                     return
                 record_billable_request()
+                if reservation is not None:
+                    outcome["credits"] = self._settle(reservation, outcome)
                 self._send_json(200, outcome)
                 return
 
@@ -2454,4 +2585,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     print(f"Prompterator API läuft auf http://{HOST}:{PORT}")
     print("Healthcheck:", f"http://{HOST}:{PORT}/health")
+    for line in shopify_credits.startup_report():
+        print(line)
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

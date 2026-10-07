@@ -29,6 +29,7 @@ Rohinput -> Problemklasse -> Modus -> Artefakt-Blueprint -> Qualitätsprüfung -
 - Python Standard Library HTTP Server
 - OpenAI Responses API im Backend (ChatGPT-Entwurf)
 - Anthropic Messages API im Backend (Claude-Entwurf und Zusammenführung, siehe README "Synthese")
+- Shopify Admin API im Backend, nur optional (Bezahlschranke, siehe README "Bezahlschranke")
 - Render Deployment
 - checkdomain DNS
 - einfache HTML/CSS/JS-Oberfläche
@@ -39,8 +40,12 @@ Rohinput -> Problemklasse -> Modus -> Artefakt-Blueprint -> Qualitätsprüfung -
 Diese Punkte dürfen nicht entfernt oder geschwächt werden:
 
 - OPENAI_API_KEY und ANTHROPIC_API_KEY bleiben ausschließlich Environment Variablen
+- SHOPIFY_CLIENT_SECRET und SHOPIFY_ADMIN_TOKEN bleiben ausschließlich Environment Variablen
 - Kein API-Key im Frontend
 - Kein API-Key im GitHub-Repo
+- Die Bezahlschranke bleibt standardmäßig aus (`PAYMENT_REQUIRED` nicht gesetzt = Verhalten wie bisher) und fällt im Zweifel zu: kein Modellaufruf ohne geprüfte Zahlung
+- Der Lauf wird vor dem Modellaufruf abgebucht und bei Misserfolg zurückgebucht; ein Fehler der Rückbuchung wird dem Käufer offen gesagt
+- Zugangscodes, Tokens und Secrets werden nie geloggt, nie in Antworten zurückgegeben und nie im Browser gespeichert
 - Rate Limit
 - Input-Limit
 - Output-Limit
@@ -57,6 +62,7 @@ Diese Punkte dürfen nicht entfernt oder geschwächt werden:
 
 ```text
 server.py        Backend, Security, API-Routen, SEO-Routen
+shopify_credits.py  Bezahlschranke über Shopify (standardmäßig aus)
 index.html       Haupt-UI
 pages/           SEO-Landingpages
 README.md        Repo-Beschreibung
@@ -118,7 +124,7 @@ Vor Ausgabe oder Änderung prüfen:
 
 ```text
 1. Läuft lokal?
-2. Bleiben OPENAI_API_KEY und ANTHROPIC_API_KEY geheim?
+2. Bleiben OPENAI_API_KEY, ANTHROPIC_API_KEY und die SHOPIFY_*-Zugangsdaten geheim?
 3. Bricht Render nicht?
 4. Bricht prompterator.de nicht?
 5. Bleibt /health verfügbar?

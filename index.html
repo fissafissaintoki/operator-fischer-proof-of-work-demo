@@ -65,6 +65,17 @@ textarea::placeholder{color:#5f7a94}
 .btn.ghost{background:transparent}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .hint{font-size:13px;color:var(--muted)}
+.hint.ok{color:var(--green)}
+.hint.warn{color:var(--amber)}
+.hint.err{color:#ffb4b4}
+.code-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.code-input{flex:1 1 180px;min-width:0;font-family:var(--mono);font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--text);background:#06101d;border:1px solid rgba(32,216,255,.35);border-radius:12px;padding:11px 14px}
+.code-input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 4px rgba(32,216,255,.12)}
+.code-input::placeholder{color:#5f7a94;text-transform:none;letter-spacing:0}
+.code-input:disabled{opacity:.5;cursor:not-allowed}
+.pay-note{margin:8px 0 0}
+.pay-links{margin:6px 0 0}
+.credit-note{margin-top:6px;font-size:13px;color:var(--muted)}
 
 .result-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .result-head h2{margin:0;font-size:18px}
@@ -164,6 +175,15 @@ footer a:hover{color:var(--cyan)}
           <span class="mono muted" id="counter">0 / 4000</span>
         </div>
       </div>
+      <div class="field" id="payBox" hidden>
+        <label class="label" for="accessCode">Zugangscode</label>
+        <div class="code-row">
+          <input type="text" id="accessCode" class="code-input" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="24" placeholder="Code aus deiner Kaufbestätigung" aria-describedby="payHint" />
+          <button type="button" class="btn ghost" id="btnCheckCode" disabled>Prüfen</button>
+        </div>
+        <p class="hint pay-note" id="payHint" role="status" aria-live="polite"></p>
+        <p class="hint pay-links" id="payLinks" hidden><a id="buyLink" target="_blank" rel="noopener noreferrer" hidden>Läufe kaufen (öffnet in neuem Tab)</a></p>
+      </div>
       <label class="consent" for="consent">
         <input type="checkbox" id="consent" />
         <span id="consentText"></span>
@@ -242,13 +262,18 @@ var PDF_STYLES=[
 var TYPE_LABELS={auto:"Automatisch",matrix:"Entscheidungsmatrix",sop:"SOP",post:"LinkedIn-Post",research:"Forschungsbrief",profile:"Bewerbungsprofil",codex:"Codex-Handoff"};
 var PLACEHOLDER_AUTO="Beschreibe Aufgabe, Idee, Prozess oder Problem in eigenen Worten. Je konkreter Ziel und Kontext, desto brauchbarer das Ergebnis.";
 
-var S={type:"auto",status:null,statusLoaded:false,busy:false,pdfBusy:false,data:null,tab:"result",pdfStyle:"of-medneon",example:null,exampleIdx:0,view:"idle"};
+var S={type:"auto",status:null,statusLoaded:false,busy:false,pdfBusy:false,data:null,tab:"result",pdfStyle:"of-medneon",example:null,exampleIdx:0,view:"idle",
+  forcePay:false,checking:false,credits:null,payNote:null,seq:0,checkCtrl:null};
 var $=function(id){return document.getElementById(id)};
 var el={raw:$("raw"),counter:$("counter"),consent:$("consent"),consentText:$("consentText"),run:$("btnRun"),clear:$("btnClear"),why:$("whyDisabled"),
-  example:$("btnExample"),chips:$("typeChips"),body:$("resultBody"),meta:$("resultMeta"),card:$("resultCard"),pill:$("statusPill"),pillText:$("statusText"),heading:$("h-result")};
+  example:$("btnExample"),chips:$("typeChips"),body:$("resultBody"),meta:$("resultMeta"),card:$("resultCard"),pill:$("statusPill"),pillText:$("statusText"),heading:$("h-result"),
+  payBox:$("payBox"),code:$("accessCode"),checkCode:$("btnCheckCode"),payHint:$("payHint"),buy:$("buyLink"),buyWrap:$("payLinks")};
+var PAY_CHECK_HINT="Dein Rohinput bleibt erhalten. Prüfe zuerst mit „Prüfen“ deinen Stand, bevor du es erneut versuchst.";
+var PAY_HINT="Dein Zugangscode steht in der Bestätigung deines Kaufs (die Bestätigungsnummer, nicht die Bestellnummer mit #). Er wird nicht im Browser gespeichert.";
 
 function mk(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n}
 function clearNode(n){while(n.firstChild)n.removeChild(n.firstChild)}
+function setText(n,t){if(n.textContent!==t)n.textContent=t}
 
 /* ---------- Status und Einwilligung ---------- */
 function providerNames(){
@@ -263,20 +288,80 @@ function renderConsent(){
   var a=mk("a",null,"Datenschutzerklärung");a.href="/datenschutz";a.target="_blank";a.rel="noopener";
   el.consentText.appendChild(a);el.consentText.appendChild(document.createTextNode("."));
 }
+/* ---------- Bezahlschranke: nur sichtbar, wenn der Server sie verlangt ---------- */
+function payOn(){return S.forcePay||!!(S.status&&S.status.payment_required)}
+/* Ein 402 vom Server beweist, dass die Schranke EIN und startklar ist (sonst käme 503). */
+function payReady(){return payOn()&&(S.forcePay||!(S.status&&S.status.payment_ready===false))}
+function codeText(){return el.code.value.trim()}
+function codeOk(){return codeText().replace(/[^A-Za-z0-9]/g,"").length>=6}
+function safeUrl(u){return typeof u==="string"&&u.indexOf("https://")===0?u:""}
+function num(x){return typeof x==="number"&&isFinite(x)&&x>=0?x:null}
+function noRunsLeft(){return payOn()&&!!S.credits&&S.credits.code===codeText()&&S.credits.remaining<=0}
+function creditsText(c){
+  if(c.remaining<=0)return "Mit diesem Zugangscode sind keine Läufe mehr übrig.";
+  if(c.granted>0)return "Code gültig. Noch "+c.remaining+" von "+c.granted+" Läufen übrig.";
+  return "Code gültig. Noch "+c.remaining+(c.remaining===1?" Lauf":" Läufe")+" übrig.";
+}
+function payMsg(text,tone){S.payNote=text?{text:text,tone:tone||""}:null;renderPay()}
+function applyCredits(code,c){
+  var rem=num(c&&c.remaining);if(rem===null)return;
+  var g=num(c.granted);
+  S.credits={code:code,granted:g===null?0:g,used:num(c.used),remaining:rem};
+  if(code===codeText())payMsg(creditsText(S.credits),rem>0?"ok":"warn");else renderPay();
+}
+function renderPay(){
+  var on=payOn();el.payBox.hidden=!on;
+  if(!on)return;
+  var ready=payReady(),url=ready?safeUrl(S.status&&S.status.buy_url):"";
+  el.code.disabled=!ready;
+  el.checkCode.disabled=!ready||S.checking||S.busy||!codeOk();
+  setText(el.checkCode,S.checking?"Prüfe …":"Prüfen");
+  if(url)el.buy.href=url;else el.buy.removeAttribute("href");
+  el.buy.hidden=!url;el.buyWrap.hidden=!url;
+  var n=S.payNote;
+  setText(el.payHint,n?n.text:(ready?PAY_HINT:"Der Verkauf ist noch nicht freigeschaltet."));
+  var cls="hint pay-note"+(n&&n.tone?" "+n.tone:"");if(el.payHint.className!==cls)el.payHint.className=cls;
+}
+/* Eine laufende Prüfung wird ungültig, sobald sich der Code ändert oder ein Lauf startet. */
+function dropCheck(){S.seq++;if(S.checkCtrl)S.checkCtrl.abort()}
+function checkCode(){
+  if(S.checking||S.busy||!payReady()||!codeOk())return;
+  var code=codeText(),my=++S.seq,ctrl=new AbortController(),to=setTimeout(function(){ctrl.abort()},30000);
+  S.checkCtrl=ctrl;S.checking=true;S.payNote={text:"Wird geprüft …",tone:""};updateControls();
+  fetch("/api/credits",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access_code:code}),signal:ctrl.signal})
+  .then(function(res){return res.json().catch(function(){return null}).then(function(data){return {res:res,data:data}})})
+  .then(function(x){
+    if(my!==S.seq)return;
+    if(x.res.ok&&x.data&&x.data.valid===true&&num(x.data.remaining)!==null){applyCredits(code,x.data)}
+    else{S.credits=null;S.payNote={text:errorMessage(x.res.status,x.data),tone:"err"}}
+  })
+  .catch(function(err){
+    if(my!==S.seq)return;
+    S.credits=null;S.payNote={text:err&&err.name==="AbortError"?"Zeitüberschreitung. Bitte erneut prüfen.":"Keine Verbindung zum Server. Bitte erneut versuchen.",tone:"err"};
+  })
+  .then(function(){clearTimeout(to);if(S.checkCtrl===ctrl)S.checkCtrl=null;S.checking=false;updateControls()});
+}
+el.code.addEventListener("input",function(){
+  if(S.credits&&S.credits.code!==codeText())S.credits=null;
+  dropCheck();S.payNote=null;updateControls();
+});
+el.code.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();checkCode()}});
+el.checkCode.addEventListener("click",checkCode);
+
 function renderStatus(){
   var s=S.status,tone="idle",text="Status nicht abrufbar";
   if(s){
-    if(!s.generate_enabled){tone="err";text="Generator pausiert"}
+    if(!s.generate_enabled){tone="err";text=(s.payment_required&&s.payment_ready===false)?"Verkauf noch nicht freigeschaltet":"Generator pausiert"}
     else if(s.synthese){tone="ok";text="ChatGPT + Claude aktiv"}
     else if(s.chatgpt){tone="warn";text="Nur ChatGPT aktiv"}
     else if(s.claude){tone="warn";text="Nur Claude aktiv"}
   } else if(!S.statusLoaded){text="Status wird geladen"}
-  el.pill.setAttribute("data-tone",tone);el.pillText.textContent=text;
+  el.pill.setAttribute("data-tone",tone);setText(el.pillText,text);
   renderConsent();updateControls();if(S.view==="idle")renderIdle();
 }
 function loadStatus(){
   fetch("/api/status",{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("status");return r.json()})
-  .then(function(s){S.status=s;S.statusLoaded=true;if(s&&s.max_input_chars&&s.max_input_chars<MAX_CHARS){MAX_CHARS=s.max_input_chars;el.raw.maxLength=MAX_CHARS}renderStatus();updateCounter()})
+  .then(function(s){S.status=s;S.statusLoaded=true;if(s&&typeof s.payment_required==="boolean")S.forcePay=false;if(s&&s.max_input_chars&&s.max_input_chars<MAX_CHARS){MAX_CHARS=s.max_input_chars;el.raw.maxLength=MAX_CHARS}renderStatus();updateCounter()})
   .catch(function(){S.status=null;S.statusLoaded=true;renderStatus()});
 }
 
@@ -288,12 +373,15 @@ function updateCounter(){
 function updateControls(){
   var len=el.raw.value.trim().length,enabled=!S.status||S.status.generate_enabled!==false;
   var why="";
-  if(!enabled)why="Der Generator ist gerade pausiert.";
+  if(!enabled)why=(payOn()&&S.status&&S.status.payment_ready===false)?"Der Verkauf ist noch nicht freigeschaltet.":"Der Generator ist gerade pausiert.";
   else if(len<3)why="Bitte Rohinput eingeben.";
+  else if(payOn()&&!codeOk())why="Bitte den Zugangscode eingeben.";
   else if(!el.consent.checked)why="Bitte den Hinweis bestätigen.";
+  else if(noRunsLeft())why="Mit diesem Zugangscode sind keine Läufe mehr übrig.";
   el.run.disabled=!!why||S.busy;
-  el.why.textContent=S.busy?"":why;
-  el.run.textContent=S.busy?"Wird erzeugt …":"Artefakt erzeugen";
+  setText(el.why,S.busy?"":(why||(payOn()?"Ein Lauf wird abgebucht.":"")));
+  setText(el.run,S.busy?"Wird erzeugt …":"Artefakt erzeugen");
+  renderPay();
 }
 function setType(t){
   S.type=t;
@@ -416,11 +504,11 @@ function renderLoading(){
   var start=Date.now();S.timer=setInterval(function(){t.textContent=Math.round((Date.now()-start)/1000)+" s"},1000);
 }
 function stopLoading(){if(S.timer){clearInterval(S.timer);S.timer=null}}
-function showError(msg){
+function showError(msg,hint){
   stopLoading();setView("error");el.meta.textContent="";clearNode(el.body);
   var b=mk("div","banner err");b.setAttribute("role","alert");b.appendChild(mk("strong",null,"Das hat nicht geklappt"));b.appendChild(document.createTextNode(msg));
   el.body.appendChild(b);
-  el.body.appendChild(mk("p","hint","Dein Rohinput bleibt erhalten. Du kannst es erneut versuchen."));
+  el.body.appendChild(mk("p","hint",hint||"Dein Rohinput bleibt erhalten. Du kannst es erneut versuchen."));
 }
 var PART_LABEL={ok:"ok",fehler:"ausgefallen",nicht_aktiv:"nicht aktiv",uebersprungen:"übersprungen"};
 function renderBanner(d){
@@ -445,7 +533,16 @@ function renderBanner(d){
   [["ChatGPT",p.chatgpt],["Claude",p.claude],["Synthese",p.synthese]].forEach(function(x){
     if(!x[1])return;parts.appendChild(mk("span",x[1]==="ok"?"ok":(x[1]==="fehler"?"bad":""),x[0]+": "+(PART_LABEL[x[1]]||x[1])));
   });
-  b.appendChild(parts);return b;
+  b.appendChild(parts);
+  var note=creditNote(d.credits);if(note)b.appendChild(mk("div","credit-note",note));
+  return b;
+}
+function creditNote(c){
+  if(!c||typeof c!=="object")return "";
+  var rem=num(c.remaining),g=num(c.granted);if(rem===null)return "";
+  var left=rem<=0?"Es sind keine Läufe mehr übrig.":(g>0?"Noch "+rem+" von "+g+" Läufen übrig.":"Noch "+rem+(rem===1?" Lauf":" Läufe")+" übrig.");
+  if(c.giveback_failed===true)return "Dieser Lauf wurde abgebucht, obwohl das Ergebnis keine vollständige Synthese ist. Die automatische Gutschrift ist fehlgeschlagen. Bitte melde dich beim Betreiber und nenne deinen Zugangscode. "+left;
+  return (c.charged===false?"Dieser Lauf wurde nicht abgebucht, weil das Ergebnis keine vollständige Synthese ist. ":"Dieser Lauf wurde abgebucht. ")+left;
 }
 function tabsFor(d){
   var t=[["result","Ergebnis"]];
@@ -519,6 +616,7 @@ function copyText(text,okMsg){
 /* ---------- Erzeugen ---------- */
 function errorMessage(status,data){
   var msg=data&&typeof data.error==="string"?data.error:"";
+  if(status===402)return msg||"Der Zugangscode wird nicht akzeptiert.";
   if(status===429)return msg||"Zu viele Anfragen. Bitte kurz warten und erneut versuchen.";
   if(status===503)return msg||"Der Generator ist gerade nicht verfügbar.";
   if(status===413)return msg||"Der Input ist zu lang.";
@@ -527,21 +625,44 @@ function errorMessage(status,data){
 function run(){
   if(S.busy)return;
   var raw=el.raw.value.trim();if(raw.length<3||!el.consent.checked)return;
+  if(payOn()&&(!codeOk()||noRunsLeft()))return;
   S.busy=true;updateControls();renderLoading();
-  var body={raw_input:raw};if(S.type!=="auto")body.artifact_type=S.type;
+  var body={raw_input:raw},codeUsed="";if(S.type!=="auto")body.artifact_type=S.type;
+  if(payOn()){codeUsed=codeText();body.access_code=codeUsed;dropCheck();S.payNote=null}
   var ctrl=new AbortController(),to=setTimeout(function(){ctrl.abort()},240000);
   fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:ctrl.signal})
   .then(function(res){return res.json().catch(function(){return null}).then(function(data){return {res:res,data:data}})})
   .then(function(x){
-    if(!x.res.ok){showError(errorMessage(x.res.status,x.data));return}
+    if(x.res.status===402){
+      /* Code fehlt/ungültig/aufgebraucht, oder die Schranke wurde seit dem Laden der Seite eingeschaltet. */
+      var m402=errorMessage(402,x.data);
+      S.forcePay=true;S.credits=null;S.payNote={text:m402,tone:"err"};renderPay();loadStatus();
+      showError(m402,"Dein Rohinput bleibt erhalten. Prüfe den Zugangscode oder kaufe Läufe und versuche es erneut.");
+      if(!el.code.disabled)el.code.focus();
+      return;
+    }
+    if(!x.res.ok){
+      /* Unklarer Buchungsstand: nicht blind wiederholen, sondern erst den Stand prüfen. */
+      var unclear=!!codeUsed&&!!x.data&&x.data.reason==="buchung_unklar";
+      if(unclear)S.credits=null;
+      showError(errorMessage(x.res.status,x.data),unclear?PAY_CHECK_HINT:undefined);return;
+    }
     if(!x.data||typeof x.data.result!=="string"||!x.data.result.trim()){showError("Die Antwort war leer. Bitte den Input konkreter formulieren.");return}
     x.data.drafts=x.data.drafts||{};x.data.participants=x.data.participants||{};
+    if(codeUsed&&x.data.credits)applyCredits(codeUsed,x.data.credits);
     S.data=x.data;S.tab="result";S.example=null;renderDone();
     var top=el.card.getBoundingClientRect().top;
     if(top>window.innerHeight*0.6){el.card.scrollIntoView({behavior:"smooth",block:"start"})}
     el.heading.focus({preventScroll:true});
   })
-  .catch(function(err){showError(err&&err.name==="AbortError"?"Zeitüberschreitung. Bitte erneut versuchen oder den Input kürzen.":"Keine Verbindung zum Server. Bitte Netzwerk prüfen und erneut versuchen.")})
+  .catch(function(err){
+    var aborted=err&&err.name==="AbortError";
+    var msg=aborted?"Zeitüberschreitung. Bitte erneut versuchen oder den Input kürzen.":"Keine Verbindung zum Server. Bitte Netzwerk prüfen und erneut versuchen.";
+    if(codeUsed){
+      /* Die Anfrage kann den Server erreicht und einen Lauf abgebucht haben, ohne dass die Antwort ankam. */
+      S.credits=null;showError(msg+" Ob dabei ein Lauf abgebucht wurde, zeigt „Prüfen“.",PAY_CHECK_HINT);
+    } else showError(msg);
+  })
   .then(function(){clearTimeout(to);S.busy=false;updateControls()});
 }
 el.run.addEventListener("click",run);

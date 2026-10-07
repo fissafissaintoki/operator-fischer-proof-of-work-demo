@@ -4,10 +4,16 @@
   <!--
     Hinweis fuer den Betreiber (nicht fuer Besucher): Die Abschnitte zu Anthropic (2.2, 4.2, 5, 6, 8)
     wurden im Oktober 2026 technisch ergaenzt und sind rechtlich NICHT geprueft.
-    Vor dem Livegang einer Bezahlfunktion zusaetzlich pruefen bzw. ergaenzen:
-    Shopify als Zahlungs- und Bestelldienstleister (Bestelldaten, Speicherdauer), AGB/Widerruf,
-    die Aussage "technischer Proof of Work, kein produktiver Dienst" sowie Name und Anschrift
-    der Anthropic-Vertragsgesellschaft laut eigenem Anthropic-Konto.
+    Ebenso die Abschnitte zur Bezahlfunktion (2.4, 4.4 sowie je ein Satz in 6 und 8): Sie beschreiben
+    nur, was die Software tut (Zugangscode, Pruefung bei Shopify, Zaehler an der Bestellung), und
+    gelten nur, wenn die Bezahlschranke eingeschaltet wird.
+    Vor dem Livegang der Bezahlfunktion zusaetzlich pruefen bzw. ergaenzen:
+    Rollen von Shopify und Betreiber (Bestelldaten, Speicherdauer, gesetzliche Aufbewahrung),
+    Name und Anschrift der Shopify-Vertragsgesellschaft laut eigenem Shopify-Konto, Drittlandfragen
+    (Abschnitt 5 nennt Shopify bisher nicht), Rechtsgrundlage der Codepruefung (Abschnitt 3),
+    AGB und Widerruf bei digitalen Leistungen, die Aussage "technischer Proof of Work, kein
+    produktiver Dienst" sowie Name und Anschrift der Anthropic-Vertragsgesellschaft laut eigenem
+    Anthropic-Konto.
   -->
   <meta charset="utf-8">
   <title>Datenschutz · Prompterator</title>
@@ -211,6 +217,23 @@
       ausgeliefert und nicht zwischengespeichert.
     </p>
 
+    <h3>2.4 Bei Nutzung eines Zugangscodes (Bezahlfunktion)</h3>
+    <p>
+      Soweit der Dienst kostenpflichtig angeboten wird, erwerben Sie Läufe in einem
+      Online-Shop des Betreibers (Shopify). Der Kauf einschließlich der dabei
+      erhobenen Angaben und der Zahlung wird im Shop abgewickelt; dafür gelten die dort
+      angegebenen Datenschutzhinweise. Mit dem Zugangscode aus Ihrer Kaufbestätigung
+      schalten Sie den Dienst frei: Der Server übermittelt den Code an Shopify, um zu
+      prüfen, ob die Bestellung bezahlt ist und wie viele Läufe noch übrig sind. Dabei liest
+      der Server nur Bestellstatus, gekaufte Positionen und einen Zähler, keine
+      Kundendaten. Der Zähler der verbrauchten Läufe wird an der Bestellung in Shopify
+      gespeichert.
+    </p>
+    <p>
+      Der Zugangscode wird auf dem Server nicht gespeichert und nicht protokolliert und in
+      Ihrem Browser nicht abgelegt.
+    </p>
+
     <h2 id="zwecke">3. Zwecke und Rechtsgrundlagen</h2>
     <p>
       Die Verarbeitung erfolgt auf Grundlage von <b>Art. 6 Abs. 1 lit. f DSGVO</b>
@@ -287,6 +310,15 @@
       Weitere Informationen: <a href="https://render.com/privacy" rel="noopener" target="_blank">render.com/privacy</a>
     </p>
 
+    <h3>4.4 Shopify (nur bei Bezahlfunktion)</h3>
+    <p>
+      Der Kauf und die Prüfung des Zugangscodes laufen über die Shop-Plattform Shopify.
+      An Shopify werden dabei der Zugangscode (zur Prüfung der Bestellung) und der
+      Zählerstand der verbrauchten Läufe übermittelt. Ihre Eingaben in das Eingabefeld
+      erhält Shopify nicht. Weitere Informationen finden Sie in den
+      Datenschutzhinweisen im Shop.
+    </p>
+
     <h2 id="drittland">5. Datenübermittlung in Drittländer</h2>
     <p>
       OpenAI, Anthropic und Render haben ihren Hauptsitz bzw. ihre
@@ -313,6 +345,7 @@
       <li>Technische Hosting-Logs: gemäß Voreinstellung des Hosters (Render), in der Regel kurzfristig</li>
       <li>Bei OpenAI: gemäß deren Privacy Policy, kurzfristige Speicherung zur Missbrauchserkennung</li>
       <li>Bei Anthropic: gemäß deren Privacy Policy und Vertragsbedingungen</li>
+      <li>Bei Nutzung der Bezahlfunktion: Bestelldaten und Zähler bei Shopify gemäß den Hinweisen im Shop und den gesetzlichen Aufbewahrungspflichten</li>
     </ul>
 
     <h2 id="rechte">7. Ihre Rechte</h2>
@@ -333,7 +366,8 @@
     <h2 id="sicherheit">8. Datensicherheit</h2>
     <p>
       Die Webseite wird verschlüsselt per HTTPS ausgeliefert. API-Anfragen
-      an OpenAI und Anthropic erfolgen ebenfalls verschlüsselt über HTTPS. Es gelten
+      an OpenAI und Anthropic (sowie bei der Bezahlfunktion an Shopify) erfolgen ebenfalls
+      verschlüsselt über HTTPS. Es gelten
       technische und organisatorische Schutzmaßnahmen wie Rate-Limiting,
       Eingabelimits und sicherheitsrelevante HTTP-Header.
     </p>
