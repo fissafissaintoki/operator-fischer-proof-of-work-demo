@@ -27,7 +27,8 @@ Rohinput -> Problemklasse -> Modus -> Artefakt-Blueprint -> Qualitätsprüfung -
 ## Aktueller Stack
 
 - Python Standard Library HTTP Server
-- OpenAI Responses API im Backend
+- OpenAI Responses API im Backend (ChatGPT-Entwurf)
+- Anthropic Messages API im Backend (Claude-Entwurf und Zusammenführung, siehe README "Synthese")
 - Render Deployment
 - checkdomain DNS
 - einfache HTML/CSS/JS-Oberfläche
@@ -37,7 +38,7 @@ Rohinput -> Problemklasse -> Modus -> Artefakt-Blueprint -> Qualitätsprüfung -
 
 Diese Punkte dürfen nicht entfernt oder geschwächt werden:
 
-- OPENAI_API_KEY bleibt ausschließlich Environment Variable
+- OPENAI_API_KEY und ANTHROPIC_API_KEY bleiben ausschließlich Environment Variablen
 - Kein API-Key im Frontend
 - Kein API-Key im GitHub-Repo
 - Rate Limit
@@ -59,6 +60,7 @@ server.py        Backend, Security, API-Routen, SEO-Routen
 index.html       Haupt-UI
 pages/           SEO-Landingpages
 README.md        Repo-Beschreibung
+tests/           Unit-Tests (python3 -m unittest discover -s tests -p "test_*.py") und Security-Check
 docs/            Operator-Fischer-Dokumente
 Procfile         Render Start Command
 requirements.txt aktuell leer/Standard-Library
@@ -116,7 +118,7 @@ Vor Ausgabe oder Änderung prüfen:
 
 ```text
 1. Läuft lokal?
-2. Bleibt OPENAI_API_KEY geheim?
+2. Bleiben OPENAI_API_KEY und ANTHROPIC_API_KEY geheim?
 3. Bricht Render nicht?
 4. Bricht prompterator.de nicht?
 5. Bleibt /health verfügbar?

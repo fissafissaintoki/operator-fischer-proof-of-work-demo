@@ -1,6 +1,14 @@
 <!doctype html>
 <html lang="de">
 <head>
+  <!--
+    Hinweis fuer den Betreiber (nicht fuer Besucher): Die Abschnitte zu Anthropic (2.2, 4.2, 5, 6, 8)
+    wurden im Oktober 2026 technisch ergaenzt und sind rechtlich NICHT geprueft.
+    Vor dem Livegang einer Bezahlfunktion zusaetzlich pruefen bzw. ergaenzen:
+    Shopify als Zahlungs- und Bestelldienstleister (Bestelldaten, Speicherdauer), AGB/Widerruf,
+    die Aussage "technischer Proof of Work, kein produktiver Dienst" sowie Name und Anschrift
+    der Anthropic-Vertragsgesellschaft laut eigenem Anthropic-Konto.
+  -->
   <meta charset="utf-8">
   <title>Datenschutz · Prompterator</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -115,7 +123,7 @@
     <div class="rule"></div>
 
     <p>
-      Stand: Mai 2026. Diese Erklärung beschreibt, welche Daten bei der Nutzung
+      Stand: Oktober 2026. Diese Erklärung beschreibt, welche Daten bei der Nutzung
       von Prompterator verarbeitet werden, auf welcher Rechtsgrundlage dies
       geschieht und welche Rechte Sie als betroffene Person haben.
     </p>
@@ -178,9 +186,12 @@
 
     <h3>2.2 Bei Nutzung des Eingabefeldes</h3>
     <p>
-      Wenn Sie Text in das Eingabefeld eingeben und "Create" auswählen,
-      wird der eingegebene Text an die OpenAI-API übermittelt, um eine
-      strukturierte Antwort zu erzeugen.
+      Wenn Sie Text in das Eingabefeld eingeben und „Artefakt erzeugen“ auswählen,
+      wird der eingegebene Text an die API von OpenAI (ChatGPT) und an die API von
+      Anthropic (Claude) übermittelt, um jeweils einen Entwurf zu erzeugen. Für die
+      anschließende Zusammenführung erhält Anthropic zusätzlich die beiden Entwürfe.
+      Ist nur ein Anbieter aktiv, wird der Text nur an diesen übermittelt; das
+      Ergebnis weist dies aus.
     </p>
 
     <div class="box green">
@@ -194,7 +205,7 @@
 
     <h3>2.3 Bei Nutzung des PDF-Exports</h3>
     <p>
-      Wenn Sie auf "PDF" klicken, wird der aktuelle Output zur Erstellung
+      Wenn Sie auf „PDF herunterladen“ klicken, wird der aktuelle Output zur Erstellung
       einer PDF-Datei verarbeitet. Auch hier erfolgt keine dauerhafte
       Speicherung auf dem Server. Die PDF-Datei wird an Ihren Browser
       ausgeliefert und nicht zwischengespeichert.
@@ -239,7 +250,24 @@
       Weitere Informationen: <a href="https://openai.com/policies/privacy-policy" rel="noopener" target="_blank">openai.com/policies/privacy-policy</a>
     </p>
 
-    <h3>4.2 Render</h3>
+    <h3>4.2 Anthropic</h3>
+    <p>
+      Die Texteingaben sowie, für die Zusammenführung, die beiden Entwürfe
+      werden an Anthropic (Anbieter des Modells Claude, USA) übermittelt:
+    </p>
+    <p>
+      Anthropic verwendet Eingaben und Ausgaben seiner kommerziellen Produkte
+      (dazu zählt die API) nach eigener Aussage standardmäßig <b>nicht zum
+      Training</b> seiner Modelle. Nach Angaben von Anthropic ist der
+      Auftragsverarbeitungsvertrag (Data Processing Addendum, Art. 28 DSGVO)
+      einschließlich der Standardvertragsklauseln Bestandteil der kommerziellen
+      Nutzungsbedingungen.
+    </p>
+    <p>
+      Weitere Informationen: <a href="https://www.anthropic.com/legal/privacy" rel="noopener" target="_blank">anthropic.com/legal/privacy</a>
+    </p>
+
+    <h3>4.3 Render</h3>
     <p>
       Der Dienst wird auf der Hosting-Plattform Render gehostet:
     </p>
@@ -261,7 +289,7 @@
 
     <h2 id="drittland">5. Datenübermittlung in Drittländer</h2>
     <p>
-      Sowohl OpenAI als auch Render haben ihren Hauptsitz bzw. ihre
+      OpenAI, Anthropic und Render haben ihren Hauptsitz bzw. ihre
       Verarbeitungsorte (auch) in den USA. Damit erfolgt eine Übermittlung
       personenbezogener Daten in ein Drittland im Sinne von Art. 44 DSGVO.
     </p>
@@ -284,6 +312,7 @@
       <li>Eingabetexte und Outputs: <b>nicht dauerhaft serverseitig gespeichert</b></li>
       <li>Technische Hosting-Logs: gemäß Voreinstellung des Hosters (Render), in der Regel kurzfristig</li>
       <li>Bei OpenAI: gemäß deren Privacy Policy, kurzfristige Speicherung zur Missbrauchserkennung</li>
+      <li>Bei Anthropic: gemäß deren Privacy Policy und Vertragsbedingungen</li>
     </ul>
 
     <h2 id="rechte">7. Ihre Rechte</h2>
@@ -304,7 +333,7 @@
     <h2 id="sicherheit">8. Datensicherheit</h2>
     <p>
       Die Webseite wird verschlüsselt per HTTPS ausgeliefert. API-Anfragen
-      an OpenAI erfolgen ebenfalls verschlüsselt über HTTPS. Es gelten
+      an OpenAI und Anthropic erfolgen ebenfalls verschlüsselt über HTTPS. Es gelten
       technische und organisatorische Schutzmaßnahmen wie Rate-Limiting,
       Eingabelimits und sicherheitsrelevante HTTP-Header.
     </p>
@@ -332,7 +361,7 @@
 
     <footer>
       <span>Prompterator · Proof of Work</span>
-      <span>Stand: Mai 2026</span>
+      <span>Stand: Oktober 2026</span>
     </footer>
   </main>
 </body>
