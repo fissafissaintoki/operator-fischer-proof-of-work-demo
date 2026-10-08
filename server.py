@@ -2187,13 +2187,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Max-Age", "600")
 
     def _send(self, status: int, body: str, content_type: str = "text/plain; charset=utf-8"):
+        data = body.encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", content_type)
+        if status not in {204, 304}:
+            self.send_header("Content-Length", str(len(data)))
         self._security_headers()
         self._cors_headers()
         self.end_headers()
         if self.command != "HEAD":
-            self.wfile.write(body.encode("utf-8"))
+            self.wfile.write(data)
 
     def _send_json(self, status: int, payload: dict):
         self._send(status, json.dumps(payload, ensure_ascii=False), "application/json; charset=utf-8")

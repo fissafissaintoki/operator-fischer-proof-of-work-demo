@@ -88,7 +88,10 @@ def _parse_run_skus(raw: str) -> dict:
     return result
 
 
-PAYMENT_REQUIRED = _env_bool("PAYMENT_REQUIRED")
+_PAYMENT_REQUIRED_VALUE = os.environ.get("PAYMENT_REQUIRED", "").strip().lower()
+# Nur fehlend/leer oder ausdruecklich false lassen den Gratisbetrieb zu. Ein ungueltiger
+# Aktivierungsversuch bleibt gesperrt, statt durch einen Tippfehler die Schranke zu oeffnen.
+PAYMENT_REQUIRED = _PAYMENT_REQUIRED_VALUE not in {"", "false"}
 SHOPIFY_SHOP_DOMAIN = _normalize_shop_domain(os.environ.get("SHOPIFY_SHOP_DOMAIN", ""))
 SHOPIFY_ADMIN_TOKEN = os.environ.get("SHOPIFY_ADMIN_TOKEN", "").strip()
 SHOPIFY_CLIENT_ID = os.environ.get("SHOPIFY_CLIENT_ID", "").strip()
@@ -148,7 +151,7 @@ class CreditsUnavailable(CreditsError):
 
     maybe_applied: True, wenn ein Schreibzugriff trotz Fehlermeldung angekommen sein koennte (Zeitueberschreitung,
     abgebrochene Verbindung, Serverfehler). Nur beim Schreiben aussagekraeftig; reserve_run und release_run
-    pruefen dann nach, bevor sie "nichts abgebucht" sagen."""
+    behandeln diesen Zustand als unklar. Der gemeinsame Zaehler beweist keine einzelne Buchung."""
 
     http_status = 503
 
@@ -188,6 +191,8 @@ def _log(message: str) -> None:
 def config_problems() -> list:
     """Namen fehlender oder ungueltiger Einstellungen (nie Werte)."""
     problems = []
+    if _PAYMENT_REQUIRED_VALUE not in {"", "false", "true"}:
+        problems.append("PAYMENT_REQUIRED ist ungültig (erlaubt: true oder false)")
     if not SHOPIFY_SHOP_DOMAIN:
         problems.append("SHOPIFY_SHOP_DOMAIN fehlt oder ist ungültig")
     if not SHOPIFY_ADMIN_TOKEN and not (SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET):
@@ -222,10 +227,6 @@ def public_info() -> dict:
 def startup_report() -> list:
     """Zeilen fuer das Start-Log. Nennt nur Namen, nie Werte."""
     if not PAYMENT_REQUIRED:
-        # Ein Tippfehler ("yes", "1", "True ") darf die Schranke nicht still ausgeschaltet lassen.
-        raw = os.environ.get("PAYMENT_REQUIRED", "").strip().lower()
-        if raw and raw != "false":
-            return ["WARNUNG: PAYMENT_REQUIRED hat keinen gültigen Wert (erlaubt: true oder false). Die Bezahlschranke ist AUS."]
         return []
     problems = config_problems()
     if problems:
@@ -559,27 +560,13 @@ def check_balance(raw_code) -> Balance:
     return balance
 
 
-def _read_used(order_id: str) -> int:
-    """Liest nur den Zaehler, um nach einer ungeklaerten Schreibantwort festzustellen, was angekommen ist.
-    Scheitert schon das Lesen, bleibt der Buchungsstand unklar (CreditsUnavailable, maybe_applied=True)."""
-    try:
-        data = _graphql(USED_QUERY, {"id": order_id})
-        order = data.get("order")
-        if not isinstance(order, dict):
-            raise _unavailable()
-        return _read_counter(order.get("metafield"))[0]
-    except CreditsUnavailable:
-        _log("Buchungsstand konnte nicht nachgelesen werden")
-        raise CreditsUnavailable(MSG_UNCLEAR, "buchung_unklar", maybe_applied=True)
-
-
 def reserve_run(raw_code) -> Balance:
     """Bucht einen Lauf ab, bevor die KI aufgerufen wird. Gibt den Stand nach der Buchung zurueck.
     Schlaegt die Erzeugung fehl, muss release_run aufgerufen werden.
 
-    Kommt auf den Schreibzugriff keine verwertbare Antwort (Zeitueberschreitung, Serverfehler), wird der
-    Zaehler nachgelesen: Nur wenn er nicht gestiegen ist, heisst es ehrlich "nichts abgebucht". Ist er
-    gestiegen, gilt der Lauf als gebucht. Laesst sich auch das nicht klaeren, sagt die Meldung das offen."""
+    Kommt auf den Schreibzugriff keine verwertbare Antwort (Zeitueberschreitung, Serverfehler), bleibt
+    die Buchung unklar und es darf kein Modellaufruf folgen. Ein gestiegener Zaehler kann von einer
+    anderen Reservierung stammen; ein unveraenderter Zaehler schliesst einen verspaeteten Write nicht aus."""
     _require_ready()
     code = normalize_code(raw_code)
     with _stripe(code):
@@ -596,9 +583,7 @@ def reserve_run(raw_code) -> Balance:
             except CreditsUnavailable as exc:
                 if not exc.maybe_applied:
                     raise
-                if _read_used(balance.order_id) <= balance.used:
-                    raise _unavailable()  # Zaehler unveraendert: die Buchung ist nicht angekommen
-                # Zaehler gestiegen: Die Buchung ist angekommen, nur die Antwort ging verloren.
+                raise CreditsUnavailable(MSG_UNCLEAR, "buchung_unklar", maybe_applied=True) from exc
             return Balance(order_id=balance.order_id, granted=balance.granted, used=balance.used + 1)
     _log("Zaehler wegen gleichzeitiger Zugriffe nicht schreibbar")
     raise _unavailable()
@@ -626,13 +611,9 @@ def _release_attempt(order_id: str) -> int:
             except CreditsUnavailable as exc:
                 if not exc.maybe_applied:
                     raise
-                try:
-                    now = _read_used(order_id)
-                except CreditsUnavailable:
-                    raise _Unsure()
-                if now < used:
-                    return now  # angekommen, nur die Antwort ging verloren
-                raise  # nicht angekommen: ein weiterer Versuch ist sicher
+                # Auch ein unveraenderter Zaehler beweist nichts: Eine neue Reservierung kann die
+                # Gutschrift verdecken, oder unser Write kommt erst spaeter an. Nicht erneut gutschreiben.
+                raise _Unsure() from exc
             return used - 1
     raise _unavailable()
 

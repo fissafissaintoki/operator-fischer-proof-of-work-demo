@@ -18,7 +18,9 @@ import http.client
 import http.server
 import io
 import json
+import os
 import re
+import subprocess
 import sys
 import threading
 import unittest
@@ -345,18 +347,41 @@ class ConfigHelpers(unittest.TestCase):
         # Reiner Modulstand ohne Patches: Wer nichts setzt, bekommt das bisherige Verhalten.
         self.assertFalse(credits.PAYMENT_REQUIRED)
 
-    def test_typo_in_the_switch_is_reported_instead_of_silently_staying_off(self):
-        with mock.patch.object(credits, "PAYMENT_REQUIRED", False):
-            for typo in ("yes", "1", "ja", "on", "tru"):
-                with mock.patch.dict(credits.os.environ, {"PAYMENT_REQUIRED": typo}):
-                    report = " ".join(credits.startup_report())
-                self.assertIn("PAYMENT_REQUIRED", report, typo)
-                self.assertIn("AUS", report, typo)
-                self.assertNotIn(f"'{typo}'", report)  # der Wert selbst wird nicht ausgegeben
-                self.assertNotIn(f'"{typo}"', report)
-            for fine in ("", "false", "FALSE", "  false "):
-                with mock.patch.dict(credits.os.environ, {"PAYMENT_REQUIRED": fine}):
-                    self.assertEqual(credits.startup_report(), [], repr(fine))
+    def test_payment_switch_is_fail_closed_in_a_fresh_process(self):
+        """Die echte Import-Konfiguration pruefen, nicht bloss ein bereits geparstes Flag patchen."""
+        code = """
+import json
+import server
+import shopify_credits as credits
+print(json.dumps({"status": server.public_status(), "problems": credits.config_problems(),
+                  "report": credits.startup_report()}))
+"""
+        env = {key: value for key, value in os.environ.items()
+               if not key.startswith(("SHOPIFY_", "OPENAI_", "ANTHROPIC_", "PAYMENT_"))}
+        env.update({"OPENAI_API_KEY": SECRET_OPENAI, "ANTHROPIC_API_KEY": SECRET_ANTHROPIC,
+                    "GENERATE_ENABLED": "true", "SYNTHESIS_ENABLED": "true",
+                    "SHOPIFY_SHOP_DOMAIN": SHOP, "SHOPIFY_ADMIN_TOKEN": STATIC_TOKEN,
+                    "SHOPIFY_RUN_SKUS": "PT-LAUF=1"})
+        cases = [(None, False, False), ("", False, False), ("  ", False, False),
+                 ("false", False, False), (" FALSE ", False, False),
+                 ("true", True, True), (" True ", True, True)]
+        cases += [(typo, True, False) for typo in ("yes", "1", "ja", "on", "tru", "ture")]
+        for raw, required, ready in cases:
+            with self.subTest(raw=raw):
+                child_env = dict(env)
+                if raw is not None:
+                    child_env["PAYMENT_REQUIRED"] = raw
+                result = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=child_env,
+                                        capture_output=True, text=True, check=True, timeout=15)
+                data = json.loads(result.stdout)
+                self.assertEqual(data["status"]["payment_required"], required)
+                self.assertEqual(data["status"]["payment_ready"], ready)
+                self.assertEqual(data["status"]["generate_enabled"], not required or ready)
+                if required and not ready:
+                    self.assertTrue(any("PAYMENT_REQUIRED" in p for p in data["problems"]))
+                    self.assertIn("Generator bleibt gesperrt", " ".join(data["report"]))
+                else:
+                    self.assertEqual(data["problems"], [])
 
     def test_readiness_needs_every_part(self):
         base = dict(PAYMENT_REQUIRED=True, SHOPIFY_SHOP_DOMAIN=SHOP, SHOPIFY_ADMIN_TOKEN=STATIC_TOKEN,
@@ -783,17 +808,18 @@ class ShopifyFailures(CreditsCase):
 
 
 class UnclearBookings(CreditsCase):
-    """Die Antwort auf das Hochzaehlen geht verloren. Der Zaehler wird nachgelesen, bevor etwas behauptet wird."""
+    """Ein gemeinsamer Zaehler kann nach verlorener Antwort keine einzelne Buchung beweisen."""
 
-    def test_applied_write_with_lost_response_counts_as_booked_exactly_once(self):
+    def test_applied_write_with_lost_response_stays_unclear(self):
         self.shop.fail_after["PromptoratorSetRunsUsed"] = TimeoutError()
-        result = credits.reserve_run(CODE)
-        self.assertEqual(result.used, 1)
+        with self.assertRaises(credits.CreditsUnavailable) as ctx:
+            credits.reserve_run(CODE)
+        self.assertEqual(ctx.exception.reason, "buchung_unklar")
         self.assertEqual(self.shop.used(), "1")
         self.assertEqual(len(self.shop.calls_for("PromptoratorSetRunsUsed")), 1)  # nicht ein zweites Mal gebucht
-        self.assertEqual(len(self.shop.calls_for("PromptoratorRunsUsed")), 1)
+        self.assertNotIn("PromptoratorRunsUsed", self.shop.ops())
 
-    def test_write_that_never_arrived_is_reported_as_not_booked(self):
+    def test_write_without_a_reliable_response_never_claims_nothing_was_booked(self):
         failures = [TimeoutError(), http_error(500), http_error(502), urllib.error.URLError("boom"),
                     ConnectionResetError(), RawResponse(b"<html>Bad gateway</html>"), FakeResponse({"data": None}),
                     BrokenBodyResponse(http.client.IncompleteRead(b"partial")),
@@ -804,25 +830,40 @@ class UnclearBookings(CreditsCase):
             self.shop.fail["PromptoratorSetRunsUsed"] = failure
             with self.assertRaises(credits.CreditsUnavailable, msg=repr(failure)) as ctx:
                 credits.reserve_run(CODE)
-            self.assertEqual(ctx.exception.reason, "bezahlung_nicht_erreichbar", repr(failure))
-            self.assertIn("nichts abgebucht", ctx.exception.message)
-            self.assertEqual(len(self.shop.calls_for("PromptoratorRunsUsed")), 1, repr(failure))  # nachgelesen
+            self.assertEqual(ctx.exception.reason, "buchung_unklar", repr(failure))
+            self.assertNotIn("nichts abgebucht", ctx.exception.message)
+            self.assertTrue(ctx.exception.maybe_applied)
+            self.assertNotIn("PromptoratorRunsUsed", self.shop.ops(), repr(failure))
             self.assertIsNone(self.shop.orders[ORDER_ID]["metafield"])
 
-    def test_unclear_state_is_stated_openly_when_the_recheck_fails_too(self):
-        recheck_failures = [http_error(500), TimeoutError(), RawResponse(b"nope"), FakeResponse({"data": {"order": None}}),
-                            FakeResponse({"data": {"order": {"id": ORDER_ID, "metafield": {"value": "abc", "compareDigest": "d"}}}})]
-        for failure in recheck_failures:
-            self.shop.orders[ORDER_ID]["metafield"] = None
-            self.shop.fail_after["PromptoratorSetRunsUsed"] = TimeoutError()  # angekommen, Antwort verloren
-            self.shop.fail["PromptoratorRunsUsed"] = failure
-            with self.assertRaises(credits.CreditsUnavailable, msg=repr(failure)) as ctx:
-                credits.reserve_run(CODE)
-            self.assertEqual(ctx.exception.reason, "buchung_unklar", repr(failure))
-            self.assertEqual(ctx.exception.message, credits.MSG_UNCLEAR)
-            self.assertNotIn("nichts abgebucht", ctx.exception.message)
-            self.assertEqual(self.shop.used(), "1")  # tatsaechlich gebucht: die Meldung ist ehrlich
+    def test_another_process_booking_cannot_be_claimed_after_our_timeout(self):
+        """A liest 0; nur B schreibt 0->1; As fehlgeschlagener Write darf keinen Lauf freigeben."""
+        def other_process_then_timeout():
+            # B hatte denselben alten Stand und schreibt mit dessen Digest. As eigentlicher Write
+            # wird durch den Timeout vor der Verarbeitung ersetzt.
+            variables = self.shop.calls_for("PromptoratorSetRunsUsed")[-1]["vars"]
+            self.shop._op_PromptoratorSetRunsUsed(variables)
+            return TimeoutError()
+
+        self.shop.fail["PromptoratorSetRunsUsed"] = other_process_then_timeout
+        with self.assertRaises(credits.CreditsUnavailable) as ctx:
+            credits.reserve_run(CODE)
+        self.assertEqual(ctx.exception.reason, "buchung_unklar")
+        self.assertEqual(self.shop.used(), "1")  # nur die fremde Buchung
+        self.assertEqual(len(self.shop.calls_for("PromptoratorSetRunsUsed")), 1)
         self.assertNoSecretsLogged()
+
+    def test_write_can_arrive_after_the_unclear_response(self):
+        """Ein zunaechst unveraenderter Stand ist kein Beweis, dass der Write nie mehr ankommt."""
+        self.shop.fail["PromptoratorSetRunsUsed"] = TimeoutError()
+        with self.assertRaises(credits.CreditsUnavailable) as ctx:
+            credits.reserve_run(CODE)
+        delayed_variables = self.shop.calls_for("PromptoratorSetRunsUsed")[-1]["vars"]
+        self.assertIsNone(self.shop.used())
+        self.assertEqual(ctx.exception.reason, "buchung_unklar")
+        self.assertNotIn("nichts abgebucht", ctx.exception.message)
+        self.shop._op_PromptoratorSetRunsUsed(delayed_variables)  # der urspruengliche Write kommt spaeter an
+        self.assertEqual(self.shop.used(), "1")
 
     def test_rejected_writes_are_not_rechecked(self):
         """4xx, Drosselung und fachliche Ablehnung bedeuten: nicht ausgefuehrt. Da gibt es nichts nachzulesen."""
@@ -843,17 +884,17 @@ class UnclearBookings(CreditsCase):
             credits.reserve_run(CODE)
         self.assertNotIn("PromptoratorRunsUsed", self.shop.ops())
 
-    def test_lost_response_followed_by_conflict_still_never_oversells(self):
-        """Antwort verloren, danach stellt sich heraus, dass jemand anderes hochgezaehlt hat: nicht doppelt buchen."""
+    def test_a_later_request_observes_the_previously_unclear_booking(self):
         self.shop.fail_after["PromptoratorSetRunsUsed"] = TimeoutError()
-        credits.reserve_run(CODE)  # Stand: 1 (angekommen)
+        with self.assertRaises(credits.CreditsUnavailable):
+            credits.reserve_run(CODE)  # Stand: 1 (angekommen), kein freigegebener Modellaufruf
         self.shop.fail_after.clear()
         self.assertEqual(credits.reserve_run(CODE).used, 2)
         self.assertEqual(self.shop.used(), "2")
 
 
 class ReleaseHardening(CreditsCase):
-    """Gutschriften duerfen nie werfen, einmal wiederholt werden und nie doppelt gutschreiben."""
+    """Nur sicher nicht ausgefuehrte Gutschriften duerfen wiederholt werden."""
 
     def setUp(self):
         super().setUp()
@@ -882,8 +923,18 @@ class ReleaseHardening(CreditsCase):
             credits.release_run(ORDER_ID)
         sleep.assert_called_once_with(0.25)
 
-    def test_release_whose_write_never_arrived_is_retried(self):
+    def test_release_timeout_is_not_retried_even_if_the_write_arrives_late(self):
         outcomes = iter([TimeoutError()])
+        self.shop.fail["PromptoratorSetRunsUsed"] = lambda: next(outcomes, None)
+        self.assertIsNone(credits.release_run(ORDER_ID))
+        self.assertEqual(self.shop.used(), "2")
+        self.assertEqual(len(self.shop.calls_for("PromptoratorSetRunsUsed")), 1)
+        delayed_variables = self.shop.calls_for("PromptoratorSetRunsUsed")[0]["vars"]
+        self.shop._op_PromptoratorSetRunsUsed(delayed_variables)
+        self.assertEqual(self.shop.used(), "1")
+
+    def test_rejected_release_write_can_be_retried(self):
+        outcomes = iter([http_error(429)])
         self.shop.fail["PromptoratorSetRunsUsed"] = lambda: next(outcomes, None)
         self.assertEqual(credits.release_run(ORDER_ID), 1)
         self.assertEqual(self.shop.used(), "1")
@@ -891,23 +942,31 @@ class ReleaseHardening(CreditsCase):
 
     def test_release_with_lost_response_is_not_applied_twice(self):
         self.shop.fail_after["PromptoratorSetRunsUsed"] = TimeoutError()
-        self.assertEqual(credits.release_run(ORDER_ID), 1)
+        self.assertIsNone(credits.release_run(ORDER_ID))
         self.assertEqual(self.shop.used(), "1")
         self.assertEqual(len(self.shop.calls_for("PromptoratorSetRunsUsed")), 1)
 
-    def test_release_is_not_repeated_when_it_is_unclear_whether_it_arrived(self):
-        self.shop.fail_after["PromptoratorSetRunsUsed"] = TimeoutError()  # kam an, Antwort ging verloren
-        reads = []
+    def test_new_booking_cannot_hide_a_release_and_cause_a_second_refund(self):
+        """A schreibt 2->1, B reserviert 1->2, As Antwort geht verloren: niemals erneut 2->1."""
+        fired = []
 
-        def only_the_recheck_fails():
-            reads.append(1)
-            return http_error(500) if len(reads) == 2 else None  # 1. Lesen ok, 2. (Nachlesen) scheitert, danach wieder ok
+        def another_reservation_before_lost_response():
+            if fired:
+                return None
+            fired.append(True)
+            mf = self.shop.orders[ORDER_ID]["metafield"]
+            self.assertEqual(mf["value"], "1")  # Rueckbuchung ist bereits angekommen
+            entry = dict(self.shop.calls_for("PromptoratorSetRunsUsed")[-1]["vars"]["metafields"][0])
+            entry.update(value="2", compareDigest=mf["digest"])
+            result = self.shop._op_PromptoratorSetRunsUsed({"metafields": [entry]})
+            self.assertEqual(result["data"]["metafieldsSet"]["userErrors"], [])
+            return TimeoutError()
 
-        self.shop.fail["PromptoratorRunsUsed"] = only_the_recheck_fails
+        self.shop.fail_after["PromptoratorSetRunsUsed"] = another_reservation_before_lost_response
         self.assertIsNone(credits.release_run(ORDER_ID))
-        self.assertEqual(len(reads), 2)  # ein dritter Lesezugriff waere ein blinder zweiter Versuch
         self.assertEqual(len(self.shop.calls_for("PromptoratorSetRunsUsed")), 1)
-        self.assertEqual(self.shop.used(), "1")  # und es wurde auch nicht doppelt gutgeschrieben
+        self.assertEqual(self.shop.used(), "2")  # 2 - genau eine Rueckbuchung + neue Reservierung
+        self.assertEqual(len(self.shop.calls_for("PromptoratorRunsUsed")), 1)
 
     def test_release_never_raises_on_odd_responses(self):
         odd = [
@@ -1125,6 +1184,16 @@ class HttpCredits(unittest.TestCase):
         self.assertNoModelCalls()
         self.assertEqual(self.shop.calls, [])
 
+    def test_invalid_payment_switch_locks_status_and_generation_even_with_valid_credentials(self):
+        with mock.patch.object(credits, "_PAYMENT_REQUIRED_VALUE", "ture"):
+            _, info = self.request("GET", "/api/status")
+            self.assertEqual((info["payment_required"], info["payment_ready"], info["generate_enabled"]),
+                             (True, False, False))
+            status, data = self.generate(code=None)
+        self.assertEqual((status, data["reason"]), (503, "bezahlung_nicht_eingerichtet"))
+        self.assertNoModelCalls()
+        self.assertEqual(self.shop.calls, [])
+
     # ---- Ohne gueltigen Code keine Kosten ----
 
     def test_missing_and_invalid_codes_cost_nothing(self):
@@ -1255,19 +1324,25 @@ class HttpCredits(unittest.TestCase):
 
     def test_unclear_booking_is_reported_openly_and_no_model_is_called(self):
         self.shop.fail_after["PromptoratorSetRunsUsed"] = TimeoutError()  # Buchung kam an, Antwort ging verloren
-        self.shop.fail["PromptoratorRunsUsed"] = http_error(500)  # und das Nachlesen scheitert ebenfalls
         status, data = self.generate()
         self.assertEqual((status, data["reason"]), (503, "buchung_unklar"))
         self.assertNotIn("nichts abgebucht", data["error"])
         self.assertIn("Prüfen", data["error"])
         self.assertNoModelCalls()
 
-    def test_lost_booking_response_is_rechecked_and_the_run_proceeds(self):
-        self.shop.fail_after["PromptoratorSetRunsUsed"] = TimeoutError()
+    def test_foreign_booking_after_our_failed_write_cannot_trigger_model_calls(self):
+        def other_process_then_timeout():
+            variables = self.shop.calls_for("PromptoratorSetRunsUsed")[-1]["vars"]
+            self.shop._op_PromptoratorSetRunsUsed(variables)  # B bucht, A erhaelt nur den Timeout
+            return TimeoutError()
+
+        self.shop.fail["PromptoratorSetRunsUsed"] = other_process_then_timeout
         status, data = self.generate()
-        self.assertEqual(status, 200)
-        self.assertEqual(data["credits"], {"granted": 5, "used": 1, "remaining": 4, "charged": True})
-        self.assertEqual(self.shop.used(), "1")  # genau einmal gebucht
+        self.assertEqual((status, data["reason"]), (503, "buchung_unklar"))
+        self.assertNotIn("nichts abgebucht", data["error"])
+        self.assertEqual(self.shop.used(), "1")  # genau die Buchung des anderen Prozesses
+        self.assertNoModelCalls()
+        self.assertEqual(self.event("charged"), 0)
 
     def test_failed_giveback_is_stated_openly(self):
         self.net.openai = lambda body: http_error(500)
@@ -1315,6 +1390,22 @@ class HttpCredits(unittest.TestCase):
         self.assertEqual(data["credits"]["charged"], True)
         self.assertEqual(data["credits"].get("giveback_failed"), True)
         self.assertEqual(self.event("release_failed"), 1)
+
+    def test_unclear_giveback_is_reported_without_a_second_refund(self):
+        self.net.draft = lambda body: http_error(500)
+
+        def lose_only_the_refund_response():
+            entry = self.shop.calls_for("PromptoratorSetRunsUsed")[-1]["vars"]["metafields"][0]
+            return TimeoutError() if entry["value"] == "0" else None
+
+        self.shop.fail_after["PromptoratorSetRunsUsed"] = lose_only_the_refund_response
+        status, data = self.generate()
+        self.assertEqual(status, 200)
+        self.assertTrue(data["credits"].get("giveback_failed"))
+        self.assertEqual(self.event("release_failed"), 1)
+        self.assertEqual(self.event("released"), 0)  # kein Erfolg behauptet, obwohl sie tatsaechlich ankam
+        self.assertEqual(len(self.shop.calls_for("PromptoratorSetRunsUsed")), 2)  # Reservierung + ein Refund
+        self.assertEqual(self.shop.used(), "0")
 
     # ---- Shopify nicht erreichbar ----
 

@@ -120,10 +120,13 @@ Die Tests sind nicht gegen die echten Anbieter-APIs gelaufen.
 
 ## Bezahlschranke (Shopify)
 
-Optional und **standardmaessig aus**. Ohne `PAYMENT_REQUIRED=true` verhaelt sich
-alles wie bisher: kein Zugangscode, kein Shopify-Aufruf, `/api/credits`
+Optional und **standardmaessig aus**. Bei nicht gesetztem/leerem
+`PAYMENT_REQUIRED` oder ausdruecklich `false` verhaelt sich alles wie bisher:
+kein Zugangscode, kein Shopify-Aufruf, `/api/credits`
 antwortet 404. Der Schalter versteht nur `true` oder `false`; bei einem anderen
-Wert (Tippfehler) warnt der Server beim Start und die Schranke bleibt aus.
+Wert (Tippfehler) sperrt der Server die Erzeugung und meldet eine ungueltige
+Konfiguration. Nur ein nicht gesetzter/leerer Wert oder ausdruecklich `false`
+schaltet die Schranke aus.
 
 ```
 Kaeufer bezahlt im Shopify-Shop ein Produkt (SKU steht in SHOPIFY_RUN_SKUS)
@@ -159,10 +162,11 @@ Regeln im Code (jeweils durch Tests belegt, siehe unten):
 - **Fail closed:** Shopify nicht erreichbar, Zaehler unlesbar oder Konfiguration
   unvollstaendig fuehren zu 503, ohne Modellaufruf und ohne Abbuchung.
 - **Unklare Buchung:** Kommt auf das Hochzaehlen keine verwertbare Antwort
-  (Zeitueberschreitung, Serverfehler), liest der Server den Zaehler nach. Nur wenn er
-  unveraendert ist, steht "nichts abgebucht"; ist er gestiegen, gilt der Lauf als gebucht.
-  Laesst sich auch das nicht klaeren, sagt die Antwort es offen (`buchung_unklar`, 503, kein
-  Modellaufruf), und die Oberflaeche raet, zuerst mit "Pruefen" den Stand anzusehen.
+  (Zeitueberschreitung, Serverfehler), wird kein Modell aufgerufen (`buchung_unklar`, 503).
+  Ein aggregierter Zaehler kann bei parallelen Anfragen nicht beweisen, dass gerade
+  diese Buchung angekommen ist. Auch ein unveraenderter Stand schliesst einen spaeten
+  Schreibzugriff nicht aus. Die Oberflaeche raet, den Stand mit "Pruefen" anzusehen
+  und bei Unklarheit den Betreiber zu kontaktieren. Es wird nicht automatisch erneut gebucht.
   Abgelehnte Schreibzugriffe (4xx, Drosselung) werden nicht nachgelesen: sie wurden nicht
   ausgefuehrt.
 - **Rueckbuchung:** Scheitert die Erzeugung (auch durch einen Absturz), wird der Lauf
@@ -205,9 +209,10 @@ Umgebungsvariablen (Secrets nur im Render-Environment, nie im Repo und nie im Ch
 
 Einrichtung:
 
-1. **Shopify-Tarif.** Der Shop laeuft derzeit im Testzeitraum (`trial`); fuer echte
-   Verkaeufe ist laut Shopify ein bezahlter Tarif noetig. Das sind Fixkosten, die der
-   Betreiber bewusst entscheidet.
+1. **Shopify-Tarif und Checkout.** Im konkreten Shop den ausgewaehlten Plan,
+   Abrechnungsbeginn, laufenden Preis und Zahlungsanbieter pruefen. Ein Planname allein
+   belegt weder eine bezahlte Rechnung noch einen funktionierenden Checkout.
+   Neue Fixkosten entscheidet der Betreiber; keinen bereits gewaehlten Tarif erneut buchen.
 2. **App im Dev Dashboard** anlegen (neue Custom Apps im Shop-Admin gibt es nicht mehr).
    Laut Shopify-Doku muessen App und Shop zur selben Organisation gehoeren, sonst lehnt
    Shopify die Token-Anfrage ab (`shop_not_permitted`). Scopes: `read_orders` und
@@ -222,13 +227,19 @@ Einrichtung:
    (`SHOPIFY_ACCEPT_TEST_ORDERS=true`): kaufen, Code pruefen, Lauf erzeugen, den Zaehler in
    Shopify ansehen, die Rueckbuchung bei einem erzwungenen Fehler pruefen. Danach
    `SHOPIFY_ACCEPT_TEST_ORDERS` wieder entfernen.
-6. **Rueckweg:** `PAYMENT_REQUIRED=false` (oder Variable loeschen) und neu starten.
+6. **Kommerzieller Not-Aus:** `GENERATE_ENABLED=false` setzen und die Aenderung deployen;
+   `PAYMENT_REQUIRED=true` beibehalten. Danach `/api/status` und eine gesperrte Anfrage
+   pruefen. `PAYMENT_REQUIRED=false` oeffnet kostenlose Laeufe auf Kosten des Betreibers
+   und ist kein Not-Aus. Ein Render-Restart allein uebernimmt laut Render-Dokumentation
+   keine nur gespeicherten Environment-Aenderungen.
 
 Bekannte Grenzen (bewusst nicht schoengeredet):
 
 - Ohne den Scope `read_all_orders` (Freigabe durch Shopify noetig) liefert Shopify nur
-  Bestellungen der letzten 60 Tage. Zugangscodes laufen deshalb praktisch 60 Tage nach dem
-  Kauf ab; das muss im Produkttext und in den AGB stehen.
+  Bestellungen der letzten 60 Tage. Aeltere Codes koennen mit diesem Ansatz nicht mehr
+  automatisch geprueft werden. Das ist eine technische Zugriffsbeschraenkung, keine
+  automatische rechtliche Verfallsfrist gekaufter Laeufe. Nutzungsdauer und eine Loesung
+  fuer weiterhin berechtigte Kaeufer vor Verkauf fachlich und rechtlich klaeren.
 - Ob die Bestaetigungsnummer auf der Danke-Seite und in der Bestellbestaetigung steht, muss
   an einer Testbestellung geprueft werden; sonst die Benachrichtigungsvorlage anpassen.
 - Wer einen Code weitergibt, teilt die Laeufe. Erstattungen und Chargebacks werden nur
@@ -236,10 +247,11 @@ Bekannte Grenzen (bewusst nicht schoengeredet):
   werden nicht ausgeglichen.
 - Die Abbuchung ist so zuverlaessig wie die Shopify-Admin-API. Faellt Shopify aus, steht
   der Verkauf still (bewusst).
-- Eine Buchung, die erst nach dem Nachlesen bei Shopify ankommt (sehr langsame Antwort nach
-  Zeitueberschreitung), kostet den Kaeufer einen Lauf, ohne dass der Server es merkt. Das ist
-  selten; der Betreiber kann den Zaehler in Shopify korrigieren. Dafuer braucht der Betreiber
-  eine Support-Adresse, an die sich Kaeufer mit ihrem Zugangscode wenden koennen.
+- Nach einer unklaren Schreibantwort kann ein Lauf verbraucht sein, obwohl kein Modell
+  gestartet wurde. Der Server meldet deshalb den unklaren Buchungsstand. Ohne dauerhafte
+  Buchungsidentitaet pro Anfrage laesst sich die Ursache nicht allein aus `runs_used`
+  beweisen. Der Betreiber braucht einen Supportweg und muss den Einzelfall pruefen;
+  den Zaehler nicht blind herabsetzen oder waehrend paralleler Laeufe ueberschreiben.
 - Bricht die Verbindung des Kaeufers waehrend eines Laufs ab (oder dauert er laenger als vier
   Minuten), bleibt der Lauf abgebucht. Die Oberflaeche weist darauf hin und raet, den Stand zu
   pruefen.

@@ -69,7 +69,7 @@ README.md        Repo-Beschreibung
 tests/           Unit-Tests (python3 -m unittest discover -s tests -p "test_*.py") und Security-Check
 docs/            Operator-Fischer-Dokumente
 Procfile         Render Start Command
-requirements.txt aktuell leer/Standard-Library
+requirements.txt ReportLab fuer PDF-Ausgaben; sonst Python-Standardbibliothek
 ```
 
 ## Arbeitsregeln für Claude
