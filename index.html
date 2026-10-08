@@ -1,16 +1,222 @@
-<!-- Prompterator.de deployment-ready single-file build v4 -->
 <!doctype html>
 <html lang="de">
 <head>
-<meta name="description" content="Prompterator.de - Operator Fischer Leitstand: Rohinput zu konkretem Artefakt, Spezial-Builder und Qualitätsgate." />
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Prompterator MVP v4 - Intent-to-Artifact Routing</title>
+<meta name="description" content="Prompterator.de: Aus Rohinput wird ein strukturiertes Arbeitsartefakt mit Qualitätsprüfung und PDF-Export. Mensch bleibt Owner." />
+<title>Prompterator – Rohinput rein, Artefakt raus</title>
 <style>
-:root{--bg:#050b14;--panel:#0a1626;--line:#1b4563;--cyan:#20d8ff;--green:#3ef0a1;--amber:#ffcf5a;--red:#ff6b6b;--text:#e8f2ff;--muted:#8aa4be}*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 20% 10%,#113452 0,#07111f 35%,#03070d 100%);color:var(--text);min-height:100vh}body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(rgba(32,216,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(32,216,255,.05) 1px,transparent 1px);background-size:34px 34px;pointer-events:none}.shell{max-width:1380px;margin:0 auto;padding:28px 18px 42px;position:relative}.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}.brand{display:flex;gap:12px;align-items:center}.topbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}.orb{width:42px;height:42px;border:1px solid var(--cyan);border-radius:50%;box-shadow:0 0 30px rgba(32,216,255,.5),inset 0 0 18px rgba(32,216,255,.15);position:relative}.orb:after{content:"";position:absolute;inset:10px;border:1px solid var(--green);border-radius:50%}.kicker{color:var(--cyan);font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}.title{font-size:clamp(34px,5vw,68px);line-height:.92;margin:0;font-weight:900;letter-spacing:-.06em}.sub{color:#b9cce0;max-width:780px;line-height:1.5;margin:12px 0 0}.badge{border:1px solid var(--line);background:rgba(10,22,38,.75);padding:8px 11px;border-radius:999px;color:#cde8ff;font-size:12px;white-space:nowrap}.engine-launcher{display:flex;align-items:center;gap:10px;border:1px solid rgba(32,216,255,.28);background:rgba(10,22,38,.82);padding:8px 10px;border-radius:16px;box-shadow:inset 0 0 18px rgba(32,216,255,.05)}.engine-launcher strong{display:block;font-size:12px;color:#fff;line-height:1.1}.engine-launcher span{display:block;font-size:10px;color:var(--green);font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-top:2px}.engine-launcher button{padding:8px 10px;border-radius:11px;font-size:12px;background:linear-gradient(135deg,#0d2b40,#0b1f31);border-color:rgba(62,240,161,.42);white-space:nowrap}.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;align-items:stretch}.card{background:linear-gradient(180deg,rgba(13,33,54,.86),rgba(7,17,31,.92));border:1px solid rgba(32,216,255,.22);border-radius:24px;box-shadow:0 24px 80px rgba(0,0,0,.38);padding:18px}.input-card{padding:22px}.label{font-size:12px;color:var(--cyan);font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}textarea{width:100%;min-height:180px;resize:vertical;border:1px solid rgba(32,216,255,.35);background:#06101d;color:var(--text);border-radius:18px;padding:16px;font-size:16px;line-height:1.55;outline:none}textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(32,216,255,.12)}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}button{border:1px solid rgba(32,216,255,.35);background:linear-gradient(135deg,#123b59,#0d2136);color:var(--text);font-weight:800;border-radius:14px;padding:12px 14px;cursor:pointer}button.primary{background:linear-gradient(135deg,var(--cyan),#3ef0a1);color:#03111a;border:0}.system-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.metric{padding:14px;border-radius:18px;background:rgba(3,10,18,.58);border:1px solid rgba(138,164,190,.18)}.metric strong{display:block;font-size:22px;color:#fff}.metric span{color:var(--muted);font-size:12px}.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:18px 0}.step{border:1px solid rgba(32,216,255,.2);background:rgba(10,22,38,.72);border-radius:16px;padding:12px;min-height:84px}.step b{display:block;color:var(--cyan);font-size:12px;margin-bottom:6px}.step span{color:#c6d7e8;font-size:12px;line-height:1.35}.output-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}.out h3{margin:0 0 10px;font-size:15px}.out pre{white-space:pre-wrap;margin:0;color:#d9eafe;font-size:13px;line-height:1.45;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.out{min-height:260px}.quality{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.gate{border-left:3px solid var(--green);padding:10px 12px;background:rgba(62,240,161,.07);border-radius:12px;color:#d8fff0;font-size:13px}.risk{border-left-color:var(--amber);background:rgba(255,207,90,.07);color:#fff5d6}.footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.status{display:flex;gap:8px;align-items:center;color:#cde8ff}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green)}@media(max-width:900px){.hero,.output-grid,.quality{grid-template-columns:1fr}.pipeline{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start;flex-direction:column}.topbar-actions{justify-content:flex-start;width:100%}.system-grid{grid-template-columns:1fr}}@media(max-width:560px){.pipeline{grid-template-columns:1fr}.title{font-size:38px}.badge{white-space:normal}.engine-launcher{justify-content:space-between;width:100%}}
-</style></head><body><div class="shell"><div class="topbar"><div class="brand"><div class="orb"></div><div><div class="kicker">GosseOS / KnowledgeOS</div><div class="status"><span class="dot"></span><span>Intent-to-Artifact Routing aktiv</span></div></div></div><div class="topbar-actions"><div class="badge">Human Owner Principle: Mensch entscheidet, KI strukturiert</div><div class="engine-launcher"><div><strong>AI Decision Engine</strong><span>PoW #2</span></div><button type="button" onclick="openDecisionEngine()">Engine öffnen</button></div></div></div><section class="hero"><div><p class="kicker">Prompterator MVP v4</p><h1 class="title">Rohinput rein.<br>Konkretes Artefakt raus.</h1><p class="sub">Build v4 priorisiert explizit angeforderte Artefakttypen vor Universal-Converter- oder Executive-Dossier-Logik. Der gewünschte Output kommt zuerst, Analyse und Governance danach.</p></div><div class="card"><div class="system-grid"><div class="metric"><strong id="m1">0</strong><span>erkannte Signale</span></div><div class="metric"><strong id="modeMetric">READY</strong><span>gewählter Builder</span></div><div class="metric"><strong>QA</strong><span>Gate aktiv</span></div><div class="metric"><strong>v4</strong><span>Routing Batch</span></div></div></div></section><section class="pipeline"><div class="step"><b>01 Rohinput</b><span>Aufgabe, Idee, Prozess, Post, SOP, Profil oder Matrix.</span></div><div class="step"><b>02 Intent</b><span>Expliziter Artefakttyp schlägt generische Struktur.</span></div><div class="step"><b>03 Builder</b><span>Codex, SOP, Social, Research, Profile, Matrix oder Universal.</span></div><div class="step"><b>04 Artefakt</b><span>Direkter Output zuerst. Kein Dossier ohne Auftrag.</span></div><div class="step"><b>05 QA / Governance</b><span>Wahrheitsgrenze, Quellenlogik, Owner, Risiko.</span></div></section><section class="card input-card"><div class="label">Rohinput</div><textarea id="raw" placeholder="Beispiel: Erstelle eine Entscheidungsmatrix für die Annahme beschädigter Ware im Wareneingang."></textarea><div class="buttons"><button class="primary" onclick="generate()">Artefakt generieren</button><button onclick="loadSample('matrix')">Matrix</button><button onclick="loadSample('sop')">SOP</button><button onclick="loadSample('post')">LinkedIn</button><button onclick="loadSample('research')">Research</button><button onclick="loadSample('profile')">Profil</button><button onclick="loadSample('codex')">Codex</button><button onclick="copyAll()">Output kopieren</button></div></section><section class="output-grid"><div class="card out"><h3>Routing + Modus</h3><pre id="classOut">Noch kein Output.</pre></div><div class="card out"><h3>Primäres Artefakt</h3><pre id="artifactOut">Noch kein Output.</pre></div><div class="card out"><h3>Quality / Masterprompt</h3><pre id="promptOut">Noch kein Output.</pre></div></section><section class="quality"><div class="gate" id="qaOut"><b>Quality Gate:</b> Explizit gewünschter Artefakttyp muss zuerst geliefert werden.</div><div class="gate risk" id="riskOut"><b>Risk Gate:</b> KI liefert Struktur. Entscheidung, Freigabe und Umsetzung bleiben beim Menschen.</div></section><div class="footer mono">Operator Fischer Method: Rohinput -> Intent -> Builder -> Artefakt -> Qualitätsprüfung -> Governance -> Wiederverwendung</div></div><script>
-const AI_DECISION_ENGINE_URL="./ai-decision-engine/index.html";
-function openDecisionEngine(){window.open(AI_DECISION_ENGINE_URL,"_blank","noopener,noreferrer")}
+:root{
+  --bg:#050b14;--panel:#0a1626;--panel-2:#0d1d31;--line:#1b4563;--line-soft:rgba(32,216,255,.2);
+  --cyan:#20d8ff;--green:#3ef0a1;--amber:#ffcf5a;--red:#ff6b6b;
+  --text:#e8f2ff;--muted:#8aa4be;--radius:16px;
+  --font:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html{background:#03070d}
+body{margin:0;min-height:100vh;font-family:var(--font);font-size:16px;line-height:1.55;color:var(--text)}
+body:before,body:after{content:"";position:fixed;inset:0;pointer-events:none}
+body:before{z-index:-2;background:radial-gradient(circle at 15% 0,#0f2e49 0,#07111f 38%,#03070d 100%)}
+body:after{z-index:-1;
+  background-image:linear-gradient(rgba(32,216,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(32,216,255,.035) 1px,transparent 1px);
+  background-size:40px 40px}
+.wrap{position:relative;max-width:980px;margin:0 auto;padding:24px 20px 40px;display:flex;flex-direction:column;gap:24px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+a{color:var(--cyan)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;color:var(--text);text-decoration:none}
+.orb{width:30px;height:30px;border:1px solid var(--cyan);border-radius:50%;position:relative;box-shadow:0 0 18px rgba(32,216,255,.35)}
+.orb:after{content:"";position:absolute;inset:7px;border:1px solid var(--green);border-radius:50%}
+.brand-name{font-weight:800;letter-spacing:.16em;font-size:14px}
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:rgba(10,22,38,.75);padding:6px 12px;border-radius:999px;font-size:13px;color:#cde8ff}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.pill[data-tone="ok"] .dot{background:var(--green);box-shadow:0 0 10px var(--green)}
+.pill[data-tone="warn"] .dot{background:var(--amber)}
+.pill[data-tone="err"] .dot{background:var(--red)}
+
+.hero h1{margin:0;font-size:clamp(32px,6vw,56px);line-height:1;letter-spacing:-.04em;font-weight:900;text-wrap:balance}
+.lead{margin:14px 0 0;max-width:62ch;color:#b9cce0}
+
+.card{background:linear-gradient(180deg,rgba(13,33,54,.88),rgba(7,17,31,.94));border:1px solid var(--line-soft);border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.field+.field{margin-top:20px}
+.label{display:block;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:14px;font-weight:600;color:var(--text);background:rgba(3,10,18,.6);border:1px solid rgba(138,164,190,.28);border-radius:999px;padding:7px 14px;cursor:pointer}
+.chip:hover{border-color:var(--cyan)}
+.chip[aria-checked="true"]{background:rgba(32,216,255,.14);border-color:var(--cyan);color:#fff}
+textarea{display:block;width:100%;min-height:170px;resize:vertical;font:inherit;font-size:16px;line-height:1.55;color:var(--text);background:#06101d;border:1px solid rgba(32,216,255,.35);border-radius:14px;padding:14px 16px}
+textarea:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 4px rgba(32,216,255,.12)}
+textarea::placeholder{color:#5f7a94}
+.meta-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:6px}
+.link{font:inherit;font-size:14px;color:var(--cyan);background:none;border:0;padding:4px 0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-size:12px}
+.consent{display:flex;gap:10px;align-items:flex-start;margin-top:18px;font-size:14px;color:#c6d7e8;cursor:pointer}
+.consent input{margin:4px 0 0;width:18px;height:18px;flex:none;accent-color:var(--cyan)}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:18px}
+.btn{font:inherit;font-size:15px;font-weight:700;color:var(--text);background:linear-gradient(135deg,#123b59,#0d2136);border:1px solid rgba(32,216,255,.35);border-radius:12px;padding:11px 18px;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--cyan)}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--green));color:#03111a;border:0}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.hint{font-size:13px;color:var(--muted)}
+.hint.ok{color:var(--green)}
+.hint.warn{color:var(--amber)}
+.hint.err{color:#ffb4b4}
+.code-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.code-input{flex:1 1 180px;min-width:0;font-family:var(--mono);font-size:16px;letter-spacing:.06em;text-transform:uppercase;color:var(--text);background:#06101d;border:1px solid rgba(32,216,255,.35);border-radius:12px;padding:11px 14px}
+.code-input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 0 4px rgba(32,216,255,.12)}
+.code-input::placeholder{color:#5f7a94;text-transform:none;letter-spacing:0}
+.code-input:disabled{opacity:.5;cursor:not-allowed}
+.pay-note{margin:8px 0 0}
+.pay-links{margin:6px 0 0}
+.credit-note{margin-top:6px;font-size:13px;color:var(--muted)}
+
+.result-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.result-head h2{margin:0;font-size:18px}
+.empty{border:1px dashed rgba(138,164,190,.35);border-radius:14px;padding:22px;color:var(--muted)}
+.empty p{margin:0 0 12px}
+.empty .chips{margin-top:10px}
+.chip.small{font-size:13px;padding:5px 12px}
+.loading{display:flex;align-items:center;gap:14px;padding:18px 4px;color:#cde8ff}
+.spinner{width:22px;height:22px;border-radius:50%;border:2px solid rgba(32,216,255,.25);border-top-color:var(--cyan);animation:spin 1s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+.banner{border-left:3px solid var(--green);background:rgba(62,240,161,.07);border-radius:10px;padding:10px 14px;font-size:14px;color:#d8fff0}
+.banner.warn{border-left-color:var(--amber);background:rgba(255,207,90,.08);color:#fff5d6}
+.banner.err{border-left-color:var(--red);background:rgba(255,107,107,.09);color:#ffe2e2}
+.banner.info{border-left-color:var(--cyan);background:rgba(32,216,255,.07);color:#d6f6ff}
+.banner strong{display:block;margin-bottom:2px}
+.parts{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px;font-size:13px;color:var(--muted)}
+.parts span:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--muted)}
+.parts .ok:before{background:var(--green)}
+.parts .bad:before{background:var(--red)}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;margin-top:16px;border-bottom:1px solid var(--line-soft)}
+.tab{font:inherit;font-size:14px;font-weight:600;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;cursor:pointer;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:#fff;border-bottom-color:var(--cyan)}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0}
+.toolbar .btn{padding:8px 14px;font-size:14px}
+.toolbar select{font:inherit;font-size:14px;color:var(--text);background:#06101d;border:1px solid rgba(32,216,255,.35);border-radius:10px;padding:8px 10px}
+.toolbar .sep{flex:1}
+.status-line{min-height:1.4em;font-size:13px;color:var(--muted)}
+.doc{min-width:0;color:#dbe9f8;overflow-wrap:anywhere}
+.doc h2{font-size:20px;margin:26px 0 8px;color:#fff}
+.doc h3{font-size:16px;margin:20px 0 6px;color:#fff}
+.doc h4{font-size:14px;margin:16px 0 4px;color:var(--cyan);text-transform:uppercase;letter-spacing:.08em}
+.doc > :first-child{margin-top:0}
+.doc p{margin:0 0 12px}
+.doc ul,.doc ol{margin:0 0 14px;padding-left:22px}
+.doc li{margin:3px 0}
+.doc code{font-family:var(--mono);font-size:.9em;background:rgba(32,216,255,.1);border-radius:5px;padding:1px 5px}
+.doc pre{font-family:var(--mono);font-size:13px;white-space:pre-wrap;background:#06101d;border:1px solid var(--line-soft);border-radius:10px;padding:12px;margin:0 0 14px}
+.tablewrap{overflow-x:auto;margin:0 0 14px;border:1px solid var(--line-soft);border-radius:10px}
+.doc table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+.doc th,.doc td{text-align:left;vertical-align:top;padding:8px 10px;border-bottom:1px solid rgba(27,69,99,.7);overflow-wrap:normal;word-break:normal}
+.doc th{background:rgba(32,216,255,.08);color:#fff;font-weight:700}
+.doc tr:last-child td{border-bottom:0}
+.tag{font-family:var(--mono);font-size:.78em;font-weight:700;border-radius:5px;padding:1px 6px;white-space:nowrap}
+.tag.t-fakt{background:rgba(62,240,161,.14);color:var(--green)}
+.tag.t-annahme{background:rgba(255,207,90,.14);color:var(--amber)}
+.tag.t-hypothese{background:rgba(32,216,255,.14);color:var(--cyan)}
+.tag.t-unsicher{background:rgba(255,107,107,.14);color:var(--red)}
+
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px;color:var(--muted);font-size:13px;padding-top:4px}
+footer p{margin:0}
+footer nav{display:flex;gap:16px}
+footer a{color:var(--muted)}
+footer a:hover{color:var(--cyan)}
+
+@media (max-width:640px){
+  .wrap{padding:16px 16px 32px;gap:20px}
+  .card{padding:16px;border-radius:16px}
+  .btn.primary{width:100%}
+  .toolbar .sep{display:none}
+  .toolbar .btn,.toolbar select{flex:1 1 auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/" aria-label="Prompterator Startseite"><span class="orb" aria-hidden="true"></span><span class="brand-name">PROMPTERATOR</span></a>
+    <div class="pill" id="statusPill" data-tone="idle" role="status" aria-live="polite"><span class="dot"></span><span id="statusText">Status wird geladen</span></div>
+  </header>
+
+  <section class="hero">
+    <h1>Rohinput rein.<br>Fertiges Artefakt raus.</h1>
+    <p class="lead">Beschreibe eine Aufgabe in eigenen Worten. Du bekommst ein strukturiertes Arbeitsartefakt mit Qualitätsprüfung, das du kopieren oder als PDF laden kannst.</p>
+  </section>
+
+  <main>
+    <section class="card" aria-labelledby="h-input">
+      <h2 id="h-input" class="sr-only">Eingabe</h2>
+      <div class="field">
+        <div class="label" id="lbl-type">Was soll entstehen?</div>
+        <div class="chips" role="radiogroup" aria-labelledby="lbl-type" id="typeChips">
+          <button type="button" class="chip" role="radio" aria-checked="true" data-type="auto">Automatisch</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" data-type="matrix">Entscheidungsmatrix</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" data-type="sop">SOP</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" data-type="post">LinkedIn-Post</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" data-type="research">Forschungsbrief</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" data-type="profile">Bewerbungsprofil</button>
+          <button type="button" class="chip" role="radio" aria-checked="false" data-type="codex">Codex-Handoff</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="raw">Rohinput</label>
+        <textarea id="raw" maxlength="4000" rows="7" aria-describedby="counter"></textarea>
+        <div class="meta-row">
+          <button type="button" class="link" id="btnExample">Beispiel laden</button>
+          <span class="mono muted" id="counter">0 / 4000</span>
+        </div>
+      </div>
+      <div class="field" id="payBox" hidden>
+        <label class="label" for="accessCode">Zugangscode</label>
+        <div class="code-row">
+          <input type="text" id="accessCode" class="code-input" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="24" placeholder="Code aus deiner Kaufbestätigung" aria-describedby="payHint" />
+          <button type="button" class="btn ghost" id="btnCheckCode" disabled>Prüfen</button>
+        </div>
+        <p class="hint pay-note" id="payHint" role="status" aria-live="polite"></p>
+        <p class="hint pay-links" id="payLinks" hidden><a id="buyLink" target="_blank" rel="noopener noreferrer" hidden>Läufe kaufen (öffnet in neuem Tab)</a></p>
+      </div>
+      <label class="consent" for="consent">
+        <input type="checkbox" id="consent" />
+        <span id="consentText"></span>
+      </label>
+      <div class="actions">
+        <button type="button" class="btn primary" id="btnRun" disabled aria-describedby="whyDisabled">Artefakt erzeugen</button>
+        <button type="button" class="btn ghost" id="btnClear">Leeren</button>
+        <span class="hint" id="whyDisabled"></span>
+      </div>
+    </section>
+
+    <section class="card" id="resultCard" aria-labelledby="h-result" style="margin-top:24px">
+      <div class="result-head">
+        <h2 id="h-result" tabindex="-1">Ergebnis</h2>
+        <span class="mono muted" id="resultMeta"></span>
+      </div>
+      <div id="resultBody" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Mensch bleibt Owner. KI bleibt Werkzeug. Ergebnisse vor der Verwendung fachlich prüfen.</p>
+    <nav aria-label="Rechtliches und Methode">
+      <a href="/operator-fischer-method">Methode</a>
+      <a href="/impressum">Impressum</a>
+      <a href="/datenschutz">Datenschutz</a>
+    </nav>
+  </footer>
+</div>
+
+<script>
+/* Beispielausgaben: vorgefertigt, keine KI-Antworten. Werden nur als Muster gezeigt. */
+const EXAMPLES=(function(){
 const samples={
   matrix:"Erstelle eine Entscheidungsmatrix für die Annahme beschädigter Ware im Wareneingang.",
   sop:"Ich brauche eine SOP für Wareneingang temperaturgeführter Ware mit Eskalationslogik.",
@@ -27,7 +233,6 @@ const rules=[
   {mode:"PROFESSIONAL_PROFILE_BUILDER",artifact:"Career Positioning Text",style:"truthful_professional_positioning",re:/bewerbungsprofil|kurzprofil|profiltext|lebenslaufprofil|recruiter[-\s]?profil|professionelles profil|bewerbungstext|cv[-\s]?profil|karriereprofil/i},
   {mode:"DECISION_MATRIX_BUILDER",artifact:"Decision Matrix",style:"operational_decision_support",re:/entscheidung(s)?matrix|entscheidungstabelle|entscheidungslogik|decision matrix|bewertungsmatrix|annahmematrix|risiko[-\/]?entscheidung|entscheidungshilfe|bewertungstabelle/i}
 ];
-function loadSample(k){document.getElementById('raw').value=samples[k];generate()}
 function route(raw){for(const r of rules){if(r.re.test(raw))return {...r,signals:[r.artifact]};}return {mode:"UNIVERSAL_CONVERTER",artifact:"Structured Artifact",style:"general_conversion",signals:["generic"]};}
 function esc(s){return String(s||"").trim();}
 function isColdChain(raw){return /wareneingang|temperatur|kühl|tiefkühl|cold chain|datenlogger|mopro/i.test(raw)}
@@ -41,6 +246,447 @@ function buildProfile(raw){return `# Bewerbungsprofil\n\n## Kurzprofil\nErfahren
 function buildMatrix(raw){return `# Entscheidungsmatrix — Annahme beschädigter Ware im Wareneingang\n\n## 1. Zweck\nStandardisierte Entscheidungshilfe für Annahme, Sperrung, Quarantäne oder Ablehnung beschädigter Ware im Wareneingang.\n\n## 2. Eingabekriterien\nSchadensart, Schadensgrad, Produktkritikalität, Dokumentation, Lieferant/Spediteur, Vertrags-/QS-Vorgaben.\n\n## 3. Entscheidungsstufen\n- Annehmen\n- Annehmen mit Sperrvermerk / QS-Prüfung\n- Sperren / Quarantäne\n- Ablehnen / Rücksendung / Eskalation\n\n## 4. Matrix\n| Schadensart | Schadensgrad | Produktkritikalität | Dokumentation vorhanden | Entscheidung | Eskalation | Maßnahme |\n|---|---|---|---|---|---|---|\n| Verpackung leicht beschädigt | gering | nicht kritisch | ja | Annehmen | Level 0 | Schaden dokumentieren, Ware freigeben |\n| Verpackung beschädigt | mittel | kritisch | ja | Annehmen mit Sperrvermerk | Level 1 | QS-Prüfung, Foto, Lieferant informieren |\n| Produkt beschädigt | mittel | kritisch | ja/nein | Sperren / Quarantäne | Level 2 | QS-Entscheid, Reklamation vorbereiten |\n| Produkt beschädigt / unklare Sicherheit | hoch | kritisch | nein | Ablehnen / Rücksprache | Level 3 | Leitung + QS + Lieferant eskalieren |\n\n## 5. Eskalationslogik\nLevel 0: Wareneingang entscheidet. Level 1: QS prüft. Level 2: QS + Leitung. Level 3: Leitung, QS, Einkauf/Disposition und Lieferant.\n\n## 6. Dokumentationspflicht\nFotos, Schadensbeschreibung, Charge, Artikel, Lieferant, Entscheidung, Owner, Zeitstempel.\n\n## 7. Beispiele\nBeispiel: Verpackung eingedrückt, Produkt unversehrt, unkritischer Artikel → Annahme mit Dokumentation.\n\n## 8. Qualitätsprüfung\nQS validiert Matrix vor Einsatz. Stichproben und Reklamationsdaten regelmäßig prüfen.\n\n## 9. Governance\nUnternehmensspezifische Grenzwerte, Vertragsbedingungen und Haftungsregeln nicht erfinden. Fachfreigabe durch QS/Logistik erforderlich.`}
 function buildUniversal(raw){return `## Problemklasse\n[FAKT] Rohinput soll strukturiert werden.\n[ANNAHME] Kein konkreter Artefakttyp wurde eindeutig erkannt.\n[HYPOTHESE] Universal Converter ist geeignet, um ein erstes Arbeitsartefakt zu erzeugen.\n\n## Modus\nUNIVERSAL_CONVERTER\n\n## Direktes Artefakt\n1. Ausgangslage\n2. Zielbild\n3. Lösungslogik\n4. Operativer Ablauf\n5. Risiken / Governance\n6. Nächste Schritte\n\n## Hinweis\nFür präzisere Ergebnisse explizit Artefakttyp nennen: SOP, LinkedIn-Post, Forschungsbrief, Entscheidungsmatrix, Bewerbungsprofil oder Codex-Handoff.`}
 function primaryArtifact(raw, r){switch(r.mode){case "CODEX_HANDOFF_BUILDER":return buildCodex(raw);case "SOCIAL_POST_BUILDER":return buildSocial(raw);case "RESEARCH_BRIEF_BUILDER":return buildResearch(raw);case "SOP_BUILDER":return buildSop(raw);case "PROFESSIONAL_PROFILE_BUILDER":return buildProfile(raw);case "DECISION_MATRIX_BUILDER":return buildMatrix(raw);default:return buildUniversal(raw)}}
-function generate(){const raw=document.getElementById('raw').value.trim();if(!raw)return;const r=route(raw);document.getElementById('m1').innerText=r.signals.length;document.getElementById('modeMetric').innerText=r.mode.replace('_BUILDER','');document.getElementById('classOut').innerText=`Gewählter Modus:\n${r.mode}\n\nArtefakttyp:\n${r.artifact}\n\nOutput Style:\n${r.style}\n\nRouting-Regel:\nExplicit Artifact Request > Generic Universal Converter\n\nOwner-Regel:\nMensch entscheidet. KI strukturiert und dokumentiert.`;document.getElementById('artifactOut').innerText=primaryArtifact(raw,r);document.getElementById('promptOut').innerText=`Quality Gate:\n- Primär den angeforderten Artefakttyp liefern.\n- Kein Executive-/Portfolio-/PDF-Dossier ohne expliziten Auftrag.\n- Fakten, Annahmen und Hypothesen trennen, wenn relevant.\n- Keine Zahlen, Quellen, Schwellenwerte oder Qualifikationen erfinden.\n- Mensch bleibt Owner.\n\nMasterprompt für Weitergabe:\nDu arbeitest im Prompterator-${r.mode}. Erzeuge als primären Output: ${r.artifact}. Nutze Rohinput: ${raw}. Liefere erst das konkrete Artefakt, danach optional Qualitätscheck, Governance und nächste Schritte.`;document.getElementById('qaOut').innerHTML='<b>Quality Gate:</b> Primärartefakt zuerst. Analyse, Varianten und Governance danach.';document.getElementById('riskOut').innerHTML='<b>Risk Gate:</b> Keine erfundenen Grenzwerte, Quellen, Credentials oder Produktreife-Claims.'}
-async function copyAll(){const txt=[document.getElementById('classOut').innerText,document.getElementById('artifactOut').innerText,document.getElementById('promptOut').innerText].join('\n\n---\n\n');await navigator.clipboard.writeText(txt);alert('Output kopiert.')}
-</script></body></html>
+  return {samples:samples,output:function(k){var raw=samples[k];return primaryArtifact(raw,route(raw));}};
+})();
+</script>
+
+<script>
+(function(){
+"use strict";
+var MAX_CHARS=4000;
+var PDF_STYLES=[
+  ["of-medneon","OF-MEDNEON"],["corporate-executive","Corporate Executive"],["industrial-ops","Industrial OPS"],
+  ["academic-research","Academic Research"],["dark-tactical-operator","Dark Tactical Operator"],
+  ["minimal-clean","Minimal Clean"],["ultra-boardroom","Ultra Boardroom"]
+];
+var TYPE_LABELS={auto:"Automatisch",matrix:"Entscheidungsmatrix",sop:"SOP",post:"LinkedIn-Post",research:"Forschungsbrief",profile:"Bewerbungsprofil",codex:"Codex-Handoff"};
+var PLACEHOLDER_AUTO="Beschreibe Aufgabe, Idee, Prozess oder Problem in eigenen Worten. Je konkreter Ziel und Kontext, desto brauchbarer das Ergebnis.";
+
+var S={type:"auto",status:null,statusLoaded:false,busy:false,pdfBusy:false,data:null,tab:"result",pdfStyle:"of-medneon",example:null,exampleIdx:0,view:"idle",
+  forcePay:false,checking:false,credits:null,payNote:null,seq:0,checkCtrl:null};
+var $=function(id){return document.getElementById(id)};
+var el={raw:$("raw"),counter:$("counter"),consent:$("consent"),consentText:$("consentText"),run:$("btnRun"),clear:$("btnClear"),why:$("whyDisabled"),
+  example:$("btnExample"),chips:$("typeChips"),body:$("resultBody"),meta:$("resultMeta"),card:$("resultCard"),pill:$("statusPill"),pillText:$("statusText"),heading:$("h-result"),
+  payBox:$("payBox"),code:$("accessCode"),checkCode:$("btnCheckCode"),payHint:$("payHint"),buy:$("buyLink"),buyWrap:$("payLinks")};
+var PAY_CHECK_HINT="Dein Rohinput bleibt erhalten. Prüfe zuerst mit „Prüfen“ deinen Stand, bevor du es erneut versuchst.";
+var PAY_HINT="Dein Zugangscode steht in der Bestätigung deines Kaufs (die Bestätigungsnummer, nicht die Bestellnummer mit #). Er wird nicht im Browser gespeichert.";
+
+function mk(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n}
+function clearNode(n){while(n.firstChild)n.removeChild(n.firstChild)}
+function setText(n,t){if(n.textContent!==t)n.textContent=t}
+
+/* ---------- Status und Einwilligung ---------- */
+function providerNames(){
+  var s=S.status;
+  if(!s)return "KI-Anbieter (OpenAI, Anthropic)";
+  var n=[];if(s.chatgpt)n.push("OpenAI");if(s.claude)n.push("Anthropic");
+  return n.length?n.join(" und "):"KI-Anbieter";
+}
+function renderConsent(){
+  clearNode(el.consentText);
+  el.consentText.appendChild(document.createTextNode("Ich gebe keine personenbezogenen oder vertraulichen Daten ein und weiß, dass meine Eingabe an "+providerNames()+" (USA) übermittelt wird. Mehr in der "));
+  var a=mk("a",null,"Datenschutzerklärung");a.href="/datenschutz";a.target="_blank";a.rel="noopener";
+  el.consentText.appendChild(a);el.consentText.appendChild(document.createTextNode("."));
+}
+/* ---------- Bezahlschranke: nur sichtbar, wenn der Server sie verlangt ---------- */
+function payOn(){return S.forcePay||!!(S.status&&S.status.payment_required)}
+/* Ein 402 vom Server beweist, dass die Schranke EIN und startklar ist (sonst käme 503). */
+function payReady(){return payOn()&&(S.forcePay||!(S.status&&S.status.payment_ready===false))}
+function codeText(){return el.code.value.trim()}
+function codeOk(){return codeText().replace(/[^A-Za-z0-9]/g,"").length>=6}
+function safeUrl(u){return typeof u==="string"&&u.indexOf("https://")===0?u:""}
+function num(x){return typeof x==="number"&&isFinite(x)&&x>=0?x:null}
+function noRunsLeft(){return payOn()&&!!S.credits&&S.credits.code===codeText()&&S.credits.remaining<=0}
+function creditsText(c){
+  if(c.remaining<=0)return "Mit diesem Zugangscode sind keine Läufe mehr übrig.";
+  if(c.granted>0)return "Code gültig. Noch "+c.remaining+" von "+c.granted+" Läufen übrig.";
+  return "Code gültig. Noch "+c.remaining+(c.remaining===1?" Lauf":" Läufe")+" übrig.";
+}
+function payMsg(text,tone){S.payNote=text?{text:text,tone:tone||""}:null;renderPay()}
+function applyCredits(code,c){
+  var rem=num(c&&c.remaining);if(rem===null)return;
+  var g=num(c.granted);
+  S.credits={code:code,granted:g===null?0:g,used:num(c.used),remaining:rem};
+  if(code===codeText())payMsg(creditsText(S.credits),rem>0?"ok":"warn");else renderPay();
+}
+function renderPay(){
+  var on=payOn();el.payBox.hidden=!on;
+  if(!on)return;
+  var ready=payReady(),url=ready?safeUrl(S.status&&S.status.buy_url):"";
+  el.code.disabled=!ready;
+  el.checkCode.disabled=!ready||S.checking||S.busy||!codeOk();
+  setText(el.checkCode,S.checking?"Prüfe …":"Prüfen");
+  if(url)el.buy.href=url;else el.buy.removeAttribute("href");
+  el.buy.hidden=!url;el.buyWrap.hidden=!url;
+  var n=S.payNote;
+  setText(el.payHint,n?n.text:(ready?PAY_HINT:"Der Verkauf ist noch nicht freigeschaltet."));
+  var cls="hint pay-note"+(n&&n.tone?" "+n.tone:"");if(el.payHint.className!==cls)el.payHint.className=cls;
+}
+/* Eine laufende Prüfung wird ungültig, sobald sich der Code ändert oder ein Lauf startet. */
+function dropCheck(){S.seq++;if(S.checkCtrl)S.checkCtrl.abort()}
+function checkCode(){
+  if(S.checking||S.busy||!payReady()||!codeOk())return;
+  var code=codeText(),my=++S.seq,ctrl=new AbortController(),to=setTimeout(function(){ctrl.abort()},30000);
+  S.checkCtrl=ctrl;S.checking=true;S.payNote={text:"Wird geprüft …",tone:""};updateControls();
+  fetch("/api/credits",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({access_code:code}),signal:ctrl.signal})
+  .then(function(res){return res.json().catch(function(){return null}).then(function(data){return {res:res,data:data}})})
+  .then(function(x){
+    if(my!==S.seq)return;
+    if(x.res.ok&&x.data&&x.data.valid===true&&num(x.data.remaining)!==null){applyCredits(code,x.data)}
+    else{S.credits=null;S.payNote={text:errorMessage(x.res.status,x.data),tone:"err"}}
+  })
+  .catch(function(err){
+    if(my!==S.seq)return;
+    S.credits=null;S.payNote={text:err&&err.name==="AbortError"?"Zeitüberschreitung. Bitte erneut prüfen.":"Keine Verbindung zum Server. Bitte erneut versuchen.",tone:"err"};
+  })
+  .then(function(){clearTimeout(to);if(S.checkCtrl===ctrl)S.checkCtrl=null;S.checking=false;updateControls()});
+}
+el.code.addEventListener("input",function(){
+  if(S.credits&&S.credits.code!==codeText())S.credits=null;
+  dropCheck();S.payNote=null;updateControls();
+});
+el.code.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();checkCode()}});
+el.checkCode.addEventListener("click",checkCode);
+
+function renderStatus(){
+  var s=S.status,tone="idle",text="Status nicht abrufbar";
+  if(s){
+    if(!s.generate_enabled){tone="err";text=(s.payment_required&&s.payment_ready===false)?"Verkauf noch nicht freigeschaltet":"Generator pausiert"}
+    else if(s.synthese){tone="ok";text="ChatGPT + Claude aktiv"}
+    else if(s.chatgpt){tone="warn";text="Nur ChatGPT aktiv"}
+    else if(s.claude){tone="warn";text="Nur Claude aktiv"}
+  } else if(!S.statusLoaded){text="Status wird geladen"}
+  el.pill.setAttribute("data-tone",tone);setText(el.pillText,text);
+  renderConsent();updateControls();if(S.view==="idle")renderIdle();
+}
+function loadStatus(){
+  fetch("/api/status",{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("status");return r.json()})
+  .then(function(s){S.status=s;S.statusLoaded=true;if(s&&typeof s.payment_required==="boolean")S.forcePay=false;if(s&&s.max_input_chars&&s.max_input_chars<MAX_CHARS){MAX_CHARS=s.max_input_chars;el.raw.maxLength=MAX_CHARS}renderStatus();updateCounter()})
+  .catch(function(){S.status=null;S.statusLoaded=true;renderStatus()});
+}
+
+/* ---------- Eingabe ---------- */
+function updateCounter(){
+  var n=el.raw.value.length;el.counter.textContent=n+" / "+MAX_CHARS;
+  el.counter.style.color=n>MAX_CHARS*0.9?"var(--amber)":"";
+}
+function updateControls(){
+  var len=el.raw.value.trim().length,enabled=!S.status||S.status.generate_enabled!==false;
+  var why="";
+  if(!enabled)why=(payOn()&&S.status&&S.status.payment_ready===false)?"Der Verkauf ist noch nicht freigeschaltet.":"Der Generator ist gerade pausiert.";
+  else if(len<3)why="Bitte Rohinput eingeben.";
+  else if(payOn()&&!codeOk())why="Bitte den Zugangscode eingeben.";
+  else if(!el.consent.checked)why="Bitte den Hinweis bestätigen.";
+  else if(noRunsLeft())why="Mit diesem Zugangscode sind keine Läufe mehr übrig.";
+  el.run.disabled=!!why||S.busy;
+  setText(el.why,S.busy?"":(why||(payOn()?"Ein Lauf wird abgebucht.":"")));
+  setText(el.run,S.busy?"Wird erzeugt …":"Artefakt erzeugen");
+  renderPay();
+}
+function setType(t){
+  S.type=t;
+  Array.prototype.forEach.call(el.chips.querySelectorAll(".chip"),function(c){c.setAttribute("aria-checked",c.getAttribute("data-type")===t?"true":"false")});
+  el.raw.placeholder=t==="auto"?PLACEHOLDER_AUTO:"Beispiel: "+EXAMPLES.samples[t];
+}
+el.chips.addEventListener("click",function(e){var c=e.target.closest(".chip");if(c)setType(c.getAttribute("data-type"))});
+el.chips.addEventListener("keydown",function(e){
+  if(["ArrowRight","ArrowLeft","ArrowDown","ArrowUp"].indexOf(e.key)<0)return;
+  var chips=Array.prototype.slice.call(el.chips.querySelectorAll(".chip"));
+  var i=chips.findIndex(function(c){return c.getAttribute("aria-checked")==="true"});
+  var next=(e.key==="ArrowRight"||e.key==="ArrowDown")?(i+1)%chips.length:(i-1+chips.length)%chips.length;
+  e.preventDefault();setType(chips[next].getAttribute("data-type"));chips[next].focus();
+});
+el.raw.addEventListener("input",function(){updateCounter();updateControls()});
+el.raw.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();if(!el.run.disabled)run()}});
+el.consent.addEventListener("change",updateControls);
+el.example.addEventListener("click",function(){
+  var keys=Object.keys(EXAMPLES.samples),k=S.type!=="auto"?S.type:keys[S.exampleIdx++%keys.length];
+  el.raw.value=EXAMPLES.samples[k];if(S.type==="auto")S.type="auto";
+  updateCounter();updateControls();el.raw.focus();
+});
+el.clear.addEventListener("click",function(){el.raw.value="";updateCounter();updateControls();S.data=null;S.example=null;renderIdle();el.raw.focus()});
+
+/* ---------- Sichere Darstellung (nur textContent, kein innerHTML) ---------- */
+function tagClass(tok){var u=tok.toUpperCase();return u.indexOf("FAKT")===1?"t-fakt":(u.indexOf("ANNAHME")===1||u.indexOf("UNTERNEHMENS")===1)?"t-annahme":u.indexOf("HYPOTHESE")===1?"t-hypothese":"t-unsicher"}
+function inline(parent,text){
+  var re=/(\*\*[^*\n]+\*\*|`[^`\n]+`|\[(?:FAKT|ANNAHME|HYPOTHESE|UNSICHER|UNTERNEHMENSSPEZIFISCH)[^\]\n]*\])/g,last=0,m;
+  while((m=re.exec(text))){
+    if(m.index>last)parent.appendChild(document.createTextNode(text.slice(last,m.index)));
+    var tok=m[0],n;
+    if(tok.slice(0,2)==="**"){n=mk("strong",null,tok.slice(2,-2))}
+    else if(tok.charAt(0)==="`"){n=mk("code",null,tok.slice(1,-1))}
+    else{n=mk("span","tag "+tagClass(tok),tok)}
+    parent.appendChild(n);last=m.index+tok.length;
+  }
+  if(last<text.length)parent.appendChild(document.createTextNode(text.slice(last)));
+}
+function splitRow(line){var t=line.trim();if(t.charAt(0)==="|")t=t.slice(1);if(t.charAt(t.length-1)==="|")t=t.slice(0,-1);return t.split("|").map(function(c){return c.trim()})}
+function renderMarkdown(container,text){
+  clearNode(container);
+  var lines=String(text).replace(/\r\n?/g,"\n").split("\n"),i=0,para=[],list=null,listType="";
+  function flushPara(){if(!para.length)return;var p=mk("p");para.forEach(function(l,idx){if(idx)p.appendChild(mk("br"));inline(p,l)});container.appendChild(p);para=[]}
+  while(i<lines.length){
+    var raw=lines[i],t=raw.trim(),m;
+    if(!t){flushPara();list=null;i++;continue}
+    if(t.slice(0,3)==="```"){
+      flushPara();list=null;var code=[];i++;
+      while(i<lines.length&&lines[i].trim().slice(0,3)!=="```"){code.push(lines[i]);i++}
+      i++;container.appendChild(mk("pre",null,code.join("\n")));continue;
+    }
+    if((m=/^(#{1,4})\s+(.*)$/.exec(t))){
+      flushPara();list=null;var lvl=m[1].length===1?2:m[1].length;
+      var h=mk("h"+lvl);inline(h,m[2]);container.appendChild(h);i++;continue;
+    }
+    if(t.charAt(0)==="|"){
+      flushPara();list=null;var rows=[];
+      while(i<lines.length&&lines[i].trim().charAt(0)==="|"){rows.push(lines[i]);i++}
+      var hasHead=rows.length>1&&/^\|?\s*:?-{2,}/.test(rows[1].trim());
+      var wrap=mk("div","tablewrap"),tbl=mk("table"),thead=null,tbody=mk("tbody");
+      rows.forEach(function(r,idx){
+        if(hasHead&&idx===1)return;
+        var cells=splitRow(r),tr=mk("tr"),isHead=hasHead&&idx===0;
+        cells.forEach(function(c){var cell=mk(isHead?"th":"td");inline(cell,c);tr.appendChild(cell)});
+        if(isHead){thead=mk("thead");thead.appendChild(tr)}else tbody.appendChild(tr);
+      });
+      if(thead)tbl.appendChild(thead);tbl.appendChild(tbody);wrap.appendChild(tbl);container.appendChild(wrap);continue;
+    }
+    if((m=/^([-*•])\s+(.*)$/.exec(t))||(m=/^(\d+)[.)]\s+(.*)$/.exec(t))){
+      flushPara();var type=/^\d/.test(m[1])?"ol":"ul";
+      if(!list||listType!==type){list=mk(type);listType=type;container.appendChild(list)}
+      var li=mk("li");inline(li,m[2]);list.appendChild(li);i++;continue;
+    }
+    if(/^[-_*]{3,}$/.test(t)){flushPara();list=null;i++;continue}
+    list=null;para.push(t);i++;
+  }
+  flushPara();
+}
+function extractMasterprompt(text){
+  var m=/^#{2,3}\s*Masterprompt\s*$/im.exec(text);if(!m)return "";
+  var rest=text.slice(m.index+m[0].length),next=rest.search(/^#{2,3}\s+\S/m);
+  var body=(next>=0?rest.slice(0,next):rest).trim();
+  return body.replace(/^["„“]+/,"").replace(/["“”]+$/,"").trim();
+}
+function pdfTitle(text){
+  var m=/^#{2,3}\s*Use-Case-Titel\s*$/im.exec(text);
+  if(m){var rest=text.slice(m.index+m[0].length).split("\n");for(var i=0;i<rest.length;i++){var l=rest[i].trim();if(l&&l.charAt(0)!=="#")return l.replace(/[*`#]/g,"").slice(0,100)}}
+  return "Prompterator Artefakt";
+}
+
+/* ---------- Ergebnisbereich ---------- */
+function setView(v){S.view=v;el.card.setAttribute("aria-busy",v==="loading"?"true":"false")}
+function renderIdle(){
+  setView("idle");el.meta.textContent="";clearNode(el.body);
+  var box=mk("div","empty");
+  var s=S.status;
+  var txt=(s&&s.synthese)?"Hier erscheint dein Ergebnis, mit Reitern für die beiden Entwürfe und die Zusammenführung.":"Hier erscheint dein Ergebnis.";
+  box.appendChild(mk("p",null,txt));
+  box.appendChild(mk("p","muted","Noch unsicher, was herauskommt? Beispielausgaben ansehen (vorgefertigt, keine KI-Antwort):"));
+  var chips=mk("div","chips");
+  ["matrix","sop","post","research","profile","codex"].forEach(function(k){
+    var b=mk("button","chip small",TYPE_LABELS[k]);b.type="button";b.setAttribute("data-example",k);chips.appendChild(b);
+  });
+  box.appendChild(chips);el.body.appendChild(box);
+}
+el.body.addEventListener("click",function(e){
+  var b=e.target.closest("[data-example]");if(b)showExample(b.getAttribute("data-example"));
+});
+function showExample(k){
+  S.data={result:EXAMPLES.output(k),differences:"",mode:"beispiel",participants:{},drafts:{},models:{}};
+  S.tab="result";S.example=k;renderDone();
+}
+function renderLoading(){
+  setView("loading");el.meta.textContent="";clearNode(el.body);
+  var box=mk("div","loading");box.appendChild(mk("div","spinner"));
+  var txt=mk("div");
+  var two=S.status&&S.status.synthese;
+  txt.appendChild(mk("div",null,two?"Beide Modelle erstellen ihren Entwurf, danach folgt die Zusammenführung.":"Das Artefakt wird erstellt."));
+  var t=mk("div","muted mono","0 s");txt.appendChild(t);box.appendChild(txt);el.body.appendChild(box);
+  var start=Date.now();S.timer=setInterval(function(){t.textContent=Math.round((Date.now()-start)/1000)+" s"},1000);
+}
+function stopLoading(){if(S.timer){clearInterval(S.timer);S.timer=null}}
+function showError(msg,hint){
+  stopLoading();setView("error");el.meta.textContent="";clearNode(el.body);
+  var b=mk("div","banner err");b.setAttribute("role","alert");b.appendChild(mk("strong",null,"Das hat nicht geklappt"));b.appendChild(document.createTextNode(msg));
+  el.body.appendChild(b);
+  el.body.appendChild(mk("p","hint",hint||"Dein Rohinput bleibt erhalten. Du kannst es erneut versuchen."));
+}
+var PART_LABEL={ok:"ok",fehler:"ausgefallen",nicht_aktiv:"nicht aktiv",uebersprungen:"übersprungen"};
+function renderBanner(d){
+  var b=mk("div","banner"),p=d.participants||{};
+  if(d.mode==="beispiel"){
+    b.className="banner info";b.appendChild(mk("strong",null,"Beispielausgabe: "+(TYPE_LABELS[S.example]||"")));
+    b.appendChild(document.createTextNode("Vorgefertigt, nicht von einer KI erzeugt. Dein Ergebnis entsteht aus deinem eigenen Rohinput."));return b;
+  }
+  if(d.mode==="synthese"){
+    b.appendChild(mk("strong",null,"Synthese aus ChatGPT und Claude"));
+    b.appendChild(document.createTextNode("Beide Modelle haben unabhängig entworfen, Claude hat die Entwürfe zusammengeführt."));
+  } else if(d.mode==="entwuerfe"){
+    b.className="banner warn";b.appendChild(mk("strong",null,"Zusammenführung fehlgeschlagen"));
+    b.appendChild(document.createTextNode("Angezeigt wird der ChatGPT-Entwurf. Beide Entwürfe findest du in den Reitern."));
+  } else {
+    b.className="banner warn";var who=d.mode==="claude"?"Claude":"ChatGPT";
+    b.appendChild(mk("strong",null,"Nur "+who+" hat geantwortet, keine Synthese"));
+    var other=d.mode==="claude"?p.chatgpt:p.claude,otherName=d.mode==="claude"?"ChatGPT":"Claude";
+    b.appendChild(document.createTextNode(other==="fehler"?otherName+" ist ausgefallen. Bitte das Ergebnis besonders sorgfältig prüfen.":otherName+" ist auf diesem Server nicht aktiv."));
+  }
+  var parts=mk("div","parts");
+  [["ChatGPT",p.chatgpt],["Claude",p.claude],["Synthese",p.synthese]].forEach(function(x){
+    if(!x[1])return;parts.appendChild(mk("span",x[1]==="ok"?"ok":(x[1]==="fehler"?"bad":""),x[0]+": "+(PART_LABEL[x[1]]||x[1])));
+  });
+  b.appendChild(parts);
+  var note=creditNote(d.credits);if(note)b.appendChild(mk("div","credit-note",note));
+  return b;
+}
+function creditNote(c){
+  if(!c||typeof c!=="object")return "";
+  var rem=num(c.remaining),g=num(c.granted);if(rem===null)return "";
+  var left=rem<=0?"Es sind keine Läufe mehr übrig.":(g>0?"Noch "+rem+" von "+g+" Läufen übrig.":"Noch "+rem+(rem===1?" Lauf":" Läufe")+" übrig.");
+  if(c.giveback_failed===true)return "Dieser Lauf wurde abgebucht, obwohl das Ergebnis keine vollständige Synthese ist. Die automatische Gutschrift ist fehlgeschlagen. Bitte melde dich beim Betreiber und nenne deinen Zugangscode. "+left;
+  return (c.charged===false?"Dieser Lauf wurde nicht abgebucht, weil das Ergebnis keine vollständige Synthese ist. ":"Dieser Lauf wurde abgebucht. ")+left;
+}
+function tabsFor(d){
+  var t=[["result","Ergebnis"]];
+  if(d.drafts&&d.drafts.chatgpt)t.push(["chatgpt","ChatGPT-Entwurf"]);
+  if(d.drafts&&d.drafts.claude)t.push(["claude","Claude-Entwurf"]);
+  if(d.differences)t.push(["differences","Abweichungen"]);
+  return t;
+}
+function currentText(){
+  var d=S.data;if(!d)return "";
+  if(S.tab==="chatgpt")return d.drafts.chatgpt||"";
+  if(S.tab==="claude")return d.drafts.claude||"";
+  if(S.tab==="differences")return d.differences||"";
+  return d.result||"";
+}
+function renderDone(){
+  stopLoading();setView("done");clearNode(el.body);
+  var d=S.data;
+  el.meta.textContent=d.mode==="beispiel"?"Beispiel":(d.models&&d.models.claude&&d.models.chatgpt?d.models.chatgpt+" · "+d.models.claude:(d.models&&(d.models.chatgpt||d.models.claude))||"");
+  el.body.appendChild(renderBanner(d));
+
+  var tabs=tabsFor(d);
+  if(tabs.length>1){
+    var bar=mk("div","tabs");bar.setAttribute("role","tablist");bar.setAttribute("aria-label","Ansicht");
+    tabs.forEach(function(t){
+      var b=mk("button","tab",t[1]);b.type="button";b.id="tab-"+t[0];b.setAttribute("role","tab");b.setAttribute("aria-selected",S.tab===t[0]?"true":"false");
+      b.setAttribute("aria-controls","panel");b.tabIndex=S.tab===t[0]?0:-1;b.setAttribute("data-tab",t[0]);bar.appendChild(b);
+    });
+    bar.addEventListener("click",function(e){var b=e.target.closest(".tab");if(b){S.tab=b.getAttribute("data-tab");renderDone();var n=$("tab-"+S.tab);if(n)n.focus()}});
+    bar.addEventListener("keydown",function(e){
+      if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")return;
+      var ids=tabs.map(function(t){return t[0]}),i=ids.indexOf(S.tab);
+      S.tab=ids[(i+(e.key==="ArrowRight"?1:ids.length-1))%ids.length];e.preventDefault();renderDone();$("tab-"+S.tab).focus();
+    });
+    el.body.appendChild(bar);
+  }
+
+  var tb=mk("div","toolbar");
+  var copy=mk("button","btn","Kopieren");copy.type="button";copy.id="btnCopy";tb.appendChild(copy);
+  if(extractMasterprompt(d.result||"")&&S.tab==="result"){var mp=mk("button","btn","Masterprompt kopieren");mp.type="button";mp.id="btnMaster";tb.appendChild(mp)}
+  tb.appendChild(mk("span","sep"));
+  if(d.mode!=="beispiel"&&S.tab!=="differences"){
+    var sel=mk("select");sel.id="pdfStyle";sel.setAttribute("aria-label","PDF-Stil");
+    PDF_STYLES.forEach(function(s){var o=mk("option",null,s[1]);o.value=s[0];if(s[0]===S.pdfStyle)o.selected=true;sel.appendChild(o)});
+    sel.addEventListener("change",function(){S.pdfStyle=sel.value});
+    tb.appendChild(sel);
+    var pdf=mk("button","btn","PDF herunterladen");pdf.type="button";pdf.id="btnPdf";tb.appendChild(pdf);
+  }
+  el.body.appendChild(tb);
+  var st=mk("div","status-line");st.id="actionStatus";st.setAttribute("role","status");el.body.appendChild(st);
+
+  var panel=mk("div","doc");panel.id="panel";panel.setAttribute("role",tabs.length>1?"tabpanel":"region");panel.setAttribute("aria-label","Ergebnistext");
+  if(tabs.length>1)panel.setAttribute("aria-labelledby","tab-"+S.tab);
+  renderMarkdown(panel,currentText());el.body.appendChild(panel);
+}
+function say(msg){var s=$("actionStatus");if(s)s.textContent=msg}
+el.body.addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.id==="btnCopy")copyText(currentText(),"Kopiert.");
+  else if(b.id==="btnMaster")copyText(extractMasterprompt(S.data.result||""),"Masterprompt kopiert.");
+  else if(b.id==="btnPdf")makePdf();
+});
+function copyText(text,okMsg){
+  function fallback(){
+    var ta=mk("textarea");ta.value=text;ta.setAttribute("readonly","");ta.style.cssText="position:fixed;left:-9999px;top:0";document.body.appendChild(ta);ta.select();
+    var ok=false;try{ok=document.execCommand("copy")}catch(_){}document.body.removeChild(ta);say(ok?okMsg:"Kopieren nicht möglich. Bitte den Text markieren und manuell kopieren.");
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){say(okMsg)},fallback)}else fallback();
+}
+
+/* ---------- Erzeugen ---------- */
+function errorMessage(status,data){
+  var msg=data&&typeof data.error==="string"?data.error:"";
+  if(status===402)return msg||"Der Zugangscode wird nicht akzeptiert.";
+  if(status===429)return msg||"Zu viele Anfragen. Bitte kurz warten und erneut versuchen.";
+  if(status===503)return msg||"Der Generator ist gerade nicht verfügbar.";
+  if(status===413)return msg||"Der Input ist zu lang.";
+  return msg||"Der Server hat nicht wie erwartet geantwortet (Status "+status+").";
+}
+function run(){
+  if(S.busy)return;
+  var raw=el.raw.value.trim();if(raw.length<3||!el.consent.checked)return;
+  if(payOn()&&(!codeOk()||noRunsLeft()))return;
+  S.busy=true;updateControls();renderLoading();
+  var body={raw_input:raw},codeUsed="";if(S.type!=="auto")body.artifact_type=S.type;
+  if(payOn()){codeUsed=codeText();body.access_code=codeUsed;dropCheck();S.payNote=null}
+  var ctrl=new AbortController(),to=setTimeout(function(){ctrl.abort()},240000);
+  fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:ctrl.signal})
+  .then(function(res){return res.json().catch(function(){return null}).then(function(data){return {res:res,data:data}})})
+  .then(function(x){
+    if(x.res.status===402){
+      /* Code fehlt/ungültig/aufgebraucht, oder die Schranke wurde seit dem Laden der Seite eingeschaltet. */
+      var m402=errorMessage(402,x.data);
+      S.forcePay=true;S.credits=null;S.payNote={text:m402,tone:"err"};renderPay();loadStatus();
+      showError(m402,"Dein Rohinput bleibt erhalten. Prüfe den Zugangscode oder kaufe Läufe und versuche es erneut.");
+      if(!el.code.disabled)el.code.focus();
+      return;
+    }
+    if(!x.res.ok){
+      /* Unklarer Buchungsstand: nicht blind wiederholen, sondern erst den Stand prüfen. */
+      var unclear=!!codeUsed&&!!x.data&&x.data.reason==="buchung_unklar";
+      if(unclear)S.credits=null;
+      showError(errorMessage(x.res.status,x.data),unclear?PAY_CHECK_HINT:undefined);return;
+    }
+    if(!x.data||typeof x.data.result!=="string"||!x.data.result.trim()){showError("Die Antwort war leer. Bitte den Input konkreter formulieren.");return}
+    x.data.drafts=x.data.drafts||{};x.data.participants=x.data.participants||{};
+    if(codeUsed&&x.data.credits)applyCredits(codeUsed,x.data.credits);
+    S.data=x.data;S.tab="result";S.example=null;renderDone();
+    var top=el.card.getBoundingClientRect().top;
+    if(top>window.innerHeight*0.6){el.card.scrollIntoView({behavior:"smooth",block:"start"})}
+    el.heading.focus({preventScroll:true});
+  })
+  .catch(function(err){
+    var aborted=err&&err.name==="AbortError";
+    var msg=aborted?"Zeitüberschreitung. Bitte erneut versuchen oder den Input kürzen.":"Keine Verbindung zum Server. Bitte Netzwerk prüfen und erneut versuchen.";
+    if(codeUsed){
+      /* Die Anfrage kann den Server erreicht und einen Lauf abgebucht haben, ohne dass die Antwort ankam. */
+      S.credits=null;showError(msg+" Ob dabei ein Lauf abgebucht wurde, zeigt „Prüfen“.",PAY_CHECK_HINT);
+    } else showError(msg);
+  })
+  .then(function(){clearTimeout(to);S.busy=false;updateControls()});
+}
+el.run.addEventListener("click",run);
+
+function makePdf(){
+  if(S.pdfBusy||!S.data)return;
+  var text=currentText();if(!text.trim())return;
+  S.pdfBusy=true;var btn=$("btnPdf");if(btn){btn.disabled=true;btn.textContent="PDF wird erstellt …"}say("");
+  fetch("/api/pdf",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:pdfTitle(S.data.result||text),content:text,source:"prompterator",selectedPdfStyle:S.pdfStyle})})
+  .then(function(res){
+    if(!res.ok)return res.json().catch(function(){return null}).then(function(d){throw new Error((d&&d.error)||"PDF-Export fehlgeschlagen.")});
+    return res.blob();
+  })
+  .then(function(blob){
+    var url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="prompterator-artefakt.pdf";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url)},10000);say("PDF erstellt.");
+  })
+  .catch(function(err){say(err&&err.message?err.message:"PDF konnte nicht erstellt werden.")})
+  .then(function(){S.pdfBusy=false;var b=$("btnPdf");if(b){b.disabled=false;b.textContent="PDF herunterladen"}});
+}
+
+/* ---------- Start ---------- */
+setType("auto");renderConsent();updateCounter();updateControls();renderIdle();loadStatus();
+})();
+</script>
+</body>
+</html>
